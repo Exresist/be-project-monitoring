@@ -13,8 +13,8 @@ import (
 	ierr "be-project-monitoring/internal/errors"
 )
 
-func (s *service) CreateUser(ctx context.Context, user *model.User) (*model.User, string, error) {
-	found, err := s.store.GetUser(ctx, domain.NewUserFilter().
+func (s *userService) CreateUser(ctx context.Context, user *model.User) (*model.User, string, error) {
+	found, err := s.userStore.GetUser(ctx, domain.NewUserFilter().
 		ByEmails(user.Email).
 		ByUsernames(user.Username))
 	if err != nil && !errors.Is(err, ierr.ErrUserNotFound) {
@@ -27,6 +27,9 @@ func (s *service) CreateUser(ctx context.Context, user *model.User) (*model.User
 		if found.Username == user.Username {
 			return nil, "", ierr.ErrUsernameAlreadyExists
 		}
+		if found.GithubUsername == user.GithubUsername {
+			return nil, "", ierr.ErrGithubUsernameAlreadyExists
+		}
 	}
 
 	userUUID, err := uuid.NewRandom()
@@ -34,18 +37,18 @@ func (s *service) CreateUser(ctx context.Context, user *model.User) (*model.User
 		return nil, "", err
 	}
 
-	found.ID = userUUID
+	user.ID = userUUID
 
-	if err = s.store.Insert(ctx, found); err != nil {
+	if err = s.userStore.Insert(ctx, user); err != nil {
 		return nil, "", err
 	}
 
-	token, err := model.GenerateToken(found)
-	return found, token, err
+	token, err := model.GenerateToken(user)
+	return user, token, err
 }
 
-func (s *service) AuthUser(ctx context.Context, username, password string) (string, error) {
-	user, err := s.store.GetUser(ctx, domain.NewUserFilter().ByUsernames(username))
+func (s *userService) AuthUser(ctx context.Context, username, password string) (string, error) {
+	user, err := s.userStore.GetUser(ctx, domain.NewUserFilter().ByUsernames(username))
 	if err != nil {
 		return "", fmt.Errorf("error while getting user: %w", err)
 	}

@@ -34,7 +34,7 @@ type (
 
 var errField = "error"
 
-func (s *Server) createUser(c *gin.Context) {
+func (s *Server) register(c *gin.Context) {
 	userReq := &createUserReq{}
 	if err := json.NewDecoder(c.Request.Body).Decode(userReq); err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})

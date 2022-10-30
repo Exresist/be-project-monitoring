@@ -9,7 +9,7 @@ import (
 	ierr "be-project-monitoring/internal/errors"
 )
 
-func (s *service) VerifyToken(ctx context.Context, token string, toAllow ...model.UserRole) error {
+func (s *userService) VerifyToken(ctx context.Context, token string, toAllow ...model.UserRole) error {
 	// Parsing token fields
 	claims, err := jwt.Parse(token, model.DecodeToken)
 	if err != nil {

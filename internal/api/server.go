@@ -17,12 +17,12 @@ type (
 	Server struct {
 		*http.Server
 		logger *zap.SugaredLogger
-		svc    service
+		svc    userService
 
 		shutdownTimeout int
 	}
 
-	service interface {
+	userService interface {
 		VerifyToken(ctx context.Context, token string, toAllow ...model.UserRole) error
 		CreateUser(ctx context.Context, user *model.User) (*model.User, string, error)
 		AuthUser(ctx context.Context, username, password string) (string, error)
@@ -43,13 +43,21 @@ func New(opts ...OptionFunc) *Server {
 	}
 
 	rtr := gin.Default()
+
+	// /api/*
 	apiRtr := rtr.Group("/api")
+	// /api/auth
 	apiRtr.POST("/auth", s.auth)
-	apiRtr.POST("/register", s.createUser)
+	// /api/register
+	apiRtr.POST("/register", s.register)
+
+	// /api/admin
 	adminRtr := apiRtr.Group("/admin", s.authMiddleware(model.Admin))
 
-	adminRtr.GET("/users", func(c *gin.Context) {
-	})
+	// /api/admin/users
+	// TODO
+	adminRtr.GET("/users", s.getUsers)
+	// /api/admin/projects
 	adminRtr.GET("/projects", func(c *gin.Context) {
 
 	})
@@ -85,7 +93,7 @@ func WithLogger(logger *zap.SugaredLogger) OptionFunc {
 	}
 }*/
 
-func WithService(svc service) OptionFunc {
+func WithService(svc userService) OptionFunc {
 	return func(s *Server) {
 		s.svc = svc
 	}

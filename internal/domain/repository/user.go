@@ -50,8 +50,8 @@ func (u *userStore) GetUsers(ctx context.Context, filter *domain.UserFilter) ([]
 		"github_username", "hashed_password").
 		From(u.tableName).
 		Where(u.conditions(filter)).
-		Limit(filter.Limit).
-		Offset(filter.Offset).
+		Limit(filter.Limit).   // max = filter.Limit numbers
+		Offset(filter.Offset). //  min = filter.Offset + 1
 		PlaceholderFormat(sq.Dollar).RunWith(u.db).QueryContext(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("error while performing sql request: %w", err)

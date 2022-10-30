@@ -32,14 +32,13 @@ func main() {
 	} else {
 		logger, err = zap.NewDevelopment()
 	}
+	if err != nil {
+		panic(fmt.Errorf("failed to initialize logger: %w", err))
+	}
 	sugaredLogger := logger.Sugar()
 
 	if err = envconfig.Process("APP", cfg); err != nil {
 		sugaredLogger.Fatal(err.Error())
-	}
-
-	if err != nil {
-		panic(fmt.Errorf("failed to initialize logger: %w", err))
 	}
 
 	conn, err := db.ConnectPostgreSQL(ctx, cfg.DSN)
