@@ -10,7 +10,7 @@ import (
 )
 
 func (s *service) VerifyToken(ctx context.Context, token string, toAllow ...model.UserRole) error {
-	//Parsing token fields
+	// Parsing token fields
 	claims, err := jwt.Parse(token, model.DecodeToken)
 	if err != nil {
 		return err
@@ -22,11 +22,11 @@ func (s *service) VerifyToken(ctx context.Context, token string, toAllow ...mode
 
 	cl := claims.Claims.(jwt.MapClaims)
 	roleID := cl["role_id"].(model.UserRole)
+	// Checking if role is in the list of the allowed roles
 	for _, v := range toAllow {
-		// role allowed so we can let this user in
 		if roleID == v {
 			return nil
 		}
 	}
-	return ierr.ErrInvalidToken
+	return ierr.ErrAccessDenied
 }

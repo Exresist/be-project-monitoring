@@ -3,21 +3,20 @@ package api
 import (
 	"net/http"
 
+	"github.com/gin-gonic/gin"
+
 	"be-project-monitoring/internal/domain/model"
 )
 
-func (s *server) authMiddleware(toAllow ...model.UserRole) func(next http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			ctx := r.Context()
-			token := r.Header.Get("Authorization")
+func (s *Server) authMiddleware(toAllow ...model.UserRole) func(c *gin.Context) {
+	return func(c *gin.Context) {
+		ctx := c.Request.Context()
+		token := c.Request.Header.Get("Authorization")
 
-			err := s.svc.VerifyToken(ctx, token, toAllow...)
-			if err != nil {
-				s.response.ErrorWithCode(w, err, http.StatusUnauthorized)
-				return
-			}
-			next.ServeHTTP(w, r)
-		})
+		err := s.svc.VerifyToken(ctx, token, toAllow...)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{errField: err.Error()})
+			return
+		}
 	}
 }

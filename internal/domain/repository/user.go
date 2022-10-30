@@ -18,10 +18,10 @@ type userStore struct {
 	db        *sql.DB
 	tableName string
 
-	logger *zap.Logger
+	logger *zap.SugaredLogger
 }
 
-func NewUserStore(db *sql.DB, tableName string, logger *zap.Logger) domain.UserStore {
+func NewUserStore(db *sql.DB, tableName string, logger *zap.SugaredLogger) domain.UserStore {
 	return &userStore{
 		db:        db,
 		tableName: tableName,
@@ -29,8 +29,8 @@ func NewUserStore(db *sql.DB, tableName string, logger *zap.Logger) domain.UserS
 	}
 }
 
-func (u *userStore) GetByFilter(ctx context.Context, filter *domain.UserFilter) (*model.User, error) {
-	users, err := u.GetListByFilter(ctx, filter.WithPaginator(1, 0))
+func (u *userStore) GetUser(ctx context.Context, filter *domain.UserFilter) (*model.User, error) {
+	users, err := u.GetUsers(ctx, filter.WithPaginator(1, 0))
 	switch {
 	case err != nil:
 		return nil, fmt.Errorf("failed to get user by id: %w", err)
@@ -41,12 +41,12 @@ func (u *userStore) GetByFilter(ctx context.Context, filter *domain.UserFilter) 
 	}
 }
 
-func (u *userStore) GetListByFilter(ctx context.Context, filter *domain.UserFilter) ([]*model.User, error) {
+func (u *userStore) GetUsers(ctx context.Context, filter *domain.UserFilter) ([]*model.User, error) {
 	rows, err := sq.Select(
 		"id", "role",
 		"color_code", "email",
 		"username", "first_name",
-		"last_name", "group",
+		"last_name", "\"group\"",
 		"github_username", "hashed_password").
 		From(u.tableName).
 		Where(u.conditions(filter)).
@@ -58,7 +58,7 @@ func (u *userStore) GetListByFilter(ctx context.Context, filter *domain.UserFilt
 	}
 
 	defer func(res *sql.Rows) {
-		err := res.Close()
+		err = res.Close()
 		if err != nil {
 			u.logger.Error("error while closing sql rows", zap.Error(err))
 		}
@@ -66,7 +66,7 @@ func (u *userStore) GetListByFilter(ctx context.Context, filter *domain.UserFilt
 	users := make([]*model.User, 0)
 	for rows.Next() {
 		user := &model.User{}
-		err := rows.Scan(&user.ID, &user.Role,
+		err = rows.Scan(&user.ID, &user.Role,
 			&user.ColorCode, &user.Email,
 			&user.Username, &user.FirstName,
 			&user.LastName, &user.Group,
@@ -81,39 +81,42 @@ func (u *userStore) GetListByFilter(ctx context.Context, filter *domain.UserFilt
 
 // TODO:
 func (u *userStore) GetCountByFilter(ctx context.Context, filter *domain.UserFilter) (int, error) {
-	panic("")
+	panic("TODO me")
 }
 func (u *userStore) DeleteByFilter(ctx context.Context, filter *domain.UserFilter) error {
-	panic("")
+	panic("TODO me")
 }
-func (u *userStore) Insert(ctx context.Context, user *model.User) (*model.User, error) {
-	if err := sq.Insert("users").
-		Columns("role", "color_code",
-			"email", "username",
-			"first_name", "last_name",
-			"group", "github_username",
-			"hashed_password").
-		Values(user.Role, randomcolor.GetRandomColorInHex(),
-			user.Email, user.Username,
-			user.FirstName, user.LastName,
-			user.Group, user.GithubUsername,
-			user.HashedPassword).
-		Suffix("RETURNING \"id\"").
+func (u *userStore) Insert(ctx context.Context, user *model.User) error {
+	_, err := sq.Insert("users").
+		Columns("id", "role",
+			"color_code", "email",
+			"username", "first_name",
+			"last_name", "\"group\"",
+			"github_username", "hashed_password").
+		Values(user.ID, user.Role,
+			randomcolor.GetRandomColorInHex(), user.Email,
+			user.Username, user.FirstName,
+			user.LastName, user.Group,
+			user.GithubUsername, user.HashedPassword).
 		PlaceholderFormat(sq.Dollar).
-		RunWith(u.db).QueryRowContext(ctx).Scan(&user.ID); err != nil {
-		return user, fmt.Errorf("error while inserting user: %w", err)
-	}
-
-	return user, nil
+		RunWith(u.db).ExecContext(ctx)
+	return err
 }
 func (u *userStore) Update(ctx context.Context, user *model.User) error {
-	panic("")
+	panic("TODO me")
 }
 
 func (u *userStore) conditions(filter *domain.UserFilter) sq.Sqlizer {
 	eq := make(sq.Eq)
 	if filter.IDs != nil {
 		eq[u.tableName+".id"] = filter.IDs
+	}
+	if len(filter.Usernames) != 0 && len(filter.Emails) != 0 {
+		usernameEq := make(sq.Eq)
+		emailEq := make(sq.Eq)
+		usernameEq[u.tableName+".username"] = filter.Usernames
+		emailEq[u.tableName+".email"] = filter.Emails
+		return sq.Or{eq, usernameEq, emailEq}
 	}
 	if filter.Usernames != nil {
 		eq[u.tableName+".username"] = filter.Usernames

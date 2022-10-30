@@ -1,11 +1,16 @@
-# Stage 1 - build executable in go container
-FROM golang:latest AS builder
+#!/bin/sh
+FROM golang:latest as builder
 
-WORKDIR $GOPATH/src/app
+WORKDIR $GOPATH/src/app/
+
 COPY . .
 
-RUN export CGO_ENABLED=0 && GOOS=linux go build -o /Users/HP/go/bin/app
+RUN export CGO_ENABLED=0 && make build
 
+# Stage 2 - build final image
 FROM alpine:latest
 
-ENTRYPOINT ["/Users/HP/go/bin/app"]
+COPY --from=builder /go/src/app/bin/be-project-monitoring go/bin/be-project-monitoring
+
+# Run the binary.
+ENTRYPOINT ["go/bin/be-project-monitoring"]

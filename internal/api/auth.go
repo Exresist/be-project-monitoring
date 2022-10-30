@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
 
 	"be-project-monitoring/internal/domain/model"
@@ -11,33 +12,37 @@ import (
 
 type (
 	createUserReq struct {
-		Email          string
-		Username       string
-		FirstName      string
-		LastName       string
-		Group          string
-		GithubUsername string
-		Password       string
+		Email          string         `json:"email"`
+		Username       string         `json:"username"`
+		FirstName      string         `json:"first_name"`
+		LastName       string         `json:"last_name"`
+		Group          string         `json:"group"`
+		GithubUsername string         `json:"github_username"`
+		Password       string         `json:"password"`
+		Role           model.UserRole `json:"role"`
 	}
 	authUserReq struct {
-		Username string
-		Password string
+		Username string `json:"username"`
+		Password string `json:"password"`
 	}
 
-	createUserResp struct {
-		*model.User
-		Token string
+	userResp struct {
+		User  *model.User `json:"user,omitempty"`
+		Token string      `json:"token"`
 	}
 )
 
-func (s *server) createUser(w http.ResponseWriter, r *http.Request) {
+var errField = "error"
+
+func (s *Server) createUser(c *gin.Context) {
 	userReq := &createUserReq{}
-	if err := json.NewDecoder(r.Body).Decode(userReq); err != nil {
-		s.response.ErrorWithCode(w, err, http.StatusBadRequest)
+	if err := json.NewDecoder(c.Request.Body).Decode(userReq); err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
+		return
 	}
 
 	newUser := &model.User{
-		Role:           model.Student,
+		Role:           userReq.Role,
 		Email:          userReq.Email,
 		Username:       userReq.Username,
 		FirstName:      userReq.FirstName,
@@ -47,16 +52,32 @@ func (s *server) createUser(w http.ResponseWriter, r *http.Request) {
 		HashedPassword: hashPass(userReq.Password),
 	}
 
-	user, token, err := s.svc.CreateUser(r.Context(), newUser)
+	user, token, err := s.svc.CreateUser(c.Request.Context(), newUser)
 	if err != nil {
-		s.response.ErrorWithCode(w, err, http.StatusInternalServerError)
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
+		return
 	}
 
-	s.response.Created(w, createUserResp{
+	c.JSON(http.StatusCreated, userResp{
 		User:  user,
 		Token: token,
 	})
+}
 
+func (s *Server) auth(c *gin.Context) {
+	userReq := &authUserReq{}
+	if err := json.NewDecoder(c.Request.Body).Decode(userReq); err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
+		return
+	}
+
+	token, err := s.svc.AuthUser(c.Request.Context(), userReq.Username, userReq.Password)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{errField: err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, userResp{Token: token})
 }
 
 func hashPass(pwd string) string {

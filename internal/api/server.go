@@ -2,25 +2,22 @@ package api
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	"time"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/cors"
+	"github.com/gin-gonic/gin"
+	"github.com/oklog/run"
 	"go.uber.org/zap"
-	"golang.org/x/sync/errgroup"
 
 	"be-project-monitoring/internal/domain/model"
 )
 
 type (
-	server struct {
+	Server struct {
 		*http.Server
-		logger   *zap.Logger
-		response *responder
-		svc      service
+		logger *zap.SugaredLogger
+		svc    service
 
 		shutdownTimeout int
 	}
@@ -28,98 +25,74 @@ type (
 	service interface {
 		VerifyToken(ctx context.Context, token string, toAllow ...model.UserRole) error
 		CreateUser(ctx context.Context, user *model.User) (*model.User, string, error)
+		AuthUser(ctx context.Context, username, password string) (string, error)
 	}
 
-	OptionFunc func(s *server)
+	OptionFunc func(s *Server)
 )
 
-func New(opts ...OptionFunc) *server {
-	s := &server{}
+func New(opts ...OptionFunc) *Server {
+	s := &Server{
+		Server: &http.Server{
+			Addr:         ":8080",
+			ReadTimeout:  time.Duration(10) * time.Second,
+			WriteTimeout: time.Duration(10) * time.Second},
+	}
 	for _, opt := range opts {
 		opt(s)
 	}
-	r := chi.NewRouter()
-	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"https://*", "http://*"},
-		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-TokenClaims"},
-		ExposedHeaders:   []string{"Link"},
-		AllowCredentials: false,
-		MaxAge:           300, // Maximum value not ignored by any of major browsers
-	}))
 
-	r.Post("/register", s.createUser)
+	rtr := gin.Default()
+	apiRtr := rtr.Group("/api")
+	apiRtr.POST("/auth", s.auth)
+	apiRtr.POST("/register", s.createUser)
+	adminRtr := apiRtr.Group("/admin", s.authMiddleware(model.Admin))
 
-	r.Route("/admin", func(r chi.Router) {
-		r.Use(s.authMiddleware(model.Admin))
-		r.Get("/users", func(writer http.ResponseWriter, request *http.Request) {
-		})
-		r.Get("/projects", func(writer http.ResponseWriter, request *http.Request) {
-		})
+	adminRtr.GET("/users", func(c *gin.Context) {
+	})
+	adminRtr.GET("/projects", func(c *gin.Context) {
+
 	})
 
-	s.Handler = r
+	s.Handler = rtr
 	return s
 }
 
-func (s *server) Run(ctx context.Context) error {
-	eg, ctx := errgroup.WithContext(ctx)
+func (s *Server) Run(g *run.Group) {
+	g.Add(func() error {
+		s.logger.Info("[http-server] started")
+		s.logger.Info(fmt.Sprintf("listening on %v", s.Addr))
+		return s.ListenAndServe()
+	}, func(err error) {
+		s.logger.Error("[http-server] terminated", zap.Error(err))
 
-	eg.Go(func() error {
-		err := s.ListenAndServe()
+		ctx, cancel := context.WithTimeout(context.Background(), 30)
+		defer cancel()
 
-		if err != nil && errors.Is(err, http.ErrServerClosed) {
-			return nil
-		}
-
-		return fmt.Errorf("http-server failed to launch: %w", err)
+		s.logger.Error("[http-server] stopped", zap.Error(s.Shutdown(ctx)))
 	})
-
-	eg.Go(func() error {
-		<-ctx.Done()
-
-		shutdownCtx, shutdownCancel := context.WithTimeout(
-			context.Background(),
-			time.Duration(s.shutdownTimeout)*time.Second,
-		)
-		defer shutdownCancel()
-
-		//nolint:contextcheck
-		if err := s.Shutdown(shutdownCtx); err != nil {
-			return fmt.Errorf("http-server shutted down: %w", err)
-		}
-
-		return nil
-	})
-	return eg.Wait()
 }
 
-func WithLogger(logger *zap.Logger) OptionFunc {
-	return func(s *server) {
+func WithLogger(logger *zap.SugaredLogger) OptionFunc {
+	return func(s *Server) {
 		s.logger = logger
 	}
 }
 
-func WithServer(srv *http.Server) OptionFunc {
-	return func(s *server) {
+/*func WithServer(srv *http.Server) OptionFunc {
+	return func(s *Server) {
 		s.Server = srv
 	}
-}
-
-func WithResponder(r *responder) OptionFunc {
-	return func(s *server) {
-		s.response = r
-	}
-}
+}*/
 
 func WithService(svc service) OptionFunc {
-	return func(s *server) {
+	return func(s *Server) {
 		s.svc = svc
 	}
 }
 
 func WithShutdownTimeout(timeout int) OptionFunc {
-	return func(s *server) {
+	return func(s *Server) {
 		s.shutdownTimeout = timeout
 	}
 }

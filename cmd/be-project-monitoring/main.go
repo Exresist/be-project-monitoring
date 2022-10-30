@@ -2,24 +2,20 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"log"
-	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/kelseyhightower/envconfig"
+	_ "github.com/lib/pq"
+	"github.com/oklog/run"
 	"go.uber.org/zap"
-	"golang.org/x/sync/errgroup"
 
 	"be-project-monitoring/internal/api"
 	"be-project-monitoring/internal/db"
 	"be-project-monitoring/internal/domain/repository"
 	"be-project-monitoring/internal/domain/service"
-	ierr "be-project-monitoring/internal/errors"
 )
 
 func main() {
@@ -31,16 +27,17 @@ func main() {
 	)
 	defer ctxCancel()
 
-	if err = envconfig.Process("APP", cfg); err != nil {
-		log.Fatal(err.Error())
-	}
-
-	if cfg.Env == "development" {
-		logger, err = zap.NewDevelopment()
-
-	} else {
+	if cfg.Env == "production" {
 		logger, err = zap.NewProduction()
+	} else {
+		logger, err = zap.NewDevelopment()
 	}
+	sugaredLogger := logger.Sugar()
+
+	if err = envconfig.Process("APP", cfg); err != nil {
+		sugaredLogger.Fatal(err.Error())
+	}
+
 	if err != nil {
 		panic(fmt.Errorf("failed to initialize logger: %w", err))
 	}
@@ -50,58 +47,39 @@ func main() {
 		panic(fmt.Errorf("невозможно открыть соединение с базой данных: %w", err))
 	}
 
-	logger.Info("creating HTTP server")
+	/*logger.Info("creating HTTP server")
 	srv := &http.Server{
-		Addr:         cfg.BindAddr,
+		Addr:         ":8080",
 		ReadTimeout:  time.Duration(cfg.ReadTimeout),
 		WriteTimeout: time.Duration(cfg.WriteTimeout),
-	}
+	}*/
+	var g = &run.Group{}
 
-	eg, egCtx := errgroup.WithContext(ctx)
-	{
-		logger.Info("start of the server")
-		eg.Go(func() error {
-			srvCtx, srvCancel := context.WithCancel(egCtx)
-			defer srvCancel()
+	userStore := repository.NewUserStore(conn, "users", sugaredLogger)
+	svc := service.NewService(userStore)
+	api.New(
+		// api.WithServer(srv),
+		api.WithLogger(sugaredLogger),
+		api.WithService(svc),
+		api.WithShutdownTimeout(cfg.ShutdownTimeout)).Run(g)
 
-			userStore := repository.NewUserStore(conn, "users", logger)
-
-			svc := service.NewService(userStore)
-			return api.New(
-				api.WithServer(srv),
-				api.WithLogger(logger),
-				api.WithResponder(api.NewResponder(logger)),
-				api.WithService(svc),
-				api.WithShutdownTimeout(cfg.ShutdownTimeout)).Run(srvCtx)
-		})
-	}
-
-	eg.Go(func() error {
+	ctx, cancel := context.WithCancel(context.Background())
+	g.Add(func() error {
 		shutdown := make(chan os.Signal, 1)
 		signal.Notify(shutdown, os.Interrupt, syscall.SIGTERM)
 
-		logger.Info("[signal-watcher] started")
+		sugaredLogger.Info("[signal-watcher] started")
 
 		select {
 		case sig := <-shutdown:
-			return fmt.Errorf("%w: %s", ierr.ErrTermSig, sig.String())
-		case <-egCtx.Done():
+			return fmt.Errorf("terminated with signal: %s", sig.String())
+		case <-ctx.Done():
 			return nil
 		}
+	}, func(err error) {
+		cancel()
+		sugaredLogger.Error("gracefully shutdown application", zap.Error(err))
 	})
 
-	defer func() {
-		recovered := recover()
-		if e, ok := recovered.(error); ok && errors.Is(e, ierr.ErrAbnormalExit) {
-			os.Exit(1)
-		}
-	}()
-
-	if err := eg.Wait(); err != nil &&
-		!errors.Is(err, ierr.ErrTermSig) &&
-		!errors.Is(err, context.Canceled) {
-		logger.Error("emergency service shutdown", zap.Error(err))
-		panic(ierr.ErrAbnormalExit)
-	}
-	logger.Info("successful shutdown")
+	sugaredLogger.Error("successful shutdown", zap.Error(g.Run()))
 }
