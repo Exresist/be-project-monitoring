@@ -1,7 +1,9 @@
+CREATE TYPE role AS ENUM ('student', 'project_manager', 'admin');
+
 CREATE TABLE users
 (
     id              uuid PRIMARY KEY NOT NULL,
-    role            smallint                  DEFAULT 0,
+    role            role                      DEFAULT 'student',
     color_code      VARCHAR          NOT NULL DEFAULT '#FFFFFF',
     email           VARCHAR UNIQUE   NOT NULL,
     username        VARCHAR UNIQUE   NOT NULL,

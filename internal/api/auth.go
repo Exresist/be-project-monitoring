@@ -52,7 +52,7 @@ func (s *Server) register(c *gin.Context) {
 		HashedPassword: hashPass(userReq.Password),
 	}
 
-	user, token, err := s.svc.CreateUser(c.Request.Context(), newUser)
+	user, token, err := s.userSvc.CreateUser(c.Request.Context(), newUser)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return
@@ -71,7 +71,7 @@ func (s *Server) auth(c *gin.Context) {
 		return
 	}
 
-	token, err := s.svc.AuthUser(c.Request.Context(), userReq.Username, userReq.Password)
+	token, err := s.userSvc.AuthUser(c.Request.Context(), userReq.Username, userReq.Password)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{errField: err.Error()})
 		return

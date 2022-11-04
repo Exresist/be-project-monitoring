@@ -12,7 +12,7 @@ import (
 var signingString = []byte("SomethingReallyStupid")
 
 type TokenClaims struct {
-	RoleID   UserRole `json:"role_id"`
+	Role     UserRole `json:"role"`
 	Username string   `json:"username"`
 	jwt.RegisteredClaims
 }
@@ -27,7 +27,7 @@ func DecodeToken(token *jwt.Token) (interface{}, error) {
 
 func GenerateToken(user *User) (string, error) {
 	claims := &TokenClaims{
-		RoleID:   user.Role,
+		Role:     user.Role,
 		Username: user.Username,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().UTC().Add(time.Hour * 48)),

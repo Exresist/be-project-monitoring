@@ -16,8 +16,9 @@ import (
 type (
 	Server struct {
 		*http.Server
-		logger *zap.SugaredLogger
-		svc    userService
+		logger  *zap.SugaredLogger
+		userSvc userService
+		pmSvc   pmService
 
 		shutdownTimeout int
 	}
@@ -26,6 +27,12 @@ type (
 		VerifyToken(ctx context.Context, token string, toAllow ...model.UserRole) error
 		CreateUser(ctx context.Context, user *model.User) (*model.User, string, error)
 		AuthUser(ctx context.Context, username, password string) (string, error)
+	}
+
+	pmService interface {
+		CreateProject(ctx context.Context, project *model.Project) (*model.Project, error)
+		UpdateProject(ctx context.Context, project *model.Project) (*model.Project, error)
+		DeleteProject(ctx context.Context, project *model.Project) error
 	}
 
 	OptionFunc func(s *Server)
@@ -50,6 +57,12 @@ func New(opts ...OptionFunc) *Server {
 	apiRtr.POST("/auth", s.auth)
 	// /api/register
 	apiRtr.POST("/register", s.register)
+
+	// /api/pm
+	pmRtr := apiRtr.Group("/pm", s.authMiddleware(model.ProjectManager))
+
+	// api/pm/project
+	pmRtr.PUT("/project", s.createProject)
 
 	// /api/admin
 	adminRtr := apiRtr.Group("/admin", s.authMiddleware(model.Admin))
@@ -95,7 +108,7 @@ func WithLogger(logger *zap.SugaredLogger) OptionFunc {
 
 func WithService(svc userService) OptionFunc {
 	return func(s *Server) {
-		s.svc = svc
+		s.userSvc = svc
 	}
 }
 

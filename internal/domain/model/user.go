@@ -3,13 +3,13 @@ package model
 import "github.com/google/uuid"
 
 const (
-	Student UserRole = iota
-	Admin
-	ProjectManager
+	Student        UserRole = "student"
+	Admin          UserRole = "admin"
+	ProjectManager UserRole = "project_manager"
 )
 
 type (
-	UserRole int
+	UserRole string
 	User     struct {
 		ID             uuid.UUID
 		Role           UserRole

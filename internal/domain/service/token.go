@@ -21,7 +21,7 @@ func (s *userService) VerifyToken(ctx context.Context, token string, toAllow ...
 	}
 
 	cl := claims.Claims.(jwt.MapClaims)
-	roleID := cl["role_id"].(model.UserRole)
+	roleID := cl["role"].(model.UserRole)
 	// Checking if role is in the list of the allowed roles
 	for _, v := range toAllow {
 		if roleID == v {
