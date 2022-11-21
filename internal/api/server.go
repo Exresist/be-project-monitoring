@@ -18,7 +18,7 @@ type (
 		*http.Server
 		logger  *zap.SugaredLogger
 		userSvc userService
-		pmSvc   pmService
+		projSvc projectService
 
 		shutdownTimeout int
 	}
@@ -27,12 +27,14 @@ type (
 		VerifyToken(ctx context.Context, token string, toAllow ...model.UserRole) error
 		CreateUser(ctx context.Context, user *model.User) (*model.User, string, error)
 		AuthUser(ctx context.Context, username, password string) (string, error)
+		GetUsers(ctx context.Context, userReq *GetUserReq) ([]*model.User, int, error)
 	}
 
-	pmService interface {
+	projectService interface {
 		CreateProject(ctx context.Context, project *model.Project) (*model.Project, error)
 		UpdateProject(ctx context.Context, project *model.Project) (*model.Project, error)
 		DeleteProject(ctx context.Context, project *model.Project) error
+		GetProjects(ctx context.Context, name string) ([]*model.Project, error)
 	}
 
 	OptionFunc func(s *Server)
@@ -71,9 +73,7 @@ func New(opts ...OptionFunc) *Server {
 	// TODO
 	adminRtr.GET("/users", s.getUsers)
 	// /api/admin/projects
-	adminRtr.GET("/projects", func(c *gin.Context) {
-
-	})
+	adminRtr.GET("/projects", s.getProjects)
 
 	s.Handler = rtr
 	return s
@@ -106,9 +106,15 @@ func WithLogger(logger *zap.SugaredLogger) OptionFunc {
 	}
 }*/
 
-func WithService(svc userService) OptionFunc {
+func WithUserService(svc userService) OptionFunc {
 	return func(s *Server) {
 		s.userSvc = svc
+	}
+}
+
+func WithProjectService(svc projectService) OptionFunc {
+	return func(s *Server) {
+		s.projSvc = svc
 	}
 }
 

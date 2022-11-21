@@ -9,7 +9,6 @@ import (
 	sq "github.com/Masterminds/squirrel"
 	"go.uber.org/zap"
 
-	"be-project-monitoring/internal/domain"
 	"be-project-monitoring/internal/domain/model"
 	ierr "be-project-monitoring/internal/errors"
 )
@@ -21,7 +20,7 @@ type userStore struct {
 	logger *zap.SugaredLogger
 }
 
-func NewUserStore(db *sql.DB, tableName string, logger *zap.SugaredLogger) domain.UserStore {
+func NewUserStore(db *sql.DB, tableName string, logger *zap.SugaredLogger) *userStore {
 	return &userStore{
 		db:        db,
 		tableName: tableName,
@@ -29,7 +28,7 @@ func NewUserStore(db *sql.DB, tableName string, logger *zap.SugaredLogger) domai
 	}
 }
 
-func (u *userStore) GetUser(ctx context.Context, filter *domain.UserFilter) (*model.User, error) {
+func (u *userStore) GetUser(ctx context.Context, filter *UserFilter) (*model.User, error) {
 	users, err := u.GetUsers(ctx, filter.WithPaginator(1, 0))
 	switch {
 	case err != nil:
@@ -41,7 +40,7 @@ func (u *userStore) GetUser(ctx context.Context, filter *domain.UserFilter) (*mo
 	}
 }
 
-func (u *userStore) GetUsers(ctx context.Context, filter *domain.UserFilter) ([]*model.User, error) {
+func (u *userStore) GetUsers(ctx context.Context, filter *UserFilter) ([]*model.User, error) {
 	rows, err := sq.Select(
 		"id", "role",
 		"color_code", "email",
@@ -79,11 +78,18 @@ func (u *userStore) GetUsers(ctx context.Context, filter *domain.UserFilter) ([]
 	return users, nil
 }
 
-// TODO:
-func (u *userStore) GetCountByFilter(ctx context.Context, filter *domain.UserFilter) (int, error) {
-	panic("TODO me")
+func (u *userStore) GetCountByFilter(ctx context.Context, filter *UserFilter) (int, error) {
+	var count int
+	if err := sq.Select("COUNT(1)").
+		From(u.tableName).
+		Where(u.conditions(filter)).
+		RunWith(u.db).QueryRowContext(ctx).Scan(&count); err != nil {
+		return 0, fmt.Errorf("error while scanning sql row: %w", err)
+	}
+	return count, nil
 }
-func (u *userStore) DeleteByFilter(ctx context.Context, filter *domain.UserFilter) error {
+
+func (u *userStore) DeleteByFilter(ctx context.Context, filter *UserFilter) error {
 	panic("TODO me")
 }
 func (u *userStore) Insert(ctx context.Context, user *model.User) error {
@@ -106,7 +112,7 @@ func (u *userStore) Update(ctx context.Context, user *model.User) error {
 	panic("TODO me")
 }
 
-func (u *userStore) conditions(filter *domain.UserFilter) sq.Sqlizer {
+func (u *userStore) conditions(filter *UserFilter) sq.Sqlizer {
 	eq := make(sq.Eq)
 	if filter.IDs != nil {
 		eq[u.tableName+".id"] = filter.IDs
@@ -118,10 +124,10 @@ func (u *userStore) conditions(filter *domain.UserFilter) sq.Sqlizer {
 		emailEq[u.tableName+".email"] = filter.Emails
 		return sq.Or{eq, usernameEq, emailEq}
 	}
-	if filter.Usernames != nil {
+	if len(filter.Usernames) != 0 {
 		eq[u.tableName+".username"] = filter.Usernames
 	}
-	if filter.Emails != nil {
+	if len(filter.Emails) != 0 {
 		eq[u.tableName+".email"] = filter.Emails
 	}
 
