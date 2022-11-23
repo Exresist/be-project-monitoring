@@ -20,11 +20,11 @@ gen:
 .PHONY: gen
 
 dbuild:
-	docker-compose -f ../be-project-monitoring/docker-compose.yml build
+	docker compose -f ../be-project-monitoring/docker-compose.yml build
 .PHONY: dbuild
 
 dstart:
-	docker-compose -f ../be-project-monitoring/docker-compose.yml up
+	docker compose -f ../be-project-monitoring/docker-compose.yml up
 .PHONY: dstart
 
 run: dbuild dstart
