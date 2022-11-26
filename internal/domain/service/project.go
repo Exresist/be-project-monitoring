@@ -1,27 +1,28 @@
 package service
 
 import (
+	"be-project-monitoring/internal/api"
 	"be-project-monitoring/internal/domain/model"
+	"be-project-monitoring/internal/domain/repository"
 	"context"
 )
 
-func (s *projectService) GetProjects(ctx context.Context, name string) ([]*model.Project, error) {
+func (s *projectService) GetProjects(ctx context.Context, projReq *api.GetProjReq) ([]*model.Project, int, error) {
+	
+	filter := repository.NewProjectFilter().ByProjectNames(projReq.Name)
+	filter.Limit = uint64(projReq.Limit)
+	filter.Offset = uint64(projReq.Offset)
+	count, err := s.projectStore.GetCountByFilter(ctx, filter)
+	if err != nil {
+		return nil, 0, err
+	}
 
-	return nil, nil
-	// filter := domain.NewUserFilter().ByUsernames(userReq.Username).ByEmails(userReq.Email)
-	// filter.Limit = uint64(userReq.Limit)
-	// filter.Offset = uint64(userReq.Offset)
-	// count, err := s.projectStore.GetCountByFilter(ctx, filter)
-	// if err != nil {
-	// 	return nil, 0, err
-	// }
+	projects, err := s.projectStore.GetProjects(ctx, filter)
+	if err != nil {
+		return nil, 0, err
+	}
 
-	// users, err := s.userStore.GetUsers(ctx, filter)
-	// if err != nil {
-	// 	return nil, 0, err
-	// }
-
-	// return users, count, nil
+	return projects, count, nil
 }
 
 func (s *projectService) CreateProject(ctx context.Context, project *model.Project) (*model.Project, error) {

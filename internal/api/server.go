@@ -34,7 +34,7 @@ type (
 		CreateProject(ctx context.Context, project *model.Project) (*model.Project, error)
 		UpdateProject(ctx context.Context, project *model.Project) (*model.Project, error)
 		DeleteProject(ctx context.Context, project *model.Project) error
-		GetProjects(ctx context.Context, name string) ([]*model.Project, error)
+		GetProjects(ctx context.Context, getProjReq *GetProjReq) ([]*model.Project, int, error)
 	}
 
 	OptionFunc func(s *Server)

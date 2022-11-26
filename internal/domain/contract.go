@@ -21,7 +21,7 @@ type (
 	ProjectStore interface {
 		GetProject(ctx context.Context, filter *repository.ProjectFilter) (*model.Project, error)
 		GetProjects(ctx context.Context, filter *repository.ProjectFilter) ([]*model.Project, error)
-		//GetCountByFilter(ctx context.Context, filter *ProjectFilter) (int, error)
+		GetCountByFilter(ctx context.Context, filter *repository.ProjectFilter) (int, error)
 		//DeleteByFilter(ctx context.Context, filter *ProjectFilter) error
 
 		//Insert(ctx context.Context, user *model.User) error

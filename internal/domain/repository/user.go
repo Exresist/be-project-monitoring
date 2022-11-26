@@ -41,16 +41,26 @@ func (u *userStore) GetUser(ctx context.Context, filter *UserFilter) (*model.Use
 }
 
 func (u *userStore) GetUsers(ctx context.Context, filter *UserFilter) ([]*model.User, error) {
-	rows, err := sq.Select(
+	builder := sq.Select(
 		"id", "role",
 		"color_code", "email",
 		"username", "first_name",
 		"last_name", "\"group\"",
 		"github_username", "hashed_password").
 		From(u.tableName).
-		Where(u.conditions(filter)).
-		Limit(filter.Limit).   // max = filter.Limit numbers
-		Offset(filter.Offset). //  min = filter.Offset + 1
+		Where(u.conditions(filter))
+
+	if filter.Limit != 0 {
+		builder = builder.Limit(filter.Limit)
+	}
+	if filter.Offset != 0 {
+		builder = builder.Offset(filter.Offset)
+	}
+
+	s, _, _ := builder.PlaceholderFormat(sq.Dollar).ToSql()
+	fmt.Println(s)
+
+	rows, err := builder.
 		PlaceholderFormat(sq.Dollar).RunWith(u.db).QueryContext(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("error while performing sql request: %w", err)
@@ -62,6 +72,7 @@ func (u *userStore) GetUsers(ctx context.Context, filter *UserFilter) ([]*model.
 			u.logger.Error("error while closing sql rows", zap.Error(err))
 		}
 	}(rows)
+
 	users := make([]*model.User, 0)
 	for rows.Next() {
 		user := &model.User{}
@@ -83,6 +94,7 @@ func (u *userStore) GetCountByFilter(ctx context.Context, filter *UserFilter) (i
 	if err := sq.Select("COUNT(1)").
 		From(u.tableName).
 		Where(u.conditions(filter)).
+		PlaceholderFormat(sq.Dollar).
 		RunWith(u.db).QueryRowContext(ctx).Scan(&count); err != nil {
 		return 0, fmt.Errorf("error while scanning sql row: %w", err)
 	}
@@ -92,6 +104,7 @@ func (u *userStore) GetCountByFilter(ctx context.Context, filter *UserFilter) (i
 func (u *userStore) DeleteByFilter(ctx context.Context, filter *UserFilter) error {
 	panic("TODO me")
 }
+
 func (u *userStore) Insert(ctx context.Context, user *model.User) error {
 	_, err := sq.Insert("users").
 		Columns("id", "role",
@@ -108,6 +121,7 @@ func (u *userStore) Insert(ctx context.Context, user *model.User) error {
 		RunWith(u.db).ExecContext(ctx)
 	return err
 }
+
 func (u *userStore) Update(ctx context.Context, user *model.User) error {
 	panic("TODO me")
 }
@@ -122,8 +136,14 @@ func (u *userStore) conditions(filter *UserFilter) sq.Sqlizer {
 		emailEq := make(sq.Eq)
 		usernameEq[u.tableName+".username"] = filter.Usernames
 		emailEq[u.tableName+".email"] = filter.Emails
+
+		if len(eq) == 0 {
+			return sq.Or{usernameEq, emailEq}
+		}
+
 		return sq.Or{eq, usernameEq, emailEq}
 	}
+
 	if len(filter.Usernames) != 0 {
 		eq[u.tableName+".username"] = filter.Usernames
 	}

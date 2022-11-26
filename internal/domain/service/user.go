@@ -9,8 +9,8 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"be-project-monitoring/internal/api"
-	"be-project-monitoring/internal/domain/repository"
 	"be-project-monitoring/internal/domain/model"
+	"be-project-monitoring/internal/domain/repository"
 	ierr "be-project-monitoring/internal/errors"
 )
 

@@ -76,24 +76,36 @@ func (u *projectStore) GetProjects(ctx context.Context, filter *ProjectFilter) (
 	return nil, nil
 }
 
-func (u *projectStore) conditions(filter *UserFilter) sq.Sqlizer {
+func (u *projectStore) GetCountByFilter(ctx context.Context, filter *ProjectFilter) (int, error) {
+	var count int
+	// if err := sq.Select("COUNT(1)").
+	// 	From(u.tableName).
+	// 	Where(u.conditions(filter)).
+	// 	PlaceholderFormat(sq.Dollar).
+	// 	RunWith(u.db).QueryRowContext(ctx).Scan(&count); err != nil {
+	// 	return 0, fmt.Errorf("error while scanning sql row: %w", err)
+	// }
+	return count, nil
+}
+
+func (u *projectStore) conditions(filter *ProjectFilter) sq.Sqlizer {
 	eq := make(sq.Eq)
-	if filter.IDs != nil {
-		eq[u.tableName+".id"] = filter.IDs
-	}
-	if len(filter.Usernames) != 0 && len(filter.Emails) != 0 {
-		usernameEq := make(sq.Eq)
-		emailEq := make(sq.Eq)
-		usernameEq[u.tableName+".username"] = filter.Usernames
-		emailEq[u.tableName+".email"] = filter.Emails
-		return sq.Or{eq, usernameEq, emailEq}
-	}
-	if len(filter.Usernames) != 0 {
-		eq[u.tableName+".username"] = filter.Usernames
-	}
-	if len(filter.Emails) != 0 {
-		eq[u.tableName+".email"] = filter.Emails
-	}
+	// if filter.IDs != nil {
+	// 	eq[u.tableName+".id"] = filter.IDs
+	// }
+	// if len(filter.Usernames) != 0 && len(filter.Emails) != 0 {
+	// 	usernameEq := make(sq.Eq)
+	// 	emailEq := make(sq.Eq)
+	// 	usernameEq[u.tableName+".username"] = filter.Usernames
+	// 	emailEq[u.tableName+".email"] = filter.Emails
+	// 	return sq.Or{eq, usernameEq, emailEq}
+	// }
+	// if len(filter.Usernames) != 0 {
+	// 	eq[u.tableName+".username"] = filter.Usernames
+	// }
+	// if len(filter.Emails) != 0 {
+	// 	eq[u.tableName+".email"] = filter.Emails
+	// }
 
 	return eq
 }

@@ -15,7 +15,7 @@ type (
 		Offset   int    `json:"offset"` //сколько записей опустить
 		Limit    int    `json:"limit"`  //сколько записей подать
 	}
-	
+
 	getUserResp struct {
 		Users []*model.User `json:"users"`
 		Count int           `json:"count"`

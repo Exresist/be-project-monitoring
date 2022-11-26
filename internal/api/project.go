@@ -1,37 +1,33 @@
 package api
 
 import (
-	"net/http"
-	"time"
+	"be-project-monitoring/internal/domain/model"
+	"net/http"	
 
 	"github.com/gin-gonic/gin"
 )
 
 type (
-	getProjReq struct {
-		name string `json :"name"`
+	GetProjReq struct {
+		Name string `json:"name"`
+		Offset   int    `json:"offset"` //сколько записей опустить
+		Limit    int    `json:"limit"`  //сколько записей подать
 	}
 	getProjResp struct {
-		ID          int       `json :"id"`
-		Name        string    `json :"name"`
-		Description string    `json :"description"`
-		PhotoURL    string    `json :"photo_url"`
-		ReportURL   string    `json :"report_url"`
-		ReportName  string    `json :"report_name"`
-		RepoURL     string    `json :"repo_url"`
-		ActiveTo    time.Time `json :"active_to"`
+		Projects []*model.Project
+		Count int
 	}
 )
 
 func (s *Server) getProjects(c *gin.Context) {
-	projReq := &getProjReq{}
-	projReq.name = c.Query("name")
+	projReq := &GetProjReq{}
+	projReq.Name = c.Query("name")
 
-	projects, err := s.projSvc.GetProjects(c.Request.Context(), projReq.name)
+	projects, count, err := s.projSvc.GetProjects(c.Request.Context(), projReq)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, projects)
+	c.JSON(http.StatusOK, getProjResp{Projects: projects, Count: count})
 }
