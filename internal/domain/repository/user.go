@@ -9,6 +9,7 @@ import (
 	sq "github.com/Masterminds/squirrel"
 	"go.uber.org/zap"
 
+	"be-project-monitoring/internal/db"
 	"be-project-monitoring/internal/domain/model"
 	ierr "be-project-monitoring/internal/errors"
 )
@@ -41,6 +42,7 @@ func (u *userStore) GetUser(ctx context.Context, filter *UserFilter) (*model.Use
 }
 
 func (u *userStore) GetUsers(ctx context.Context, filter *UserFilter) ([]*model.User, error) {
+	filter.Limit = db.NormalizeLimit(filter.Limit)
 	builder := sq.Select(
 		"id", "role",
 		"color_code", "email",
@@ -58,7 +60,7 @@ func (u *userStore) GetUsers(ctx context.Context, filter *UserFilter) ([]*model.
 	}
 
 	s, _, _ := builder.PlaceholderFormat(sq.Dollar).ToSql()
-	fmt.Println(s)
+	u.logger.Debug(s)	
 
 	rows, err := builder.
 		PlaceholderFormat(sq.Dollar).RunWith(u.db).QueryContext(ctx)

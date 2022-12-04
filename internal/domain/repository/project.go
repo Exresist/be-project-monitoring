@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"be-project-monitoring/internal/db"
 	"be-project-monitoring/internal/domain/model"
 	ierr "be-project-monitoring/internal/errors"
 	"context"
@@ -26,6 +27,7 @@ func NewProjectStore(db *sql.DB, tableName string, logger *zap.SugaredLogger) *p
 	}
 }
 
+// by ID escho nado
 func (u *projectStore) GetProject(ctx context.Context, filter *ProjectFilter) (*model.Project, error) {
 	users, err := u.GetProjects(ctx, filter.WithPaginator(1, 0))
 	switch {
@@ -39,6 +41,7 @@ func (u *projectStore) GetProject(ctx context.Context, filter *ProjectFilter) (*
 }
 
 func (u *projectStore) GetProjects(ctx context.Context, filter *ProjectFilter) ([]*model.Project, error) {
+	filter.Limit = db.NormalizeLimit(filter.Limit)
 	// rows, err := sq.Select(
 	// 	"id", "role",
 	// 	"color_code", "email",

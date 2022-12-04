@@ -11,7 +11,7 @@ func (s *projectService) GetProjects(ctx context.Context, projReq *api.GetProjRe
 	
 	filter := repository.NewProjectFilter().ByProjectNames(projReq.Name)
 	filter.Limit = uint64(projReq.Limit)
-	filter.Offset = uint64(projReq.Offset)
+	filter.Offset = uint64(projReq.Offset)	
 	count, err := s.projectStore.GetCountByFilter(ctx, filter)
 	if err != nil {
 		return nil, 0, err
