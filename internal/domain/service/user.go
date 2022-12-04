@@ -8,15 +8,14 @@ import (
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 
-	"be-project-monitoring/internal/domain"
+	"be-project-monitoring/internal/api"
 	"be-project-monitoring/internal/domain/model"
+	"be-project-monitoring/internal/domain/repository"
 	ierr "be-project-monitoring/internal/errors"
 )
 
 func (s *userService) CreateUser(ctx context.Context, user *model.User) (*model.User, string, error) {
-	found, err := s.userStore.GetUser(ctx, domain.NewUserFilter().
-		ByEmails(user.Email).
-		ByUsernames(user.Username))
+	found, err := s.userStore.GetUser(ctx, repository.NewUserFilter())
 	if err != nil && !errors.Is(err, ierr.ErrUserNotFound) {
 		return nil, "", err
 	}
@@ -48,7 +47,7 @@ func (s *userService) CreateUser(ctx context.Context, user *model.User) (*model.
 }
 
 func (s *userService) AuthUser(ctx context.Context, username, password string) (string, error) {
-	user, err := s.userStore.GetUser(ctx, domain.NewUserFilter().ByUsernames(username))
+	user, err := s.userStore.GetUser(ctx, repository.NewUserFilter().ByUsernames(username))
 	if err != nil {
 		return "", fmt.Errorf("error while getting user: %w", err)
 	}
@@ -56,4 +55,23 @@ func (s *userService) AuthUser(ctx context.Context, username, password string) (
 		return "", err
 	}
 	return model.GenerateToken(user)
+}
+
+func (s *userService) GetUsers(ctx context.Context, userReq *api.GetUserReq) ([]*model.User, int, error) {
+
+	filter := repository.NewUserFilter().ByUsernames(userReq.Username).ByEmails(userReq.Email)
+	filter.Limit = uint64(userReq.Limit)
+	filter.Offset = uint64(userReq.Offset)
+
+	count, err := s.userStore.GetCountByFilter(ctx, filter)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	users, err := s.userStore.GetUsers(ctx, filter)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return users, count, nil
 }
