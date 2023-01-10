@@ -39,7 +39,7 @@ func (s *projectService) CreateProject(ctx context.Context, project *model.Proje
 	}
 
 	if found != nil {
-		return nil, ierr.ErrProjectNotFound //TODO already exists
+		return nil, ierr.ErrProjectNameAlreadyExists
 	}
 
 	projectUUID, err := uuid.NewRandom()
