@@ -4,7 +4,9 @@ import (
 	"be-project-monitoring/internal/api"
 	"be-project-monitoring/internal/domain/model"
 	"be-project-monitoring/internal/domain/repository"
+	ierr "be-project-monitoring/internal/errors"
 	"context"
+	"errors"
 )
 
 func (s *service) GetProjects(ctx context.Context, projReq *api.GetProjReq) ([]*model.Project, int, error) {
@@ -25,8 +27,27 @@ func (s *service) GetProjects(ctx context.Context, projReq *api.GetProjReq) ([]*
 	return projects, count, nil
 }
 
-func (s *service) CreateProject(ctx context.Context, project *model.Project) (*model.Project, error) {
-	return nil, nil
+func (s *service) CreateProject(ctx context.Context, projectReq *api.CreateProjectReq) (*model.Project, error) {
+	
+	project := &model.Project{
+		Name:        projectReq.Name,
+		Description: projectReq.Description,
+		ActiveTo:    projectReq.ActiveTo,
+		PhotoURL:   projectReq.PhotoURL,
+	}
+
+	found, err := s.repo.GetProject(ctx, repository.NewProjectFilter().
+		ByProjectNames(project.Name))
+	if err != nil && !errors.Is(err, ierr.ErrProjectNotFound) {
+		return nil, err
+	}
+
+	if found != nil {
+		return nil, ierr.ErrProjectNameAlreadyExists
+	}
+
+
+	return s.repo.InsertProject(ctx, project)
 }
 
 func (s *service) UpdateProject(ctx context.Context, project *model.Project) (*model.Project, error) {

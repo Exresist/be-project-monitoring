@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"be-project-monitoring/internal/db"
 	"be-project-monitoring/internal/domain/model"
 	ierr "be-project-monitoring/internal/errors"
 	"context"
@@ -8,7 +9,6 @@ import (
 	"fmt"
 
 	"github.com/AvraamMavridis/randomcolor"
-	sq "github.com/Masterminds/squirrel"
 	"go.uber.org/zap"
 )
 
@@ -25,17 +25,18 @@ func (r *Repository) GetUser(ctx context.Context, filter *UserFilter) (*model.Us
 }
 
 func (r *Repository) GetUsers(ctx context.Context, filter *UserFilter) ([]*model.User, error) {
+	filter.Limit = db.NormalizeLimit(filter.Limit)
 	rows, err := r.sq.Select(
-		"id", "role",
-		"color_code", "email",
-		"username", "first_name",
-		"last_name", "\"group\"",
-		"github_username", "hashed_password").
+		"u.id", "u.role",
+		"u.color_code", "u.email",
+		"u.username", "u.first_name",
+		"u.last_name", "\"u.group\"",
+		"u.github_username", "u.hashed_password").
 		From("users u").
 		Where(conditionsFromUserFilter(filter)).
 		Limit(filter.Limit).   // max = filter.Limit numbers
 		Offset(filter.Offset). //  min = filter.Offset + 1
-		PlaceholderFormat(sq.Dollar).RunWith(r.db).QueryContext(ctx)
+		QueryContext(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("error while performing sql request: %w", err)
 	}
@@ -49,12 +50,13 @@ func (r *Repository) GetUsers(ctx context.Context, filter *UserFilter) ([]*model
 	users := make([]*model.User, 0)
 	for rows.Next() {
 		user := &model.User{}
-		err = rows.Scan(&user.ID, &user.Role,
+		if err = rows.Scan(
+			&user.ID, &user.Role,
 			&user.ColorCode, &user.Email,
 			&user.Username, &user.FirstName,
 			&user.LastName, &user.Group,
-			&user.GithubUsername, &user.HashedPassword)
-		if err != nil {
+			&user.GithubUsername, &user.HashedPassword,
+		); err != nil {
 			return nil, fmt.Errorf("error while scanning sql row: %w", err)
 		}
 		users = append(users, user)
@@ -62,14 +64,20 @@ func (r *Repository) GetUsers(ctx context.Context, filter *UserFilter) ([]*model
 	return users, nil
 }
 
-// TODO:
 func (r *Repository) GetCountByFilter(ctx context.Context, filter *UserFilter) (int, error) {
-	panic("TODO me")
+	var count int
+	if err := r.sq.Select("COUNT(1)").
+		From("users u").
+		Where(conditionsFromUserFilter(filter)).
+		QueryRowContext(ctx).Scan(&count); err != nil {
+		return 0, fmt.Errorf("error while scanning sql row: %w", err)
+	}
+	return count, nil
 }
 func (r *Repository) DeleteByFilter(ctx context.Context, filter *UserFilter) error {
 	panic("TODO me")
 }
-func (r *Repository) Insert(ctx context.Context, user *model.User) error {
+func (r *Repository) InsertUser(ctx context.Context, user *model.User) error {
 	_, err := r.sq.Insert("users").
 		Columns("id", "role",
 			"color_code", "email",
@@ -81,8 +89,7 @@ func (r *Repository) Insert(ctx context.Context, user *model.User) error {
 			user.Username, user.FirstName,
 			user.LastName, user.Group,
 			user.GithubUsername, user.HashedPassword).
-		PlaceholderFormat(sq.Dollar).
-		RunWith(r.db).ExecContext(ctx)
+		ExecContext(ctx)
 	return err
 }
 func (r *Repository) Update(ctx context.Context, user *model.User) error {
