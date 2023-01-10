@@ -55,11 +55,14 @@ func main() {
 	var g = &run.Group{}
 
 	userStore := repository.NewUserStore(conn, "users", sugaredLogger)
-	svc := service.NewService(userStore)
+	userSvc := service.NewUserService(userStore)
+	projectStore := repository.NewProjectStore(conn, "projects", sugaredLogger)
+	projSvc := service.NewProjectService(projectStore)
 	api.New(
 		// api.WithServer(srv),
 		api.WithLogger(sugaredLogger),
-		api.WithService(svc),
+		api.WithUserService(userSvc),
+		api.WithProjectService(projSvc),
 		api.WithShutdownTimeout(cfg.ShutdownTimeout)).Run(g)
 
 	ctx, cancel := context.WithCancel(context.Background())
