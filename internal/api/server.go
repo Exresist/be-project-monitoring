@@ -1,6 +1,7 @@
 package api
 
 import (
+	"be-project-monitoring/internal/domain/model"
 	"context"
 	"fmt"
 	"net/http"
@@ -9,20 +10,21 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/oklog/run"
 	"go.uber.org/zap"
-
-	"be-project-monitoring/internal/domain/model"
 )
 
 type (
 	Server struct {
 		*http.Server
-		logger  *zap.SugaredLogger
-		userSvc userService
-		pmSvc   pmService
+		logger *zap.SugaredLogger
+		svc    Service
 
 		shutdownTimeout int
 	}
 
+	Service interface {
+		userService
+		pmService
+	}
 	userService interface {
 		VerifyToken(ctx context.Context, token string, toAllow ...model.UserRole) error
 		CreateUser(ctx context.Context, user *model.User) (*model.User, string, error)
@@ -106,9 +108,9 @@ func WithLogger(logger *zap.SugaredLogger) OptionFunc {
 	}
 }*/
 
-func WithService(svc userService) OptionFunc {
+func WithService(svc Service) OptionFunc {
 	return func(s *Server) {
-		s.userSvc = svc
+		s.svc = svc
 	}
 }
 

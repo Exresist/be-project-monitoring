@@ -1,6 +1,9 @@
 package repository
 
 import (
+	"be-project-monitoring/internal/domain"
+	"be-project-monitoring/internal/domain/model"
+	ierr "be-project-monitoring/internal/errors"
 	"context"
 	"database/sql"
 	"fmt"
@@ -8,10 +11,6 @@ import (
 	"github.com/AvraamMavridis/randomcolor"
 	sq "github.com/Masterminds/squirrel"
 	"go.uber.org/zap"
-
-	"be-project-monitoring/internal/domain"
-	"be-project-monitoring/internal/domain/model"
-	ierr "be-project-monitoring/internal/errors"
 )
 
 type userStore struct {
@@ -21,7 +20,7 @@ type userStore struct {
 	logger *zap.SugaredLogger
 }
 
-func NewUserStore(db *sql.DB, tableName string, logger *zap.SugaredLogger) domain.UserStore {
+func NewUserStore(db *sql.DB, tableName string, logger *zap.SugaredLogger) domain.Repository {
 	return &userStore{
 		db:        db,
 		tableName: tableName,
@@ -29,7 +28,7 @@ func NewUserStore(db *sql.DB, tableName string, logger *zap.SugaredLogger) domai
 	}
 }
 
-func (u *userStore) GetUser(ctx context.Context, filter *domain.UserFilter) (*model.User, error) {
+func (u *userStore) GetUser(ctx context.Context, filter *UserFilter) (*model.User, error) {
 	users, err := u.GetUsers(ctx, filter.WithPaginator(1, 0))
 	switch {
 	case err != nil:
@@ -41,7 +40,7 @@ func (u *userStore) GetUser(ctx context.Context, filter *domain.UserFilter) (*mo
 	}
 }
 
-func (u *userStore) GetUsers(ctx context.Context, filter *domain.UserFilter) ([]*model.User, error) {
+func (u *userStore) GetUsers(ctx context.Context, filter *UserFilter) ([]*model.User, error) {
 	rows, err := sq.Select(
 		"id", "role",
 		"color_code", "email",
@@ -80,10 +79,10 @@ func (u *userStore) GetUsers(ctx context.Context, filter *domain.UserFilter) ([]
 }
 
 // TODO:
-func (u *userStore) GetCountByFilter(ctx context.Context, filter *domain.UserFilter) (int, error) {
+func (u *userStore) GetCountByFilter(ctx context.Context, filter *UserFilter) (int, error) {
 	panic("TODO me")
 }
-func (u *userStore) DeleteByFilter(ctx context.Context, filter *domain.UserFilter) error {
+func (u *userStore) DeleteByFilter(ctx context.Context, filter *UserFilter) error {
 	panic("TODO me")
 }
 func (u *userStore) Insert(ctx context.Context, user *model.User) error {
@@ -106,7 +105,7 @@ func (u *userStore) Update(ctx context.Context, user *model.User) error {
 	panic("TODO me")
 }
 
-func (u *userStore) conditions(filter *domain.UserFilter) sq.Sqlizer {
+func (u *userStore) conditions(filter *UserFilter) sq.Sqlizer {
 	eq := make(sq.Eq)
 	if filter.IDs != nil {
 		eq[u.tableName+".id"] = filter.IDs

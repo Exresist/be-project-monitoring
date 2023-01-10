@@ -2,10 +2,10 @@ package service
 
 import "be-project-monitoring/internal/domain"
 
-type userService struct {
-	userStore domain.UserStore
+type service struct {
+	repo domain.Repository
 }
 
-func NewService(store domain.UserStore) *userService {
-	return &userService{userStore: store}
+func NewService(store domain.Repository) *service {
+	return &service{repo: store}
 }

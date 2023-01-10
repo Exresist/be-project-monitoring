@@ -1,15 +1,14 @@
 package service
 
 import (
+	"be-project-monitoring/internal/domain/model"
+	ierr "be-project-monitoring/internal/errors"
 	"context"
 
 	"github.com/golang-jwt/jwt/v4"
-
-	"be-project-monitoring/internal/domain/model"
-	ierr "be-project-monitoring/internal/errors"
 )
 
-func (s *userService) VerifyToken(ctx context.Context, token string, toAllow ...model.UserRole) error {
+func (s *service) VerifyToken(ctx context.Context, token string, toAllow ...model.UserRole) error {
 	// Parsing token fields
 	claims, err := jwt.Parse(token, model.DecodeToken)
 	if err != nil {

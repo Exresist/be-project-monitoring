@@ -1,13 +1,12 @@
 package api
 
 import (
+	"be-project-monitoring/internal/domain/model"
 	"encoding/json"
 	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
-
-	"be-project-monitoring/internal/domain/model"
 )
 
 type (

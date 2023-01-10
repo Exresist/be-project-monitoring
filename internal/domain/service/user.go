@@ -1,20 +1,19 @@
 package service
 
 import (
+	"be-project-monitoring/internal/domain/model"
+	"be-project-monitoring/internal/domain/repository"
+	ierr "be-project-monitoring/internal/errors"
 	"context"
 	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
-
-	"be-project-monitoring/internal/domain"
-	"be-project-monitoring/internal/domain/model"
-	ierr "be-project-monitoring/internal/errors"
 )
 
-func (s *userService) CreateUser(ctx context.Context, user *model.User) (*model.User, string, error) {
-	found, err := s.userStore.GetUser(ctx, domain.NewUserFilter().
+func (s *service) CreateUser(ctx context.Context, user *model.User) (*model.User, string, error) {
+	found, err := s.repo.GetUser(ctx, repository.NewUserFilter().
 		ByEmails(user.Email).
 		ByUsernames(user.Username))
 	if err != nil && !errors.Is(err, ierr.ErrUserNotFound) {
@@ -39,7 +38,7 @@ func (s *userService) CreateUser(ctx context.Context, user *model.User) (*model.
 
 	user.ID = userUUID
 
-	if err = s.userStore.Insert(ctx, user); err != nil {
+	if err = s.repo.Insert(ctx, user); err != nil {
 		return nil, "", err
 	}
 
@@ -47,8 +46,8 @@ func (s *userService) CreateUser(ctx context.Context, user *model.User) (*model.
 	return user, token, err
 }
 
-func (s *userService) AuthUser(ctx context.Context, username, password string) (string, error) {
-	user, err := s.userStore.GetUser(ctx, domain.NewUserFilter().ByUsernames(username))
+func (s *service) AuthUser(ctx context.Context, username, password string) (string, error) {
+	user, err := s.repo.GetUser(ctx, repository.NewUserFilter().ByUsernames(username))
 	if err != nil {
 		return "", fmt.Errorf("error while getting user: %w", err)
 	}
