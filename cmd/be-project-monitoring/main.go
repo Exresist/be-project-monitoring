@@ -1,6 +1,10 @@
 package main
 
 import (
+	"be-project-monitoring/internal/api"
+	"be-project-monitoring/internal/db"
+	"be-project-monitoring/internal/domain/repository"
+	"be-project-monitoring/internal/domain/service"
 	"context"
 	"fmt"
 	"os"
@@ -11,11 +15,6 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/oklog/run"
 	"go.uber.org/zap"
-
-	"be-project-monitoring/internal/api"
-	"be-project-monitoring/internal/db"
-	"be-project-monitoring/internal/domain/repository"
-	"be-project-monitoring/internal/domain/service"
 )
 
 func main() {
@@ -54,15 +53,12 @@ func main() {
 	}*/
 	var g = &run.Group{}
 
-	userStore := repository.NewUserStore(conn, "users", sugaredLogger)
-	userSvc := service.NewUserService(userStore)
-	projectStore := repository.NewProjectStore(conn, "projects", sugaredLogger)
-	projSvc := service.NewProjectService(projectStore)
+	repo := repository.NewUserStore(conn, "users", sugaredLogger)
+	svc := service.NewService(repo)
 	api.New(
 		// api.WithServer(srv),
 		api.WithLogger(sugaredLogger),
-		api.WithUserService(userSvc),
-		api.WithProjectService(projSvc),
+		api.WithService(svc),
 		api.WithShutdownTimeout(cfg.ShutdownTimeout)).Run(g)
 
 	ctx, cancel := context.WithCancel(context.Background())

@@ -36,3 +36,22 @@ func (f *UserFilter) WithPaginator(limit, offset uint64) *UserFilter {
 	f.Paginator = db.NewPaginator(limit, offset)
 	return f
 }
+
+type ProjectFilter struct {
+	Names []string
+	*db.Paginator
+}
+
+func NewProjectFilter() *ProjectFilter {
+	return &ProjectFilter{Paginator: db.DefaultPaginator}
+}
+
+func (f *ProjectFilter) ByProjectNames(names ...string) *ProjectFilter {
+	f.Names = names
+	return f
+}
+
+func (f *ProjectFilter) WithPaginator(limit, offset uint64) *ProjectFilter {
+	f.Paginator = db.NewPaginator(limit, offset)
+	return f
+}

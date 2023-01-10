@@ -17,6 +17,16 @@ type (
 		PhotoURL    string    `json:"photo_url"`
 		RepoURL     string    `json:"repo_url"`
 	}
+
+	GetProjReq struct {
+		Name   string `json:"name"`
+		Offset int    `json:"offset"` //сколько записей опустить
+		Limit  int    `json:"limit"`  //сколько записей подать
+	}
+	getProjResp struct {
+		Projects []*model.Project
+		Count    int
+	}
 )
 
 func (s *Server) createProject(c *gin.Context) {

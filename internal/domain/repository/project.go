@@ -5,31 +5,14 @@ import (
 	"be-project-monitoring/internal/domain/model"
 	ierr "be-project-monitoring/internal/errors"
 	"context"
-	"database/sql"
 	"fmt"
 
 	sq "github.com/Masterminds/squirrel"
-	"go.uber.org/zap"
 )
 
-type projectStore struct {
-	db        *sql.DB
-	tableName string
-
-	logger *zap.SugaredLogger
-}
-
-func NewProjectStore(db *sql.DB, tableName string, logger *zap.SugaredLogger) *projectStore {
-	return &projectStore{
-		db:        db,
-		tableName: tableName,
-		logger:    logger,
-	}
-}
-
 // by ID escho nado
-func (u *projectStore) GetProject(ctx context.Context, filter *ProjectFilter) (*model.Project, error) {
-	users, err := u.GetProjects(ctx, filter.WithPaginator(1, 0))
+func (r *Repository) GetProject(ctx context.Context, filter *ProjectFilter) (*model.Project, error) {
+	users, err := r.GetProjects(ctx, filter.WithPaginator(1, 0))
 	switch {
 	case err != nil:
 		return nil, fmt.Errorf("failed to get project by id: %w", err)
@@ -40,7 +23,7 @@ func (u *projectStore) GetProject(ctx context.Context, filter *ProjectFilter) (*
 	}
 }
 
-func (u *projectStore) GetProjects(ctx context.Context, filter *ProjectFilter) ([]*model.Project, error) {
+func (r *Repository) GetProjects(ctx context.Context, filter *ProjectFilter) ([]*model.Project, error) {
 	filter.Limit = db.NormalizeLimit(filter.Limit)
 	// rows, err := sq.Select(
 	// 	"id", "role",
@@ -48,11 +31,11 @@ func (u *projectStore) GetProjects(ctx context.Context, filter *ProjectFilter) (
 	// 	"username", "first_name",
 	// 	"last_name", "\"group\"",
 	// 	"github_username", "hashed_password").
-	// 	From(u.tableName).
-	// 	Where(u.conditions(filter)).
+	// 	From(r.tableName).
+	// 	Where(r.conditions(filter)).
 	// 	Limit(filter.Limit).   // max = filter.Limit numbers
 	// 	Offset(filter.Offset). //  min = filter.Offset + 1
-	// 	PlaceholderFormat(sq.Dollar).RunWith(u.db).QueryContext(ctx)
+	// 	PlaceholderFormat(sq.Dollar).RunWith(r.db).QueryContext(ctx)
 	// if err != nil {
 	// 	return nil, fmt.Errorf("error while performing sql request: %w", err)
 	// }
@@ -60,7 +43,7 @@ func (u *projectStore) GetProjects(ctx context.Context, filter *ProjectFilter) (
 	// defer func(res *sql.Rows) {
 	// 	err = res.Close()
 	// 	if err != nil {
-	// 		u.logger.Error("error while closing sql rows", zap.Error(err))
+	// 		r.logger.Error("error while closing sql rows", zap.Error(err))
 	// 	}
 	// }(rows)
 	// users := make([]*model.Project, 0)
@@ -79,7 +62,7 @@ func (u *projectStore) GetProjects(ctx context.Context, filter *ProjectFilter) (
 	return nil, nil
 }
 
-func (u *projectStore) GetCountByFilter(ctx context.Context, filter *ProjectFilter) (int, error) {
+func (r *Repository) GetProjectCountByFilter(ctx context.Context, filter *ProjectFilter) (int, error) {
 	var count int
 	// if err := sq.Select("COUNT(1)").
 	// 	From(u.tableName).
@@ -91,7 +74,7 @@ func (u *projectStore) GetCountByFilter(ctx context.Context, filter *ProjectFilt
 	return count, nil
 }
 
-func (u *projectStore) conditions(filter *ProjectFilter) sq.Sqlizer {
+func (r *Repository) conditions(filter *ProjectFilter) sq.Sqlizer {
 	eq := make(sq.Eq)
 	// if filter.IDs != nil {
 	// 	eq[u.tableName+".id"] = filter.IDs
