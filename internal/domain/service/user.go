@@ -15,7 +15,9 @@ import (
 )
 
 func (s *userService) CreateUser(ctx context.Context, user *model.User) (*model.User, string, error) {
-	found, err := s.userStore.GetUser(ctx, repository.NewUserFilter())
+	found, err := s.userStore.GetUser(ctx, repository.NewUserFilter().
+		ByEmails(user.Email).
+		ByUsernames(user.Username))
 	if err != nil && !errors.Is(err, ierr.ErrUserNotFound) {
 		return nil, "", err
 	}

@@ -58,6 +58,7 @@ func main() {
 	userSvc := service.NewUserService(userStore)
 	projectStore := repository.NewProjectStore(conn, "projects", sugaredLogger)
 	projSvc := service.NewProjectService(projectStore)
+	
 	api.New(
 		// api.WithServer(srv),
 		api.WithLogger(sugaredLogger),
@@ -84,4 +85,5 @@ func main() {
 	})
 
 	sugaredLogger.Error("successful shutdown", zap.Error(g.Run()))
+	//change
 }

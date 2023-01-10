@@ -32,5 +32,8 @@ func (s *Server) getProjects(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, getProjResp{Projects: projects, Count: count})
+	c.JSON(http.StatusOK, getProjResp{
+		Projects: projects,
+		Count:    count,
+	})
 }
