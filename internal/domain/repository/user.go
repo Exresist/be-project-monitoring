@@ -1,7 +1,6 @@
 package repository
 
 import (
-	"be-project-monitoring/internal/domain"
 	"be-project-monitoring/internal/domain/model"
 	ierr "be-project-monitoring/internal/errors"
 	"context"
@@ -13,23 +12,8 @@ import (
 	"go.uber.org/zap"
 )
 
-type userStore struct {
-	db        *sql.DB
-	tableName string
-
-	logger *zap.SugaredLogger
-}
-
-func NewUserStore(db *sql.DB, tableName string, logger *zap.SugaredLogger) domain.Repository {
-	return &userStore{
-		db:        db,
-		tableName: tableName,
-		logger:    logger,
-	}
-}
-
-func (u *userStore) GetUser(ctx context.Context, filter *UserFilter) (*model.User, error) {
-	users, err := u.GetUsers(ctx, filter.WithPaginator(1, 0))
+func (r *Repository) GetUser(ctx context.Context, filter *UserFilter) (*model.User, error) {
+	users, err := r.GetUsers(ctx, filter.WithPaginator(1, 0))
 	switch {
 	case err != nil:
 		return nil, fmt.Errorf("failed to get user by id: %w", err)
@@ -40,18 +24,18 @@ func (u *userStore) GetUser(ctx context.Context, filter *UserFilter) (*model.Use
 	}
 }
 
-func (u *userStore) GetUsers(ctx context.Context, filter *UserFilter) ([]*model.User, error) {
-	rows, err := sq.Select(
+func (r *Repository) GetUsers(ctx context.Context, filter *UserFilter) ([]*model.User, error) {
+	rows, err := r.sq.Select(
 		"id", "role",
 		"color_code", "email",
 		"username", "first_name",
 		"last_name", "\"group\"",
 		"github_username", "hashed_password").
-		From(u.tableName).
-		Where(u.conditions(filter)).
+		From("users u").
+		Where(conditionsFromUserFilter(filter)).
 		Limit(filter.Limit).   // max = filter.Limit numbers
 		Offset(filter.Offset). //  min = filter.Offset + 1
-		PlaceholderFormat(sq.Dollar).RunWith(u.db).QueryContext(ctx)
+		PlaceholderFormat(sq.Dollar).RunWith(r.db).QueryContext(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("error while performing sql request: %w", err)
 	}
@@ -59,7 +43,7 @@ func (u *userStore) GetUsers(ctx context.Context, filter *UserFilter) ([]*model.
 	defer func(res *sql.Rows) {
 		err = res.Close()
 		if err != nil {
-			u.logger.Error("error while closing sql rows", zap.Error(err))
+			r.logger.Error("error while closing sql rows", zap.Error(err))
 		}
 	}(rows)
 	users := make([]*model.User, 0)
@@ -79,14 +63,14 @@ func (u *userStore) GetUsers(ctx context.Context, filter *UserFilter) ([]*model.
 }
 
 // TODO:
-func (u *userStore) GetCountByFilter(ctx context.Context, filter *UserFilter) (int, error) {
+func (r *Repository) GetCountByFilter(ctx context.Context, filter *UserFilter) (int, error) {
 	panic("TODO me")
 }
-func (u *userStore) DeleteByFilter(ctx context.Context, filter *UserFilter) error {
+func (r *Repository) DeleteByFilter(ctx context.Context, filter *UserFilter) error {
 	panic("TODO me")
 }
-func (u *userStore) Insert(ctx context.Context, user *model.User) error {
-	_, err := sq.Insert("users").
+func (r *Repository) Insert(ctx context.Context, user *model.User) error {
+	_, err := r.sq.Insert("users").
 		Columns("id", "role",
 			"color_code", "email",
 			"username", "first_name",
@@ -98,31 +82,9 @@ func (u *userStore) Insert(ctx context.Context, user *model.User) error {
 			user.LastName, user.Group,
 			user.GithubUsername, user.HashedPassword).
 		PlaceholderFormat(sq.Dollar).
-		RunWith(u.db).ExecContext(ctx)
+		RunWith(r.db).ExecContext(ctx)
 	return err
 }
-func (u *userStore) Update(ctx context.Context, user *model.User) error {
+func (r *Repository) Update(ctx context.Context, user *model.User) error {
 	panic("TODO me")
-}
-
-func (u *userStore) conditions(filter *UserFilter) sq.Sqlizer {
-	eq := make(sq.Eq)
-	if filter.IDs != nil {
-		eq[u.tableName+".id"] = filter.IDs
-	}
-	if len(filter.Usernames) != 0 && len(filter.Emails) != 0 {
-		usernameEq := make(sq.Eq)
-		emailEq := make(sq.Eq)
-		usernameEq[u.tableName+".username"] = filter.Usernames
-		emailEq[u.tableName+".email"] = filter.Emails
-		return sq.Or{eq, usernameEq, emailEq}
-	}
-	if filter.Usernames != nil {
-		eq[u.tableName+".username"] = filter.Usernames
-	}
-	if filter.Emails != nil {
-		eq[u.tableName+".email"] = filter.Emails
-	}
-
-	return eq
 }

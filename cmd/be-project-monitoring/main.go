@@ -53,7 +53,7 @@ func main() {
 	}*/
 	var g = &run.Group{}
 
-	repo := repository.NewUserStore(conn, "users", sugaredLogger)
+	repo := repository.NewRepository(conn, sugaredLogger)
 	svc := service.NewService(repo)
 	api.New(
 		// api.WithServer(srv),

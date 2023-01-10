@@ -23,15 +23,16 @@ type (
 
 	Service interface {
 		userService
-		pmService
+		projectService
 	}
 	userService interface {
 		VerifyToken(ctx context.Context, token string, toAllow ...model.UserRole) error
 		CreateUser(ctx context.Context, user *model.User) (*model.User, string, error)
 		AuthUser(ctx context.Context, username, password string) (string, error)
+		GetUsers(ctx context.Context, userReq *GetUserReq) ([]*model.User, int, error)
 	}
 
-	pmService interface {
+	projectService interface {
 		CreateProject(ctx context.Context, project *model.Project) (*model.Project, error)
 		UpdateProject(ctx context.Context, project *model.Project) (*model.Project, error)
 		DeleteProject(ctx context.Context, project *model.Project) error

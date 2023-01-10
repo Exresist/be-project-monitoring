@@ -1,12 +1,11 @@
 package api
 
 import (
+	"be-project-monitoring/internal/domain/model"
 	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
-
-	"be-project-monitoring/internal/domain/model"
 )
 
 func (s *Server) authMiddleware(toAllow ...model.UserRole) func(c *gin.Context) {
@@ -25,7 +24,7 @@ func (s *Server) authMiddleware(toAllow ...model.UserRole) func(c *gin.Context) 
 			return
 		}
 
-		err := s.userSvc.VerifyToken(ctx, parts[1], toAllow...)
+		err := s.svc.VerifyToken(ctx, parts[1], toAllow...)
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, "unauthorized")
 			return

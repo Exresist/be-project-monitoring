@@ -30,7 +30,7 @@ func (s *Server) getUsers(c *gin.Context) {
 	userReq.Offset, _ = strconv.Atoi(c.Query("offset"))
 	userReq.Limit, _ = strconv.Atoi(c.Query("limit"))
 
-	users, count, err := s.userSvc.GetUsers(c.Request.Context(), userReq)
+	users, count, err := s.svc.GetUsers(c.Request.Context(), userReq)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return

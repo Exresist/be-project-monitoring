@@ -1,6 +1,7 @@
 package service
 
 import (
+	"be-project-monitoring/internal/api"
 	"be-project-monitoring/internal/domain/model"
 	"be-project-monitoring/internal/domain/repository"
 	ierr "be-project-monitoring/internal/errors"
@@ -55,4 +56,23 @@ func (s *service) AuthUser(ctx context.Context, username, password string) (stri
 		return "", err
 	}
 	return model.GenerateToken(user)
+}
+
+func (s *service) GetUsers(ctx context.Context, userReq *api.GetUserReq) ([]*model.User, int, error) {
+
+	filter := repository.NewUserFilter().ByUsernames(userReq.Username).ByEmails(userReq.Email)
+	filter.Limit = uint64(userReq.Limit)
+	filter.Offset = uint64(userReq.Offset)
+
+	count, err := s.repo.GetCountByFilter(ctx, filter)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	users, err := s.repo.GetUsers(ctx, filter)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return users, count, nil
 }
