@@ -64,13 +64,12 @@ func New(opts ...OptionFunc) *Server {
 	pmRtr := apiRtr.Group("/pm", s.authMiddleware(model.ProjectManager))
 
 	// api/pm/project
-	pmRtr.PUT("/project", s.createProject)
+	pmRtr.POST("/project", s.createProject)
 
 	// /api/admin
 	adminRtr := apiRtr.Group("/admin", s.authMiddleware(model.Admin))
 
 	// /api/admin/users
-	// TODO
 	adminRtr.GET("/users", s.getUsers)
 	// /api/admin/projects
 	adminRtr.GET("/projects", s.getProjects)

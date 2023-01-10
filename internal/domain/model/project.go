@@ -4,11 +4,11 @@ import "time"
 
 type Project struct {
 	ID          int
-	Name        string
-	Description string
-	PhotoURL    string
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	PhotoURL    string `json:"photo_url"`
 	ReportURL   string
 	ReportName  string
-	RepoURL     string
-	ActiveTo    time.Time
+	RepoURL     string    `json:"repo_url"`
+	ActiveTo    time.Time `json:"active_to"`
 }

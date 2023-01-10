@@ -1,8 +1,8 @@
 package domain
 
 import (
-	"context"	
-	
+	"context"
+
 	"be-project-monitoring/internal/domain/model"
 	"be-project-monitoring/internal/domain/repository"
 )
@@ -16,7 +16,7 @@ type (
 
 		Insert(ctx context.Context, user *model.User) error
 		Update(ctx context.Context, user *model.User) error
-	}	
+	}
 
 	ProjectStore interface {
 		GetProject(ctx context.Context, filter *repository.ProjectFilter) (*model.Project, error)
@@ -24,11 +24,7 @@ type (
 		GetCountByFilter(ctx context.Context, filter *repository.ProjectFilter) (int, error)
 		//DeleteByFilter(ctx context.Context, filter *ProjectFilter) error
 
-		//Insert(ctx context.Context, user *model.User) error
+		Insert(ctx context.Context, user *model.Project) error
 		//Update(ctx context.Context, user *model.User) error
-	}	
-
+	}
 )
-
-
-

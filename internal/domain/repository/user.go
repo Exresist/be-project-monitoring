@@ -31,39 +31,42 @@ func NewUserStore(db *sql.DB, tableName string, logger *zap.SugaredLogger) *user
 
 func (u *userStore) GetUser(ctx context.Context, filter *UserFilter) (*model.User, error) {
 	users, err := u.GetUsers(ctx, filter.WithPaginator(1, 0))
-	switch {
-	case err != nil:
+	if err != nil{
 		return nil, fmt.Errorf("failed to get user by id: %w", err)
-	case len(users) == 0:
-		return nil, ierr.ErrUserNotFound
-	default:
-		return users[0], nil
 	}
+	if len(users) == 0{
+		return nil, ierr.ErrUserNotFound
+	}
+	return users[0], nil
 }
 
 func (u *userStore) GetUsers(ctx context.Context, filter *UserFilter) ([]*model.User, error) {
 	filter.Limit = db.NormalizeLimit(filter.Limit)
-	builder := sq.Select(
+	rows, err := sq.Select(
 		"id", "role",
 		"color_code", "email",
 		"username", "first_name",
 		"last_name", "\"group\"",
 		"github_username", "hashed_password").
 		From(u.tableName).
-		Where(u.conditions(filter))
-
-	if filter.Limit != 0 {
-		builder = builder.Limit(filter.Limit)
-	}
-	if filter.Offset != 0 {
-		builder = builder.Offset(filter.Offset)
-	}
-
-	s, _, _ := builder.PlaceholderFormat(sq.Dollar).ToSql()
-	u.logger.Debug(s)	
-
-	rows, err := builder.
+		Where(u.conditions(filter)).
+		Limit(filter.Limit).   // max = filter.Limit numbers
+		Offset(filter.Offset). //  min = filter.Offset + 1
 		PlaceholderFormat(sq.Dollar).RunWith(u.db).QueryContext(ctx)
+
+	// if filter.Limit != 0 {
+	// 	builder = builder.Limit(filter.Limit)
+	// }
+	// if filter.Offset != 0 {
+	// 	builder = builder.Offset(filter.Offset)
+	// }
+
+	// s, _, _ := builder.PlaceholderFormat(sq.Dollar).ToSql()
+	// u.logger.Debug(s)
+
+	// rows, err := builder.
+	// 	PlaceholderFormat(sq.Dollar).RunWith(u.db).QueryContext(ctx)
+
 	if err != nil {
 		return nil, fmt.Errorf("error while performing sql request: %w", err)
 	}
