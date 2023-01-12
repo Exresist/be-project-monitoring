@@ -30,7 +30,7 @@ type (
 	}
 
 	getProjResp struct {
-		Projects []*model.Project
+		Projects []model.Project
 		Count    int
 	}
 

@@ -21,11 +21,11 @@ func (r *Repository) GetProject(ctx context.Context, filter *ProjectFilter) (*mo
 	case len(users) == 0:
 		return nil, ierr.ErrProjectNotFound
 	default:
-		return users[0], nil
+		return &users[0], nil
 	}
 }
 
-func (r *Repository) GetProjects(ctx context.Context, filter *ProjectFilter) ([]*model.Project, error) {
+func (r *Repository) GetProjects(ctx context.Context, filter *ProjectFilter) ([]model.Project, error) {
 	filter.Limit = db.NormalizeLimit(filter.Limit)
 	rows, err := sq.Select(
 		"p.id", "p.name",
@@ -47,9 +47,9 @@ func (r *Repository) GetProjects(ctx context.Context, filter *ProjectFilter) ([]
 			r.logger.Error("error while closing sql rows", zap.Error(err))
 		}
 	}(rows)
-	projects := make([]*model.Project, 0)
+	projects := make([]model.Project, 0)
 	for rows.Next() {
-		project := &model.Project{}
+		project := model.Project{}
 		if err = rows.Scan(
 			&project.ID, &project.Name,
 			&project.Description, &project.PhotoURL,

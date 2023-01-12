@@ -20,11 +20,11 @@ func (r *Repository) GetUser(ctx context.Context, filter *UserFilter) (*model.Us
 	case len(users) == 0:
 		return nil, ierr.ErrUserNotFound
 	default:
-		return users[0], nil
+		return &users[0], nil
 	}
 }
 
-func (r *Repository) GetUsers(ctx context.Context, filter *UserFilter) ([]*model.User, error) {
+func (r *Repository) GetUsers(ctx context.Context, filter *UserFilter) ([]model.User, error) {
 	filter.Limit = db.NormalizeLimit(filter.Limit)
 	rows, err := r.sq.Select(
 		"u.id", "u.role",
@@ -47,9 +47,9 @@ func (r *Repository) GetUsers(ctx context.Context, filter *UserFilter) ([]*model
 			r.logger.Error("error while closing sql rows", zap.Error(err))
 		}
 	}(rows)
-	users := make([]*model.User, 0)
+	users := make([]model.User, 0)
 	for rows.Next() {
-		user := &model.User{}
+		user := model.User{}
 		if err = rows.Scan(
 			&user.ID, &user.Role,
 			&user.ColorCode, &user.Email,
@@ -92,6 +92,16 @@ func (r *Repository) InsertUser(ctx context.Context, user *model.User) error {
 		ExecContext(ctx)
 	return err
 }
-func (r *Repository) Update(ctx context.Context, user *model.User) error {
-	panic("TODO me")
+func (r *Repository) UpdateUser(ctx context.Context, user *model.User) error {
+	_, err := r.sq.Update("users").
+		SetMap(map[string]interface{}{
+			"role":            user.Role,
+			"username":        user.Username,
+			"first_name":      user.FirstName,
+			"last_name":       user.LastName,
+			"\"group\"":           user.Group,
+			"github_username": user.GithubUsername,
+			"hashed_password": user.HashedPassword,
+		}).ExecContext(ctx)
+	return err
 }

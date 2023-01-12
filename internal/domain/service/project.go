@@ -10,7 +10,7 @@ import (
 	ierr "be-project-monitoring/internal/errors"
 )
 
-func (s *service) GetProjects(ctx context.Context, projReq *api.GetProjReq) ([]*model.Project, int, error) {
+func (s *service) GetProjects(ctx context.Context, projReq *api.GetProjReq) ([]model.Project, int, error) {
 
 	filter := repository.NewProjectFilter().ByProjectNames(projReq.Name)
 	filter.Limit = uint64(projReq.Limit)

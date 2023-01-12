@@ -30,15 +30,15 @@ type (
 		VerifyToken(ctx context.Context, token string, toAllow ...model.UserRole) error
 		CreateUser(ctx context.Context, user *CreateUserReq) (*model.User, string, error)
 		AuthUser(ctx context.Context, username, password string) (string, error)
-		GetUsers(ctx context.Context, userReq *GetUserReq) ([]*model.User, int, error)
-		FindGithubUser(ctx context.Context, username string) bool
+		GetUsers(ctx context.Context, userReq *GetUserReq) ([]model.User, int, error)
+		UpdateUser(ctx context.Context, userReq *UpdateUserReq) (*model.User, error)
 	}
 
 	projectService interface {
 		CreateProject(ctx context.Context, project *CreateProjectReq) (*model.Project, error)
 		UpdateProject(ctx context.Context, project *model.Project) (*model.Project, error)
 		DeleteProject(ctx context.Context, project *model.Project) error
-		GetProjects(ctx context.Context, getProjReq *GetProjReq) ([]*model.Project, int, error)
+		GetProjects(ctx context.Context, getProjReq *GetProjReq) ([]model.Project, int, error)
 	}
 
 	participantService interface {
