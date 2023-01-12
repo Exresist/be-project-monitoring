@@ -20,6 +20,8 @@ var (
 	ErrEmailAlreadyExists          = errors.New("email already exists")
 	ErrUsernameAlreadyExists       = errors.New("username already exists")
 	ErrGithubUsernameAlreadyExists = errors.New("github username already exists")
+	ErrInvalidRole                 = errors.New("invalid role")
+	ErrProjectNameAlreadyExists    = errors.New("project name already exists")
 )
 
 // package ierr

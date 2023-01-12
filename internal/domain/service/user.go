@@ -13,7 +13,22 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-func (s *service) CreateUser(ctx context.Context, user *model.User) (*model.User, string, error) {
+func (s *service) CreateUser(ctx context.Context, userReq *api.CreateUserReq) (*model.User, string, error) {
+	if _, ok := model.UserRoles[userReq.Role]; !ok {
+		return nil, "", ierr.ErrInvalidRole
+	}
+
+	user := &model.User{
+		Role:           model.UserRole(userReq.Role),
+		Email:          userReq.Email,
+		Username:       userReq.Username,
+		FirstName:      userReq.FirstName,
+		LastName:       userReq.LastName,
+		Group:          userReq.Group,
+		GithubUsername: userReq.GithubUsername,
+		HashedPassword: hashPass(userReq.Password),
+	}
+
 	found, err := s.repo.GetUser(ctx, repository.NewUserFilter().
 		ByEmails(user.Email).
 		ByUsernames(user.Username))
@@ -39,7 +54,7 @@ func (s *service) CreateUser(ctx context.Context, user *model.User) (*model.User
 
 	user.ID = userUUID
 
-	if err = s.repo.Insert(ctx, user); err != nil {
+	if err = s.repo.InsertUser(ctx, user); err != nil {
 		return nil, "", err
 	}
 
@@ -75,4 +90,8 @@ func (s *service) GetUsers(ctx context.Context, userReq *api.GetUserReq) ([]*mod
 	}
 
 	return users, count, nil
+}
+func hashPass(pwd string) string {
+	hash, _ := bcrypt.GenerateFromPassword([]byte(pwd), bcrypt.DefaultCost)
+	return string(hash)
 }

@@ -6,19 +6,18 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"golang.org/x/crypto/bcrypt"
 )
 
 type (
-	createUserReq struct {
-		Email          string         `json:"email"`
-		Username       string         `json:"username"`
-		FirstName      string         `json:"first_name"`
-		LastName       string         `json:"last_name"`
-		Group          string         `json:"group"`
-		GithubUsername string         `json:"github_username"`
-		Password       string         `json:"password"`
-		Role           model.UserRole `json:"role"`
+	CreateUserReq struct {
+		Email          string `json:"email"`
+		Username       string `json:"username"`
+		FirstName      string `json:"first_name"`
+		LastName       string `json:"last_name"`
+		Group          string `json:"group"`
+		GithubUsername string `json:"github_username"`
+		Password       string `json:"password"`
+		Role           string `json:"role"`
 	}
 	authUserReq struct {
 		Username string `json:"username"`
@@ -34,24 +33,13 @@ type (
 var errField = "error"
 
 func (s *Server) register(c *gin.Context) {
-	userReq := &createUserReq{}
+	userReq := &CreateUserReq{}
 	if err := json.NewDecoder(c.Request.Body).Decode(userReq); err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return
 	}
 
-	newUser := &model.User{
-		Role:           userReq.Role,
-		Email:          userReq.Email,
-		Username:       userReq.Username,
-		FirstName:      userReq.FirstName,
-		LastName:       userReq.LastName,
-		Group:          userReq.Group,
-		GithubUsername: userReq.GithubUsername,
-		HashedPassword: hashPass(userReq.Password),
-	}
-
-	user, token, err := s.svc.CreateUser(c.Request.Context(), newUser)
+	user, token, err := s.svc.CreateUser(c.Request.Context(), userReq)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return
@@ -77,9 +65,4 @@ func (s *Server) auth(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, userResp{Token: token})
-}
-
-func hashPass(pwd string) string {
-	hash, _ := bcrypt.GenerateFromPassword([]byte(pwd), bcrypt.DefaultCost)
-	return string(hash)
 }

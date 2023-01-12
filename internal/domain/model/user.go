@@ -1,6 +1,8 @@
 package model
 
-import "github.com/google/uuid"
+import (
+	"github.com/google/uuid"
+)
 
 const (
 	Student        UserRole = "student"
@@ -24,8 +26,8 @@ type (
 	}
 )
 
-var RolesToString = map[UserRole]string{
-	Student:        "student",
-	Admin:          "admin",
-	ProjectManager: "project_manager", 
+var UserRoles = map[string]struct{}{
+	"student":         {},
+	"admin":           {},
+	"project_manager": {},
 }
