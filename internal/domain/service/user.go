@@ -62,6 +62,30 @@ func (s *service) CreateUser(ctx context.Context, userReq *api.CreateUserReq) (*
 	return user, token, err
 }
 
+func (s *service) UpdateUser(ctx context.Context, userReq *api.UpdateUserReq) (*model.User, error) {
+	oldUser, err := s.repo.GetUser(ctx, repository.NewUserFilter().ByIDs(userReq.ID))
+	if err != nil {
+		return nil, fmt.Errorf("error while getting user: %w", err)
+	}
+
+	newUser := &model.User{
+		ID:             userReq.ID,
+		Role:           model.UserRole(userReq.Role),
+		Username:       userReq.Username,
+		FirstName:      userReq.FirstName,
+		LastName:       userReq.LastName,
+		Group:          userReq.Group,
+		GithubUsername: userReq.GithubUsername,
+		HashedPassword: hashPass(userReq.Password),
+	}
+
+	if err := mergeUserFields(oldUser, newUser); err != nil {
+		return nil, err
+	}
+
+	return newUser, s.repo.UpdateUser(ctx, newUser)
+}
+
 func (s *service) AuthUser(ctx context.Context, username, password string) (string, error) {
 	user, err := s.repo.GetUser(ctx, repository.NewUserFilter().ByUsernames(username))
 	if err != nil {
@@ -73,7 +97,7 @@ func (s *service) AuthUser(ctx context.Context, username, password string) (stri
 	return model.GenerateToken(user)
 }
 
-func (s *service) GetUsers(ctx context.Context, userReq *api.GetUserReq) ([]*model.User, int, error) {
+func (s *service) GetUsers(ctx context.Context, userReq *api.GetUserReq) ([]model.User, int, error) {
 
 	filter := repository.NewUserFilter().ByUsernames(userReq.Username).ByEmails(userReq.Email)
 	filter.Limit = uint64(userReq.Limit)
@@ -94,4 +118,31 @@ func (s *service) GetUsers(ctx context.Context, userReq *api.GetUserReq) ([]*mod
 func hashPass(pwd string) string {
 	hash, _ := bcrypt.GenerateFromPassword([]byte(pwd), bcrypt.DefaultCost)
 	return string(hash)
+}
+
+func mergeUserFields(oldUser, newUser *model.User) error {
+	if newUser.Username == "" {
+		newUser.Username = oldUser.Username
+	}
+	if newUser.FirstName == "" {
+		newUser.FirstName = oldUser.FirstName
+	}
+	if newUser.LastName == "" {
+		newUser.LastName = oldUser.LastName
+	}
+	if newUser.Group == "" {
+		newUser.Group = oldUser.Group
+	}
+	if newUser.GithubUsername == "" {
+		newUser.GithubUsername = oldUser.GithubUsername
+	}
+	if newUser.HashedPassword == "" {
+		newUser.HashedPassword = oldUser.HashedPassword
+	}
+	if _, ok := model.UserRoles[string(newUser.Role)]; ok && newUser.Role == "" {
+		newUser.Role = model.UserRole(newUser.Role)
+	} else {
+		return ierr.ErrInvalidRole
+	}
+	return nil
 }
