@@ -74,7 +74,6 @@ func (s *service) AuthUser(ctx context.Context, username, password string) (stri
 }
 
 func (s *service) GetUsers(ctx context.Context, userReq *api.GetUserReq) ([]*model.User, int, error) {
-
 	filter := repository.NewUserFilter().ByUsernames(userReq.Username).ByEmails(userReq.Email)
 	filter.Limit = uint64(userReq.Limit)
 	filter.Offset = uint64(userReq.Offset)
@@ -91,6 +90,15 @@ func (s *service) GetUsers(ctx context.Context, userReq *api.GetUserReq) ([]*mod
 
 	return users, count, nil
 }
+
+func (s *service) FindGithubUser(ctx context.Context, username string) bool {
+	_, _, err := s.githubCl.Users.Get(ctx, username)
+	if err != nil {
+		return false
+	}
+	return true
+}
+
 func hashPass(pwd string) string {
 	hash, _ := bcrypt.GenerateFromPassword([]byte(pwd), bcrypt.DefaultCost)
 	return string(hash)

@@ -11,10 +11,12 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/google/go-github/v49/github"
 	"github.com/kelseyhightower/envconfig"
 	_ "github.com/lib/pq"
 	"github.com/oklog/run"
 	"go.uber.org/zap"
+	"golang.org/x/oauth2"
 )
 
 func main() {
@@ -54,9 +56,13 @@ func main() {
 	var g = &run.Group{}
 
 	repo := repository.NewRepository(conn, sugaredLogger)
-	svc := service.NewService(repo)
+	ts := oauth2.StaticTokenSource(
+		&oauth2.Token{AccessToken: cfg.GHToken},
+	)
+	tc := oauth2.NewClient(ctx, ts)
+	githubCl := github.NewClient(tc)
+	svc := service.NewService(repo, githubCl)
 	api.New(
-		// api.WithServer(srv),
 		api.WithLogger(sugaredLogger),
 		api.WithService(svc),
 		api.WithShutdownTimeout(cfg.ShutdownTimeout)).Run(g)

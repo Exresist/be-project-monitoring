@@ -1,12 +1,13 @@
 package service
 
 import (
+	"context"
+	"errors"
+
 	"be-project-monitoring/internal/api"
 	"be-project-monitoring/internal/domain/model"
 	"be-project-monitoring/internal/domain/repository"
 	ierr "be-project-monitoring/internal/errors"
-	"context"
-	"errors"
 )
 
 func (s *service) GetProjects(ctx context.Context, projReq *api.GetProjReq) ([]*model.Project, int, error) {
@@ -28,12 +29,12 @@ func (s *service) GetProjects(ctx context.Context, projReq *api.GetProjReq) ([]*
 }
 
 func (s *service) CreateProject(ctx context.Context, projectReq *api.CreateProjectReq) (*model.Project, error) {
-	
+
 	project := &model.Project{
 		Name:        projectReq.Name,
 		Description: projectReq.Description,
 		ActiveTo:    projectReq.ActiveTo,
-		PhotoURL:   projectReq.PhotoURL,
+		PhotoURL:    projectReq.PhotoURL,
 	}
 
 	found, err := s.repo.GetProject(ctx, repository.NewProjectFilter().
@@ -45,7 +46,6 @@ func (s *service) CreateProject(ctx context.Context, projectReq *api.CreateProje
 	if found != nil {
 		return nil, ierr.ErrProjectNameAlreadyExists
 	}
-
 
 	return s.repo.InsertProject(ctx, project)
 }

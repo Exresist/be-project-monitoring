@@ -63,7 +63,7 @@ func (r *Repository) GetProjects(ctx context.Context, filter *ProjectFilter) ([]
 	return projects, nil
 }
 
-func (r *Repository) GetProjectCountByFilter(ctx context.Context, filter *ProjectFilter) (int, error) {	
+func (r *Repository) GetProjectCountByFilter(ctx context.Context, filter *ProjectFilter) (int, error) {
 	var count int
 	if err := r.sq.Select("COUNT(1)").
 		From("projects p").

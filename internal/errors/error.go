@@ -2,7 +2,7 @@ package errors
 
 import "errors"
 
-// TODO:
+// TODO
 /*type InternalError struct {
 	Code int
 	Err  error
@@ -13,6 +13,7 @@ func (i *InternalError) Error() string {
 }*/
 
 var (
+	ErrGithubUserNotFound          = errors.New("github user with provided username not found")
 	ErrInvalidToken                = errors.New("invalid token")
 	ErrAccessDenied                = errors.New("access denied")
 	ErrUserNotFound                = errors.New("user not found")
@@ -31,7 +32,6 @@ var (
 // 	"net/http"
 // 	"sort"
 // 	"strings"
-// )
 
 // type Cancel struct {
 // 	msg   string
