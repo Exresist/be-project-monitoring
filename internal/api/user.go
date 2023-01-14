@@ -68,17 +68,32 @@ func (s *Server) updateUser(c *gin.Context) {
 	c.JSON(http.StatusOK, user)
 }
 
-// func (s *Server) updateUserRole(c *gin.Context) {
-// 	userReq := &UpdateUserReq{}
-// 	if err := json.NewDecoder(c.Request.Body).Decode(userReq); err != nil {
-// 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
-// 		return
-// 	}
+func (s *Server) updateUserRole(c *gin.Context) {
+	userRoleReq := &struct {
+		ID   uuid.UUID `json:"id"`
+		Role string    `json:"role"`
+	}{}
 
-// 	user, err := s.svc.UpdateUser(c.Request.Context(), userReq)
-// 	if err != nil {
-// 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
-// 		return
-// 	}
-// 	c.JSON(http.StatusOK, user)
-// }
+	if err := json.NewDecoder(c.Request.Body).Decode(userRoleReq); err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
+		return
+	}
+
+	if userRoleReq.Role == ""	{
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: "role is required"})
+		return
+	}
+	
+	userReq := &UpdateUserReq{
+		ID:   userRoleReq.ID,
+		Role: userRoleReq.Role,
+	}
+
+	user, err := s.svc.UpdateUser(c.Request.Context(), userReq)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, user)
+}

@@ -3,8 +3,9 @@ package repository
 import (
 	"database/sql"
 
-	sq "github.com/Masterminds/squirrel"
 	"go.uber.org/zap"
+
+	sq "github.com/Masterminds/squirrel"
 )
 
 type Repository struct {

@@ -121,6 +121,9 @@ func hashPass(pwd string) string {
 }
 
 func mergeUserFields(oldUser, newUser *model.User) error {
+	newUser.ColorCode = oldUser.ColorCode
+	newUser.Email = oldUser.Email
+	
 	if newUser.Username == "" {
 		newUser.Username = oldUser.Username
 	}

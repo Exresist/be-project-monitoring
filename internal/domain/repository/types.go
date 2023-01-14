@@ -38,25 +38,6 @@ func (f *UserFilter) WithPaginator(limit, offset uint64) *UserFilter {
 	return f
 }
 
-type ProjectFilter struct {
-	Names []string
-	*db.Paginator
-}
-
-func NewProjectFilter() *ProjectFilter {
-	return &ProjectFilter{Paginator: db.DefaultPaginator}
-}
-
-func (f *ProjectFilter) ByProjectNames(names ...string) *ProjectFilter {
-	f.Names = names
-	return f
-}
-
-func (f *ProjectFilter) WithPaginator(limit, offset uint64) *ProjectFilter {
-	f.Paginator = db.NewPaginator(limit, offset)
-	return f
-}
-
 func conditionsFromUserFilter(filter *UserFilter) sq.Sqlizer {
 	eq := make(sq.Eq)
 	if filter.IDs != nil {
@@ -77,6 +58,31 @@ func conditionsFromUserFilter(filter *UserFilter) sq.Sqlizer {
 	}
 
 	return eq
+}
+
+type ProjectFilter struct {
+	IDs   []int
+	Names []string
+	*db.Paginator
+}
+
+func NewProjectFilter() *ProjectFilter {
+	return &ProjectFilter{Paginator: db.DefaultPaginator}
+}
+
+func (f *ProjectFilter) ByIDs(ids ...int) *ProjectFilter {
+	f.IDs = ids
+	return f
+}
+
+func (f *ProjectFilter) ByProjectNames(names ...string) *ProjectFilter {
+	f.Names = names
+	return f
+}
+
+func (f *ProjectFilter) WithPaginator(limit, offset uint64) *ProjectFilter {
+	f.Paginator = db.NewPaginator(limit, offset)
+	return f
 }
 
 func conditionsFromProjectFilter(filter *ProjectFilter) sq.Sqlizer {

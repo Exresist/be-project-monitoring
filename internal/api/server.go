@@ -35,9 +35,9 @@ type (
 
 	projectService interface {
 		CreateProject(ctx context.Context, project *CreateProjectReq) (*model.Project, error)
-		UpdateProject(ctx context.Context, project *model.Project) (*model.Project, error)
+		UpdateProject(ctx context.Context, project *UpdateProjectReq) (*model.Project, error)
 		DeleteProject(ctx context.Context, project *model.Project) error
-		GetProjects(ctx context.Context, getProjReq *GetProjReq) ([]model.Project, int, error)
+		GetProjects(ctx context.Context, getProjReq *GetProjectReq) ([]model.Project, int, error)
 	}
 
 	OptionFunc func(s *Server)

@@ -14,14 +14,14 @@ import (
 
 // by ID escho nado
 func (r *Repository) GetProject(ctx context.Context, filter *ProjectFilter) (*model.Project, error) {
-	users, err := r.GetProjects(ctx, filter.WithPaginator(1, 0))
+	projects, err := r.GetProjects(ctx, filter.WithPaginator(1, 0))
 	switch {
 	case err != nil:
 		return nil, fmt.Errorf("failed to get project by id: %w", err)
-	case len(users) == 0:
+	case len(projects) == 0:
 		return nil, ierr.ErrProjectNotFound
 	default:
-		return &users[0], nil
+		return &projects[0], nil
 	}
 }
 
@@ -74,7 +74,7 @@ func (r *Repository) GetProjectCountByFilter(ctx context.Context, filter *Projec
 	return count, nil
 }
 
-func (r *Repository) InsertProject(ctx context.Context, project *model.Project) (*model.Project, error) {
+func (r *Repository) InsertProject(ctx context.Context, project *model.Project) error {
 	row := r.sq.Insert("projects").
 		Columns("name",
 			"description", "photo_url",
@@ -86,7 +86,21 @@ func (r *Repository) InsertProject(ctx context.Context, project *model.Project) 
 		QueryRowContext(ctx)
 
 	if err := row.Scan(&project.ID); err != nil {
-		return nil, fmt.Errorf("error while scanning sql row: %w", err)
+		return fmt.Errorf("error while scanning sql row: %w", err)
 	}
-	return project, nil
+	return nil
+}
+
+func (r *Repository) UpdateProject(ctx context.Context, project *model.Project) error {
+	_, err := r.sq.Update("projects").
+		SetMap(map[string]interface{}{
+			"name":        project.Name,
+			"description": project.Description,
+			"photo_url":   project.PhotoURL,
+			"report_url":  project.ReportURL,
+			"report_name": project.ReportName,
+			"repo_url":    project.RepoURL,
+			"active_to":   project.ActiveTo,
+		}).ExecContext(ctx)
+	return err
 }

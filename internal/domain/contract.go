@@ -26,6 +26,8 @@ type (
 		GetProject(ctx context.Context, filter *repository.ProjectFilter) (*model.Project, error)
 		GetProjects(ctx context.Context, filter *repository.ProjectFilter) ([]model.Project, error)
 		GetProjectCountByFilter(ctx context.Context, filter *repository.ProjectFilter) (int, error)
-		InsertProject(ctx context.Context, project *model.Project) (*model.Project, error)
+
+		InsertProject(ctx context.Context, project *model.Project) error
+		UpdateProject(ctx context.Context, project *model.Project) error
 	}
 )

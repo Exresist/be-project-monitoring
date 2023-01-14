@@ -99,7 +99,7 @@ func (r *Repository) UpdateUser(ctx context.Context, user *model.User) error {
 			"username":        user.Username,
 			"first_name":      user.FirstName,
 			"last_name":       user.LastName,
-			"\"group\"":           user.Group,
+			"\"group\"":       user.Group,
 			"github_username": user.GithubUsername,
 			"hashed_password": user.HashedPassword,
 		}).ExecContext(ctx)
