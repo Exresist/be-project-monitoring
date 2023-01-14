@@ -1,13 +1,14 @@
 package service
 
 import (
+	"context"
+	"errors"
+	"time"
+
 	"be-project-monitoring/internal/api"
 	"be-project-monitoring/internal/domain/model"
 	"be-project-monitoring/internal/domain/repository"
 	ierr "be-project-monitoring/internal/errors"
-	"context"
-	"errors"
-	"time"
 )
 
 func (s *service) GetProjects(ctx context.Context, projReq *api.GetProjectReq) ([]model.Project, int, error) {

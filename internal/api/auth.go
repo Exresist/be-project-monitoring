@@ -1,9 +1,11 @@
 package api
 
 import (
-	"be-project-monitoring/internal/domain/model"
 	"encoding/json"
 	"net/http"
+
+	"be-project-monitoring/internal/domain/model"
+	ierr "be-project-monitoring/internal/errors"
 
 	"github.com/gin-gonic/gin"
 )
@@ -37,6 +39,10 @@ func (s *Server) register(c *gin.Context) {
 	if err := json.NewDecoder(c.Request.Body).Decode(userReq); err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return
+	}
+
+	if !s.svc.FindGithubUser(c.Request.Context(), userReq.GithubUsername) {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: ierr.ErrGithubUserNotFound.Error()})
 	}
 
 	user, token, err := s.svc.CreateUser(c.Request.Context(), userReq)

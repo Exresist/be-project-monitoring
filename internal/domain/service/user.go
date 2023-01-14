@@ -115,6 +115,15 @@ func (s *service) GetUsers(ctx context.Context, userReq *api.GetUserReq) ([]mode
 
 	return users, count, nil
 }
+
+func (s *service) FindGithubUser(ctx context.Context, username string) bool {
+	_, _, err := s.githubCl.Users.Get(ctx, username)
+	if err != nil {
+		return false
+	}
+	return true
+}
+
 func hashPass(pwd string) string {
 	hash, _ := bcrypt.GenerateFromPassword([]byte(pwd), bcrypt.DefaultCost)
 	return string(hash)

@@ -1,15 +1,17 @@
 package domain
 
 import (
+	"context"
+
 	"be-project-monitoring/internal/domain/model"
 	"be-project-monitoring/internal/domain/repository"
-	"context"
 )
 
 type (
 	Repository interface {
 		userRepo
 		projectRepo
+		participantRepo
 	}
 
 	userRepo interface {
@@ -29,5 +31,10 @@ type (
 
 		InsertProject(ctx context.Context, project *model.Project) error
 		UpdateProject(ctx context.Context, project *model.Project) error
+	}
+
+	participantRepo interface {
+		AddParticipant(ctx context.Context, participant *model.Participant) ([]model.Participant, error)
+		GetParticipants(ctx context.Context, projectID int) ([]model.Participant, error)
 	}
 )

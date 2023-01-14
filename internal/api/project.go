@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 type (
@@ -42,6 +43,11 @@ type (
 		ReportName  string    `json:"report_name"`
 		RepoURL     string    `json:"repo_url"`
 		ActiveTo    time.Time `json:"active_to"`
+	}
+	addParticipantReq struct {
+		Role      int       `json:"role"`
+		UserID    uuid.UUID `json:"user_id"`
+		ProjectID int       `json:"project_id"`
 	}
 )
 
@@ -88,11 +94,30 @@ func (s *Server) updateProject(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return
 	}
-
 	project, err := s.svc.UpdateProject(c.Request.Context(), newProj)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, project)
+}
+
+func (s *Server) addParticipant(c *gin.Context) {
+	req := &addParticipantReq{}
+	if err := json.NewDecoder(c.Request.Body).Decode(req); err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
+		return
+	}
+	
+	participants, err := s.svc.AddParticipant(c.Request.Context(), &model.Participant{
+		Role:      model.ParticipantRole(req.Role),
+		UserID:    req.UserID,
+		ProjectID: req.ProjectID,
+	})
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
+		return
+	}
+	
+	c.JSON(http.StatusOK, gin.H{"participants": participants})
 }

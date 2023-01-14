@@ -24,6 +24,7 @@ type (
 	Service interface {
 		userService
 		projectService
+		participantService
 	}
 	userService interface {
 		VerifyToken(ctx context.Context, token string, toAllow ...model.UserRole) error
@@ -38,6 +39,11 @@ type (
 		UpdateProject(ctx context.Context, project *UpdateProjectReq) (*model.Project, error)
 		DeleteProject(ctx context.Context, project *model.Project) error
 		GetProjects(ctx context.Context, getProjReq *GetProjectReq) ([]model.Project, int, error)
+	}
+
+	participantService interface {
+		AddParticipant(ctx context.Context, participant *model.Participant) ([]model.Participant, error)
+		GetParticipants(ctx context.Context, projectID int) ([]model.Participant, error)
 	}
 
 	OptionFunc func(s *Server)
@@ -67,7 +73,10 @@ func New(opts ...OptionFunc) *Server {
 	pmRtr := apiRtr.Group("/pm", s.authMiddleware(model.ProjectManager))
 
 	// api/pm/project
-	pmRtr.PUT("/project", s.createProject)
+	projectRtr := pmRtr.Group("/project")
+
+	projectRtr.PUT("/", s.createProject)
+	projectRtr.POST("/:id", s.addParticipant)
 
 	// /api/admin
 	adminRtr := apiRtr.Group("/admin", s.authMiddleware(model.Admin))

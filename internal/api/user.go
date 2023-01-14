@@ -97,3 +97,20 @@ func (s *Server) updateUserRole(c *gin.Context) {
 
 	c.JSON(http.StatusOK, user)
 }
+
+
+
+// func (s *Server) updateUserRole(c *gin.Context) {
+// 	userReq := &UpdateUserReq{}
+// 	if err := json.NewDecoder(c.Request.Body).Decode(userReq); err != nil {
+// 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
+// 		return
+// 	}
+
+// 	user, err := s.svc.UpdateUser(c.Request.Context(), userReq)
+// 	if err != nil {
+// 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
+// 		return
+// 	}
+// 	c.JSON(http.StatusOK, user)
+// }
