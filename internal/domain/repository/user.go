@@ -91,7 +91,6 @@ func (r *Repository) InsertUser(ctx context.Context, user *model.User) error {
 }
 func (r *Repository) UpdateUser(ctx context.Context, user *model.User) error {
 	_, err := r.sq.Update("users").
-		Where(sq.Eq{"id": user.ID}).
 		SetMap(map[string]interface{}{
 			"role":            user.Role,
 			"username":        user.Username,
@@ -100,7 +99,8 @@ func (r *Repository) UpdateUser(ctx context.Context, user *model.User) error {
 			"\"group\"":       user.Group,
 			"github_username": user.GithubUsername,
 			"hashed_password": user.HashedPassword,
-		}).ExecContext(ctx)
+		}).Where(sq.Eq{"id": user.ID}).
+		ExecContext(ctx)
 	return err
 }
 func (r *Repository) DeleteUser(ctx context.Context, id uuid.UUID) error {
