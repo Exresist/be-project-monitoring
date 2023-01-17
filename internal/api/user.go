@@ -1,10 +1,11 @@
 package api
 
 import (
-	"be-project-monitoring/internal/domain/model"
 	"encoding/json"
 	"net/http"
 	"strconv"
+
+	"be-project-monitoring/internal/domain/model"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -25,13 +26,16 @@ type (
 
 	UpdateUserReq struct {
 		ID             uuid.UUID `json:"id"`
-		Role           string    `json:"role"`
-		Username       string    `json:"username"`
-		FirstName      string    `json:"first_name"`
-		LastName       string    `json:"last_name"`
-		Group          string    `json:"group"`
-		GithubUsername string    `json:"github_username"`
-		Password       string    `json:"password"`
+		Role           *string   `json:"role"`
+		Username       *string   `json:"username"`
+		FirstName      *string   `json:"first_name"`
+		LastName       *string   `json:"last_name"`
+		Group          *string   `json:"group"`
+		GithubUsername *string   `json:"github_username"`
+		Password       *string   `json:"password"`
+	}
+	DeleteUserReq struct {
+		ID uuid.UUID `json:"id"`
 	}
 )
 
@@ -53,7 +57,6 @@ func (s *Server) getUsers(c *gin.Context) {
 
 func (s *Server) updateUser(c *gin.Context) {
 	userReq := &UpdateUserReq{}
-
 	if err := json.NewDecoder(c.Request.Body).Decode(userReq); err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return
@@ -68,49 +71,18 @@ func (s *Server) updateUser(c *gin.Context) {
 	c.JSON(http.StatusOK, user)
 }
 
-func (s *Server) updateUserRole(c *gin.Context) {
-	userRoleReq := &struct {
-		ID   uuid.UUID `json:"id"`
-		Role string    `json:"role"`
-	}{}
-
-	if err := json.NewDecoder(c.Request.Body).Decode(userRoleReq); err != nil {
+func (s *Server) deleteUser(c *gin.Context) {
+	userReq := &DeleteUserReq{}
+	if err := json.NewDecoder(c.Request.Body).Decode(userReq); err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return
 	}
 
-	if userRoleReq.Role == ""	{
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: "role is required"})
-		return
-	}
-	
-	userReq := &UpdateUserReq{
-		ID:   userRoleReq.ID,
-		Role: userRoleReq.Role,
-	}
-
-	user, err := s.svc.UpdateUser(c.Request.Context(), userReq)
+	err := s.svc.DeleteUser(c.Request.Context(), userReq)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, user)
+	c.JSON(http.StatusOK, "User deleted")
 }
-
-
-
-// func (s *Server) updateUserRole(c *gin.Context) {
-// 	userReq := &UpdateUserReq{}
-// 	if err := json.NewDecoder(c.Request.Body).Decode(userReq); err != nil {
-// 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
-// 		return
-// 	}
-
-// 	user, err := s.svc.UpdateUser(c.Request.Context(), userReq)
-// 	if err != nil {
-// 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
-// 		return
-// 	}
-// 	c.JSON(http.StatusOK, user)
-// }

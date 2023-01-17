@@ -7,7 +7,6 @@ import (
 	ierr "be-project-monitoring/internal/errors"
 	"context"
 	"errors"
-	"fmt"
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
@@ -65,21 +64,11 @@ func (s *service) CreateUser(ctx context.Context, userReq *api.CreateUserReq) (*
 func (s *service) UpdateUser(ctx context.Context, userReq *api.UpdateUserReq) (*model.User, error) {
 	oldUser, err := s.repo.GetUser(ctx, repository.NewUserFilter().ByIDs(userReq.ID))
 	if err != nil {
-		return nil, fmt.Errorf("error while getting user: %w", err)
+		return nil, err
 	}
 
-	newUser := &model.User{
-		ID:             userReq.ID,
-		Role:           model.UserRole(userReq.Role),
-		Username:       userReq.Username,
-		FirstName:      userReq.FirstName,
-		LastName:       userReq.LastName,
-		Group:          userReq.Group,
-		GithubUsername: userReq.GithubUsername,
-		HashedPassword: hashPass(userReq.Password),
-	}
-
-	if err := mergeUserFields(oldUser, newUser); err != nil {
+	newUser, err := mergeUserFields(oldUser, userReq)
+	if err != nil {
 		return nil, err
 	}
 
@@ -89,7 +78,7 @@ func (s *service) UpdateUser(ctx context.Context, userReq *api.UpdateUserReq) (*
 func (s *service) AuthUser(ctx context.Context, username, password string) (string, error) {
 	user, err := s.repo.GetUser(ctx, repository.NewUserFilter().ByUsernames(username))
 	if err != nil {
-		return "", fmt.Errorf("error while getting user: %w", err)
+		return "", err
 	}
 	if err = bcrypt.CompareHashAndPassword([]byte(user.HashedPassword), []byte(password)); err != nil {
 		return "", err
@@ -124,37 +113,61 @@ func (s *service) FindGithubUser(ctx context.Context, username string) bool {
 	return true
 }
 
+func (s *service) DeleteUser(ctx context.Context, userReq *api.DeleteUserReq) error {
+	if _, err := s.repo.GetUser(ctx, repository.NewUserFilter().ByIDs(userReq.ID)); err != nil {
+		return err
+	}
+	
+	return s.repo.DeleteUser(ctx, userReq.ID)
+}
+
 func hashPass(pwd string) string {
 	hash, _ := bcrypt.GenerateFromPassword([]byte(pwd), bcrypt.DefaultCost)
 	return string(hash)
 }
 
-func mergeUserFields(oldUser, newUser *model.User) error {
-	newUser.ColorCode = oldUser.ColorCode
-	newUser.Email = oldUser.Email
-	
-	if newUser.Username == "" {
+func mergeUserFields(oldUser *model.User, userReq *api.UpdateUserReq) (*model.User, error) {
+	newUser := &model.User{
+		ColorCode:      oldUser.ColorCode,
+		Email:          oldUser.Email,
+		ID:             userReq.ID,
+		Role:           model.UserRole(*userReq.Role),
+		Username:       *userReq.Username,
+		FirstName:      *userReq.FirstName,
+		LastName:       *userReq.LastName,
+		Group:          *userReq.Group,
+		GithubUsername: *userReq.GithubUsername,
+		HashedPassword: hashPass(*userReq.Password),
+	}
+
+	if _, ok := model.UserRoles[string(*userReq.Role)]; ok {
+		newUser.Role = model.UserRole(*userReq.Role)
+	} else {
+		if userReq.Role == nil || *userReq.Role == "" {
+			newUser.Role = oldUser.Role
+		} else {
+			return nil, ierr.ErrInvalidRole
+		}
+	}
+
+	if userReq.Username == nil || *userReq.Username == "" {
 		newUser.Username = oldUser.Username
 	}
-	if newUser.FirstName == "" {
+	if userReq.FirstName == nil || *userReq.FirstName == "" {
 		newUser.FirstName = oldUser.FirstName
 	}
-	if newUser.LastName == "" {
+	if userReq.LastName == nil || *userReq.LastName == "" {
 		newUser.LastName = oldUser.LastName
 	}
-	if newUser.Group == "" {
+	if userReq.Group == nil || *userReq.Group == "" {
 		newUser.Group = oldUser.Group
 	}
-	if newUser.GithubUsername == "" {
+	if userReq.GithubUsername == nil || *userReq.GithubUsername == "" {
 		newUser.GithubUsername = oldUser.GithubUsername
 	}
-	if newUser.HashedPassword == "" {
+	if userReq.Password == nil || *userReq.Password == "" {
 		newUser.HashedPassword = oldUser.HashedPassword
 	}
-	if _, ok := model.UserRoles[string(newUser.Role)]; ok && newUser.Role == "" {
-		newUser.Role = model.UserRole(newUser.Role)
-	} else {
-		return ierr.ErrInvalidRole
-	}
-	return nil
+
+	return newUser, nil
 }

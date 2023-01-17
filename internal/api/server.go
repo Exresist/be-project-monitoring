@@ -31,14 +31,16 @@ type (
 		CreateUser(ctx context.Context, user *CreateUserReq) (*model.User, string, error)
 		AuthUser(ctx context.Context, username, password string) (string, error)
 		GetUsers(ctx context.Context, userReq *GetUserReq) ([]model.User, int, error)
+		FindGithubUser(ctx context.Context, userReq string) bool
 		UpdateUser(ctx context.Context, userReq *UpdateUserReq) (*model.User, error)
+		DeleteUser(ctx context.Context, userReq *DeleteUserReq) error
 	}
 
 	projectService interface {
 		CreateProject(ctx context.Context, project *CreateProjectReq) (*model.Project, error)
-		UpdateProject(ctx context.Context, project *UpdateProjectReq) (*model.Project, error)
-		DeleteProject(ctx context.Context, project *model.Project) error
-		GetProjects(ctx context.Context, getProjReq *GetProjectReq) ([]model.Project, int, error)
+		UpdateProject(ctx context.Context, projectReq *UpdateProjectReq) (*model.Project, error)
+		DeleteProject(ctx context.Context, projectReq *DeleteProjectReq) error
+		GetProjects(ctx context.Context, projectReq *GetProjectReq) ([]model.Project, int, error)
 	}
 
 	participantService interface {

@@ -23,7 +23,7 @@ var (
 	ErrGithubUsernameAlreadyExists = errors.New("github username already exists")
 	ErrInvalidRole                 = errors.New("invalid role")
 	ErrProjectNameAlreadyExists    = errors.New("project name already exists")
-	ErrProjectDateIsNotValid       = errors.New("project date is not valid")
+	ErrProjectActiveToIsInvalid      = errors.New("project date is not valid")
 )
 
 // package ierr

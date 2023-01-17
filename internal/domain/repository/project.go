@@ -12,7 +12,6 @@ import (
 	"go.uber.org/zap"
 )
 
-// by ID escho nado
 func (r *Repository) GetProject(ctx context.Context, filter *ProjectFilter) (*model.Project, error) {
 	projects, err := r.GetProjects(ctx, filter.WithPaginator(1, 0))
 	switch {
@@ -24,7 +23,6 @@ func (r *Repository) GetProject(ctx context.Context, filter *ProjectFilter) (*mo
 		return &projects[0], nil
 	}
 }
-
 func (r *Repository) GetProjects(ctx context.Context, filter *ProjectFilter) ([]model.Project, error) {
 	filter.Limit = db.NormalizeLimit(filter.Limit)
 	rows, err := sq.Select(
@@ -62,7 +60,6 @@ func (r *Repository) GetProjects(ctx context.Context, filter *ProjectFilter) ([]
 	}
 	return projects, nil
 }
-
 func (r *Repository) GetProjectCountByFilter(ctx context.Context, filter *ProjectFilter) (int, error) {
 	var count int
 	if err := r.sq.Select("COUNT(1)").
@@ -73,7 +70,6 @@ func (r *Repository) GetProjectCountByFilter(ctx context.Context, filter *Projec
 	}
 	return count, nil
 }
-
 func (r *Repository) InsertProject(ctx context.Context, project *model.Project) error {
 	row := r.sq.Insert("projects").
 		Columns("name",
@@ -90,7 +86,6 @@ func (r *Repository) InsertProject(ctx context.Context, project *model.Project) 
 	}
 	return nil
 }
-
 func (r *Repository) UpdateProject(ctx context.Context, project *model.Project) error {
 	_, err := r.sq.Update("projects").
 		SetMap(map[string]interface{}{
@@ -101,6 +96,12 @@ func (r *Repository) UpdateProject(ctx context.Context, project *model.Project) 
 			"report_name": project.ReportName,
 			"repo_url":    project.RepoURL,
 			"active_to":   project.ActiveTo,
-		}).ExecContext(ctx)
+		}).Where(sq.Eq{"id": project.ID}).
+		ExecContext(ctx)
+	return err
+}
+func (r *Repository) DeleteProject(ctx context.Context, id int) error {
+	_, err := r.sq.Delete("projects").
+		Where(sq.Eq{"id": id}).ExecContext(ctx)
 	return err
 }

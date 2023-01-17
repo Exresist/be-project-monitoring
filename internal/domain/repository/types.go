@@ -40,24 +40,38 @@ func (f *UserFilter) WithPaginator(limit, offset uint64) *UserFilter {
 
 func conditionsFromUserFilter(filter *UserFilter) sq.Sqlizer {
 	eq := make(sq.Eq)
-	if filter.IDs != nil {
+	usernameEq := make(sq.Eq)
+	emailEq := make(sq.Eq)
+	if len(filter.IDs) != 0 {
 		eq["u.id"] = filter.IDs
 	}
-	if len(filter.Usernames) != 0 && len(filter.Emails) != 0 {
-		usernameEq := make(sq.Eq)
-		emailEq := make(sq.Eq)
-		usernameEq["u.username"] = filter.Usernames
-		emailEq["u.email"] = filter.Emails
-		return sq.Or{eq, usernameEq, emailEq}
-	}
-	if filter.Usernames != nil {
+	if len(filter.Usernames) != 0 {
 		eq["u.username"] = filter.Usernames
 	}
-	if filter.Emails != nil {
+	if len(filter.Emails) != 0 {
 		eq["u.email"] = filter.Emails
 	}
 
-	return eq
+	return sq.Or{eq, usernameEq, emailEq}
+
+	// eq := make(sq.Eq)
+	// if filter.IDs != nil {
+	// 	eq["u.id"] = filter.IDs
+	// }
+	// if len(filter.Usernames) != 0 && len(filter.Emails) != 0 {
+	// 	usernameEq := make(sq.Eq)
+	// 	emailEq := make(sq.Eq)
+	// 	usernameEq["u.username"] = filter.Usernames
+	// 	emailEq["u.email"] = filter.Emails
+	// 	return sq.Or{eq, usernameEq, emailEq}
+	// }
+	// if filter.Usernames != nil {
+	// 	eq["u.username"] = filter.Usernames
+	// }
+	// if filter.Emails != nil {
+	// 	eq["u.email"] = filter.Emails
+	// }
+	// return eq
 }
 
 type ProjectFilter struct {
@@ -87,22 +101,12 @@ func (f *ProjectFilter) WithPaginator(limit, offset uint64) *ProjectFilter {
 
 func conditionsFromProjectFilter(filter *ProjectFilter) sq.Sqlizer {
 	eq := make(sq.Eq)
-	// if filter.IDs != nil {
-	// 	eq[u.tableName+".id"] = filter.IDs
-	// }
-	// if len(filter.Usernames) != 0 && len(filter.Emails) != 0 {
-	// 	usernameEq := make(sq.Eq)
-	// 	emailEq := make(sq.Eq)
-	// 	usernameEq[u.tableName+".username"] = filter.Usernames
-	// 	emailEq[u.tableName+".email"] = filter.Emails
-	// 	return sq.Or{eq, usernameEq, emailEq}
-	// }
-	// if len(filter.Usernames) != 0 {
-	// 	eq[u.tableName+".username"] = filter.Usernames
-	// }
-	// if len(filter.Emails) != 0 {
-	// 	eq[u.tableName+".email"] = filter.Emails
-	// }
-
-	return eq
+	nameEq := make(sq.Eq)
+	if len(filter.IDs) != 0 {
+		eq["p.id"] = filter.IDs
+	}
+	if len(filter.Names) != 0 {
+		eq["p.name"] = filter.Names
+	}
+	return sq.Or{eq, nameEq}
 }

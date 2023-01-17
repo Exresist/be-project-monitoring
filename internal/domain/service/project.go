@@ -40,10 +40,11 @@ func (s *service) CreateProject(ctx context.Context, projectReq *api.CreateProje
 	if found != nil {
 		return nil, ierr.ErrProjectNameAlreadyExists
 	}
-	//nado li kakie-nibud 10 min visrat?
-	if projectReq.ActiveTo.Before(time.Now()) {
-		return nil, ierr.ErrProjectDateIsNotValid
+
+	if projectReq.ActiveTo.IsZero() || projectReq.ActiveTo.Before(time.Now()) {
+		return nil, ierr.ErrProjectActiveToIsInvalid
 	}
+
 	project := &model.Project{
 		Name:        projectReq.Name,
 		Description: projectReq.Description,
@@ -59,60 +60,62 @@ func (s *service) CreateProject(ctx context.Context, projectReq *api.CreateProje
 
 func (s *service) UpdateProject(ctx context.Context, projectReq *api.UpdateProjectReq) (*model.Project, error) {
 
-	//nado li kakie-nibud minus 10 min visrat?
-	// if projectReq.ActiveTo != nil && projectReq.ActiveTo.Before(time.Now()) {
-	// 	return nil, ierr.ErrProjectDateIsNotValid
-	// }
-
 	oldProject, err := s.repo.GetProject(ctx, repository.NewProjectFilter().
 		ByIDs(projectReq.ID))
 	if err != nil {
 		return nil, err
 	}
 
-	newProject := &model.Project{
-		ID:          projectReq.ID,
-		Name:        projectReq.Name,
-		Description: projectReq.Description,
-		PhotoURL:    projectReq.PhotoURL,
-		ReportURL:   projectReq.ReportURL,
-		ReportName:  projectReq.ReportName,
-		RepoURL:     projectReq.RepoURL,
-		ActiveTo:    projectReq.ActiveTo,
-	}
-	if err := mergeProjectFields(oldProject, newProject); err != nil {
+	newProject, err := mergeProjectFields(oldProject, projectReq)
+	if err != nil {
 		return nil, err
 	}
 
 	return newProject, s.repo.UpdateProject(ctx, newProject)
 }
 
-func (s *service) DeleteProject(ctx context.Context, project *model.Project) error {
-	return nil
+func (s *service) DeleteProject(ctx context.Context, projectReq *api.DeleteProjectReq) error {
+	if _, err := s.repo.GetProject(ctx, repository.NewProjectFilter().ByIDs(projectReq.ID)); err != nil {
+		return err
+	}
+
+	return s.repo.DeleteProject(ctx, projectReq.ID)
 }
 
-func mergeProjectFields(oldProject, newProject *model.Project) error {
-	//c фронта всегда новый дескрипшн должен приходить
-	if newProject.Name == "" {
+func mergeProjectFields(oldProject *model.Project, projectReq *api.UpdateProjectReq) (*model.Project, error) {
+
+	newProject := &model.Project{
+		ID:          projectReq.ID,
+		Name:        *projectReq.Name,
+		Description: *projectReq.Description,
+		PhotoURL:    *projectReq.PhotoURL,
+		ReportURL:   *projectReq.ReportURL,
+		ReportName:  *projectReq.ReportName,
+		RepoURL:     *projectReq.RepoURL,
+		ActiveTo:    projectReq.ActiveTo,
+	}
+
+	if projectReq.Name == nil {
 		newProject.Name = oldProject.Name
 	}
-	//a popo photo?
-	if newProject.PhotoURL == "" {
+	if projectReq.Description == nil {
+		newProject.Description = oldProject.Description
+	}
+	if projectReq.PhotoURL == nil {
 		newProject.PhotoURL = oldProject.PhotoURL
 	}
-	if newProject.ReportURL == "" {
+	if projectReq.ReportURL == nil {
 		newProject.ReportURL = oldProject.ReportURL
 	}
-	if newProject.ReportName == "" {
+	if projectReq.ReportName == nil {
 		newProject.ReportName = oldProject.ReportName
 	}
-	if newProject.RepoURL == "" {
+	if projectReq.RepoURL == nil {
 		newProject.RepoURL = oldProject.RepoURL
 	}
-	//escho datu nazad nizya
-	// if newProject.ActiveTo == nil {
-	// 	newProject.ActiveTo = oldProject.ActiveTo
-	// }
+	if projectReq.ActiveTo.IsZero() || projectReq.ActiveTo.Before(time.Now()) {
+		newProject.ActiveTo = oldProject.ActiveTo
+	}
 
-	return nil
+	return newProject, nil
 }

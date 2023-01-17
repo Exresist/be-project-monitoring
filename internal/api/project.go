@@ -36,18 +36,21 @@ type (
 
 	UpdateProjectReq struct {
 		ID          int       `json:"id"`
-		Name        string    `json:"name"`
-		Description string    `json:"description"`
-		PhotoURL    string    `json:"photo_url"`
-		ReportURL   string    `json:"report_url"`
-		ReportName  string    `json:"report_name"`
-		RepoURL     string    `json:"repo_url"`
+		Name        *string   `json:"name"`
+		Description *string   `json:"description"`
+		PhotoURL    *string   `json:"photo_url"`
+		ReportURL   *string   `json:"report_url"`
+		ReportName  *string   `json:"report_name"`
+		RepoURL     *string   `json:"repo_url"`
 		ActiveTo    time.Time `json:"active_to"`
 	}
 	addParticipantReq struct {
 		Role      int       `json:"role"`
 		UserID    uuid.UUID `json:"user_id"`
 		ProjectID int       `json:"project_id"`
+	}
+	DeleteProjectReq struct {
+		ID int `json:"id"`
 	}
 )
 
@@ -108,7 +111,7 @@ func (s *Server) addParticipant(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return
 	}
-	
+
 	participants, err := s.svc.AddParticipant(c.Request.Context(), &model.Participant{
 		Role:      model.ParticipantRole(req.Role),
 		UserID:    req.UserID,
@@ -118,6 +121,22 @@ func (s *Server) addParticipant(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{"participants": participants})
+}
+
+func (s *Server) deleteProject(c *gin.Context) {
+	projectReq := &DeleteProjectReq{}
+	if err := json.NewDecoder(c.Request.Body).Decode(projectReq); err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
+		return
+	}
+
+	err := s.svc.DeleteProject(c.Request.Context(), projectReq)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, "Project deleted")
 }
