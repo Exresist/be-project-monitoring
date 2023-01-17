@@ -12,20 +12,18 @@ import (
 	"go.uber.org/zap"
 )
 
-// by ID escho nado
 func (r *Repository) GetProject(ctx context.Context, filter *ProjectFilter) (*model.Project, error) {
-	users, err := r.GetProjects(ctx, filter.WithPaginator(1, 0))
+	projects, err := r.GetProjects(ctx, filter.WithPaginator(1, 0))
 	switch {
 	case err != nil:
 		return nil, fmt.Errorf("failed to get project by id: %w", err)
-	case len(users) == 0:
+	case len(projects) == 0:
 		return nil, ierr.ErrProjectNotFound
 	default:
-		return users[0], nil
+		return &projects[0], nil
 	}
 }
-
-func (r *Repository) GetProjects(ctx context.Context, filter *ProjectFilter) ([]*model.Project, error) {
+func (r *Repository) GetProjects(ctx context.Context, filter *ProjectFilter) ([]model.Project, error) {
 	filter.Limit = db.NormalizeLimit(filter.Limit)
 	rows, err := sq.Select(
 		"p.id", "p.name",
@@ -47,9 +45,9 @@ func (r *Repository) GetProjects(ctx context.Context, filter *ProjectFilter) ([]
 			r.logger.Error("error while closing sql rows", zap.Error(err))
 		}
 	}(rows)
-	projects := make([]*model.Project, 0)
+	projects := make([]model.Project, 0)
 	for rows.Next() {
-		project := &model.Project{}
+		project := model.Project{}
 		if err = rows.Scan(
 			&project.ID, &project.Name,
 			&project.Description, &project.PhotoURL,
@@ -62,7 +60,6 @@ func (r *Repository) GetProjects(ctx context.Context, filter *ProjectFilter) ([]
 	}
 	return projects, nil
 }
-
 func (r *Repository) GetProjectCountByFilter(ctx context.Context, filter *ProjectFilter) (int, error) {
 	var count int
 	if err := r.sq.Select("COUNT(1)").
@@ -73,8 +70,7 @@ func (r *Repository) GetProjectCountByFilter(ctx context.Context, filter *Projec
 	}
 	return count, nil
 }
-
-func (r *Repository) InsertProject(ctx context.Context, project *model.Project) (*model.Project, error) {
+func (r *Repository) InsertProject(ctx context.Context, project *model.Project) error {
 	row := r.sq.Insert("projects").
 		Columns("name",
 			"description", "photo_url",
@@ -86,7 +82,26 @@ func (r *Repository) InsertProject(ctx context.Context, project *model.Project) 
 		QueryRowContext(ctx)
 
 	if err := row.Scan(&project.ID); err != nil {
-		return nil, fmt.Errorf("error while scanning sql row: %w", err)
+		return fmt.Errorf("error while scanning sql row: %w", err)
 	}
-	return project, nil
+	return nil
+}
+func (r *Repository) UpdateProject(ctx context.Context, project *model.Project) error {
+	_, err := r.sq.Update("projects").
+		SetMap(map[string]interface{}{
+			"name":        project.Name,
+			"description": project.Description,
+			"photo_url":   project.PhotoURL,
+			"report_url":  project.ReportURL,
+			"report_name": project.ReportName,
+			"repo_url":    project.RepoURL,
+			"active_to":   project.ActiveTo,
+		}).Where(sq.Eq{"id": project.ID}).
+		ExecContext(ctx)
+	return err
+}
+func (r *Repository) DeleteProject(ctx context.Context, id int) error {
+	_, err := r.sq.Delete("projects").
+		Where(sq.Eq{"id": id}).ExecContext(ctx)
+	return err
 }
