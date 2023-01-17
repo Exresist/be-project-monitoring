@@ -1,11 +1,12 @@
 package api
 
 import (
-	"be-project-monitoring/internal/domain/model"
 	"context"
 	"fmt"
 	"net/http"
 	"time"
+
+	"be-project-monitoring/internal/domain/model"
 
 	"github.com/gin-gonic/gin"
 	"github.com/oklog/run"

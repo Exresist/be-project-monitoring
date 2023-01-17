@@ -1,9 +1,10 @@
 package api
 
 import (
-	"be-project-monitoring/internal/domain/model"
 	"net/http"
 	"strings"
+
+	"be-project-monitoring/internal/domain/model"
 
 	"github.com/gin-gonic/gin"
 )

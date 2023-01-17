@@ -1,11 +1,12 @@
 package api
 
 import (
-	"be-project-monitoring/internal/domain/model"
 	"encoding/json"
 	"net/http"
 	"strconv"
 	"time"
+
+	"be-project-monitoring/internal/domain/model"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
