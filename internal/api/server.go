@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/google/uuid"
+
 	"be-project-monitoring/internal/domain/model"
 
 	"github.com/gin-gonic/gin"
@@ -34,7 +36,7 @@ type (
 		GetUsers(ctx context.Context, userReq *GetUserReq) ([]model.User, int, error)
 		FindGithubUser(ctx context.Context, userReq string) bool
 		UpdateUser(ctx context.Context, userReq *UpdateUserReq) (*model.User, error)
-		DeleteUser(ctx context.Context, userReq *DeleteUserReq) error
+		DeleteUser(ctx context.Context, id uuid.UUID) error
 	}
 
 	projectService interface {
@@ -72,6 +74,14 @@ func New(opts ...OptionFunc) *Server {
 	// /api/register
 	apiRtr.POST("/register", s.register)
 
+	usersRtr := apiRtr.Group("/users")
+
+	usersRtr.GET("/users", s.getUsers)
+
+	//TODO:
+	//usersRtr.GET("/users/:id", s.getUserByID)
+	//usersRtr.DELETE("/users/:id", s.deleteUser)
+
 	// /api/pm
 	pmRtr := apiRtr.Group("/pm", s.authMiddleware(model.ProjectManager))
 
@@ -79,16 +89,17 @@ func New(opts ...OptionFunc) *Server {
 	projectRtr := pmRtr.Group("/project")
 
 	projectRtr.PUT("/", s.createProject)
+	projectRtr.POST("/", s.updateProject)
 	projectRtr.POST("/:id", s.addParticipant)
 
 	// /api/admin
-	adminRtr := apiRtr.Group("/admin", s.authMiddleware(model.Admin))
+	//adminRtr := apiRtr.Group("/admin", s.authMiddleware(model.Admin))
 
-	// /api/admin/users
-	// TODO
-	adminRtr.GET("/users", s.getUsers)
-	// /api/admin/projects
-	adminRtr.GET("/projects", s.getProjects)
+	/*	// /api/admin/users
+		// TODO
+		adminRtr.GET("/users", s.getUsers)
+		// /api/admin/projects
+		adminRtr.GET("/projects", s.getProjects)*/
 
 	s.Handler = rtr
 	return s

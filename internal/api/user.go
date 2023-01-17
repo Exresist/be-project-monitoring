@@ -34,7 +34,7 @@ type (
 		GithubUsername *string   `json:"github_username"`
 		Password       *string   `json:"password"`
 	}
-	DeleteUserReq struct {
+	deleteUserReq struct {
 		ID uuid.UUID `json:"id"`
 	}
 )
@@ -72,13 +72,13 @@ func (s *Server) updateUser(c *gin.Context) {
 }
 
 func (s *Server) deleteUser(c *gin.Context) {
-	userReq := &DeleteUserReq{}
+	userReq := &deleteUserReq{}
 	if err := json.NewDecoder(c.Request.Body).Decode(userReq); err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return
 	}
 
-	err := s.svc.DeleteUser(c.Request.Context(), userReq)
+	err := s.svc.DeleteUser(c.Request.Context(), userReq.ID)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return
