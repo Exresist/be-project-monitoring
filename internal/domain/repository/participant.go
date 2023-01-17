@@ -43,7 +43,10 @@ func (r *Repository) GetParticipants(ctx context.Context, projectID int) ([]mode
 		From("participants p").
 		Join("users u ON u.id = p.user_id").
 		Where("p.project_id = $1", projectID).QueryContext(ctx)
-	participants := make([]model.Participant, 0, 0)
+	if err != nil {
+		return nil, fmt.Errorf("error while querying participants: %w", err)
+	}
+	participants := make([]model.Participant, 0)
 	for rows.Next() {
 		p := model.Participant{}
 		if err := rows.Scan(
@@ -59,5 +62,5 @@ func (r *Repository) GetParticipants(ctx context.Context, projectID int) ([]mode
 		}
 		participants = append(participants, p)
 	}
-	return nil, err
+	return participants, nil
 }

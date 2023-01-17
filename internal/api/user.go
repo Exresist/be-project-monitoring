@@ -84,5 +84,5 @@ func (s *Server) deleteUser(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, "User deleted")
+	c.JSON(http.StatusOK, nil)
 }

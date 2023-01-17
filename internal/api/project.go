@@ -138,5 +138,5 @@ func (s *Server) deleteProject(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, "Project deleted")
+	c.JSON(http.StatusOK, nil)
 }
