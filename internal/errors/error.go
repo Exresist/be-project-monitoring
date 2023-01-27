@@ -23,7 +23,11 @@ var (
 	ErrGithubUsernameAlreadyExists = errors.New("github username already exists")
 	ErrInvalidRole                 = errors.New("invalid role")
 	ErrProjectNameAlreadyExists    = errors.New("project name already exists")
-	ErrProjectActiveToIsInvalid      = errors.New("project date is not valid")
+	ErrProjectNameIsInvalid        = errors.New("project name is not valid")
+	ErrProjectActiveToIsInvalid    = errors.New("project date is not valid")
+	ErrTaskNameIsInvalid           = errors.New("task name is not valid")
+	ErrTaskCreatorIDIsInvalid      = errors.New("task creator id is not valid")
+	ErrTaskNotFound                = errors.New("task not found")
 )
 
 // package ierr

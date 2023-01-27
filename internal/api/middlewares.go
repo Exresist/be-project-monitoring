@@ -30,6 +30,18 @@ func (s *Server) authMiddleware(toAllow ...model.UserRole) func(c *gin.Context) 
 			c.AbortWithStatusJSON(http.StatusUnauthorized, "unauthorized")
 			return
 		}
-
 	}
 }
+
+// func (s *Server) updateUserMiddleware(toAllow ...model.UserRole) func(c *gin.Context) {
+// 	return func(c *gin.Context) {
+// 		ctx := c.Request.Context()
+
+// 		err := s.svc.VerifyToken(ctx, parts[1], toAllow...)
+// 		if err != nil {
+// 			c.AbortWithStatusJSON(http.StatusUnauthorized, "unauthorized")
+// 			return
+// 		}
+
+// 	}
+// }

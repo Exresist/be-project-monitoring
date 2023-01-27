@@ -28,6 +28,7 @@ type (
 		userService
 		projectService
 		participantService
+		taskService
 	}
 	userService interface {
 		VerifyToken(ctx context.Context, token string, toAllow ...model.UserRole) error
@@ -37,10 +38,11 @@ type (
 		FindGithubUser(ctx context.Context, userReq string) bool
 		UpdateUser(ctx context.Context, userReq *UpdateUserReq) (*model.User, error)
 		DeleteUser(ctx context.Context, id uuid.UUID) error
+		GetUserProfile(ctx context.Context, id uuid.UUID) (*GetUserProfileResp, error)
 	}
 
 	projectService interface {
-		CreateProject(ctx context.Context, project *CreateProjectReq) (*model.Project, error)
+		CreateProject(ctx context.Context, projectReq *CreateProjectReq) (*model.Project, error)
 		UpdateProject(ctx context.Context, projectReq *UpdateProjectReq) (*model.Project, error)
 		DeleteProject(ctx context.Context, projectReq *DeleteProjectReq) error
 		GetProjects(ctx context.Context, projectReq *GetProjectReq) ([]model.Project, int, error)
@@ -49,6 +51,13 @@ type (
 	participantService interface {
 		AddParticipant(ctx context.Context, participant *model.Participant) ([]model.Participant, error)
 		GetParticipants(ctx context.Context, projectID int) ([]model.Participant, error)
+	}
+
+	taskService interface {
+		CreateTask(ctx context.Context, task *CreateTaskReq) (*model.Task, error)
+		UpdateTask(ctx context.Context, taskReq *UpdateTaskReq) (*model.Task, error)
+		DeleteTask(ctx context.Context, taskReq *DeleteTaskReq) error
+		GetTasks(ctx context.Context, taskReq *GetTaskReq) ([]model.Task, int, error)
 	}
 
 	OptionFunc func(s *Server)

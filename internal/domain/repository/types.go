@@ -2,6 +2,7 @@ package repository
 
 import (
 	"be-project-monitoring/internal/db"
+	"time"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/google/uuid"
@@ -109,4 +110,40 @@ func conditionsFromProjectFilter(filter *ProjectFilter) sq.Sqlizer {
 		eq["p.name"] = filter.Names
 	}
 	return sq.Or{eq, nameEq}
+}
+
+type TaskFilter struct {
+	IDs   []int
+	Names []string
+	Dates []time.Time
+	*db.Paginator
+}
+
+func NewTaskFilter() *TaskFilter {
+	return &TaskFilter{Paginator: db.DefaultPaginator}
+}
+
+func (f *TaskFilter) ByIDs(ids ...int) *TaskFilter {
+	f.IDs = ids
+	return f
+}
+
+func (f *TaskFilter) ByTaskNames(names ...string) *TaskFilter {
+	f.Names = names
+	return f
+}
+
+func (f *TaskFilter) ByCreatedAt(dates ...time.Time) *TaskFilter {
+	f.Dates = dates
+	return f
+}
+
+func (f *TaskFilter) WithPaginator(limit, offset uint64) *TaskFilter {
+	f.Paginator = db.NewPaginator(limit, offset)
+	return f
+}
+
+func conditionsFromTaskFilter(filter *TaskFilter) sq.Sqlizer {
+	//TODO
+	return nil
 }

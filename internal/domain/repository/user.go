@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"be-project-monitoring/internal/api"
 	"be-project-monitoring/internal/db"
 	"be-project-monitoring/internal/domain/model"
 	ierr "be-project-monitoring/internal/errors"
@@ -107,4 +108,49 @@ func (r *Repository) DeleteUser(ctx context.Context, id uuid.UUID) error {
 	_, err := r.sq.Delete("users").
 		Where(sq.Eq{"id": id}).ExecContext(ctx)
 	return err
+}
+func (r *Repository) GetUserProfile(ctx context.Context, id uuid.UUID) (*api.GetUserProfileResp, error) {
+	rows, err := r.sq.Select(
+		"u.id", "u.role",
+		"u.color_code", "u.email",
+		"u.username", "u.first_name",
+		"u.last_name", "\"u.group\"",
+		"u.github_username", "p.id",
+		"p.name", "p.description",
+		"p.active_to").
+		From("participants part").
+		Join("users u ON part.user_id = u.id").
+		Join("projects p ON part.project_id = p.id").
+		Where(sq.Eq{"id": id}).
+		QueryContext(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("error while performing sql request: %w", err)
+	}
+
+	defer func(res *sql.Rows) {
+		err = res.Close()
+		if err != nil {
+			r.logger.Error("error while closing sql rows", zap.Error(err))
+		}
+	}(rows)
+
+	//ну тут кароче получится что на каждую запись для юзера с id=x в таблице participants (т.е. для каждого его проекта) userProject будет постоянно перезаписываться
+	//можно сделать чтоб перед циклом 1 раз записался юзер в юзерПрофайл, а потом в цикле только проекты добавлялись
+	userProfile := &api.GetUserProfileResp{}
+	for rows.Next() {
+		userProject := &api.UserProjectsResp{}
+		if err = rows.Scan(
+			&userProfile.ID, &userProfile.Role,
+			&userProfile.ColorCode, &userProfile.Email,
+			&userProfile.Username, &userProfile.FirstName,
+			&userProfile.LastName, &userProfile.Group,
+			&userProfile.GithubUsername, &userProject.ID,
+			&userProject.Name, &userProject.Description,
+			&userProject.ActiveTo,
+		); err != nil {
+			return nil, fmt.Errorf("error while scanning sql row: %w", err)
+		}
+		userProfile.UserProjects = append(userProfile.UserProjects, userProject)
+	}
+	return userProfile, nil
 }

@@ -75,10 +75,11 @@ func (s *service) AuthUser(ctx context.Context, username, password string) (stri
 }
 
 func (s *service) GetUsers(ctx context.Context, userReq *api.GetUserReq) ([]model.User, int, error) {
-	filter := repository.NewUserFilter().ByUsernames(userReq.Username).ByEmails(userReq.Email)
-	filter.Limit = uint64(userReq.Limit)
-	filter.Offset = uint64(userReq.Offset)
+	filter := repository.NewUserFilter().
+		WithPaginator(uint64(userReq.Limit), uint64(userReq.Offset)).
+		ByUsernames(userReq.Username).ByEmails(userReq.Email)
 
+	//slushay, a nahuya mi eto cherez bazu ischem esli mozhem sdelat len(users) nizhe?????)))))
 	count, err := s.repo.GetCountByFilter(ctx, filter)
 	if err != nil {
 		return nil, 0, err
@@ -110,7 +111,6 @@ func (s *service) DeleteUser(ctx context.Context, guid uuid.UUID) error {
 	if _, err := s.repo.GetUser(ctx, repository.NewUserFilter().ByIDs(guid)); err != nil {
 		return err
 	}
-
 	return s.repo.DeleteUser(ctx, guid)
 }
 
@@ -120,6 +120,9 @@ func (s *service) FindGithubUser(ctx context.Context, username string) bool {
 		return false
 	}
 	return true
+}
+func (s *service) GetUserProfile(ctx context.Context, guid uuid.UUID) (*api.GetUserProfileResp, error) {	
+	return s.repo.GetUserProfile(ctx, guid)
 }
 
 func hashPass(pwd string) string {
@@ -144,11 +147,12 @@ func mergeUserFields(oldUser *model.User, userReq *api.UpdateUserReq) (*model.Us
 	if _, ok := model.UserRoles[*userReq.Role]; ok {
 		newUser.Role = model.UserRole(*userReq.Role)
 	} else {
-		if userReq.Role == nil || *userReq.Role == "" {
-			newUser.Role = oldUser.Role
-		} else {
-			return nil, ierr.ErrInvalidRole
-		}
+		newUser.Role = oldUser.Role
+		// if userReq.Role == nil || *userReq.Role == "" {
+		// 	newUser.Role = oldUser.Role
+		// } else {
+		// 	return nil, ierr.ErrInvalidRole
+		// }
 	}
 
 	if userReq.Username == nil || *userReq.Username == "" {

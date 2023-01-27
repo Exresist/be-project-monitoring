@@ -20,14 +20,10 @@ type (
 		PhotoURL    string    `json:"photo_url"`
 	}
 
-	createProjectResp struct {
-		*model.Project
-	}
-
 	GetProjectReq struct {
 		Name   string `json:"name"`
-		Offset int    `json:"offset"` //сколько записей опустить
-		Limit  int    `json:"limit"`  //сколько записей подать
+		Offset int    `json:"offset"`
+		Limit  int    `json:"limit"`
 	}
 
 	getProjectResp struct {
@@ -45,99 +41,97 @@ type (
 		RepoURL     *string   `json:"repo_url"`
 		ActiveTo    time.Time `json:"active_to"`
 	}
+	DeleteProjectReq struct {
+		ID int `json:"id"`
+	}
 	addParticipantReq struct {
 		Role      int       `json:"role"`
 		UserID    uuid.UUID `json:"user_id"`
 		ProjectID int       `json:"project_id"`
 	}
-	DeleteProjectReq struct {
-		ID int `json:"id"`
-	}
 )
 
-func (s *Server) createProject(c *gin.Context) {
+func (s *Server) createProject(ctx *gin.Context) {
 	newProject := &CreateProjectReq{}
-	if err := json.NewDecoder(c.Request.Body).Decode(newProject); err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
+	if err := json.NewDecoder(ctx.Request.Body).Decode(newProject); err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return
 	}
 
-	project, err := s.svc.CreateProject(c.Request.Context(), newProject)
+	project, err := s.svc.CreateProject(ctx.Request.Context(), newProject)
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusCreated, createProjectResp{
-		project,
-	})
+	ctx.JSON(http.StatusCreated, project)
 
 }
 
-func (s *Server) getProjects(c *gin.Context) {
+func (s *Server) getProjects(ctx *gin.Context) {
 	projReq := &GetProjectReq{}
-	projReq.Name = c.Query("name")
-	projReq.Offset, _ = strconv.Atoi(c.Query("offset"))
-	projReq.Limit, _ = strconv.Atoi(c.Query("limit"))
+	projReq.Name = ctx.Query("name")
+	projReq.Offset, _ = strconv.Atoi(ctx.Query("offset"))
+	projReq.Limit, _ = strconv.Atoi(ctx.Query("limit"))
 
-	projects, count, err := s.svc.GetProjects(c.Request.Context(), projReq)
+	projects, count, err := s.svc.GetProjects(ctx.Request.Context(), projReq)
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, getProjectResp{
+	ctx.JSON(http.StatusOK, getProjectResp{
 		Projects: projects,
 		Count:    count,
 	})
 }
 
-func (s *Server) updateProject(c *gin.Context) {
+func (s *Server) updateProject(ctx *gin.Context) {
 	newProj := &UpdateProjectReq{}
-	if err := json.NewDecoder(c.Request.Body).Decode(newProj); err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
+	if err := json.NewDecoder(ctx.Request.Body).Decode(newProj); err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return
 	}
-	project, err := s.svc.UpdateProject(c.Request.Context(), newProj)
+	project, err := s.svc.UpdateProject(ctx.Request.Context(), newProj)
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, project)
+	ctx.JSON(http.StatusOK, project)
 }
 
-func (s *Server) addParticipant(c *gin.Context) {
-	req := &addParticipantReq{}
-	if err := json.NewDecoder(c.Request.Body).Decode(req); err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
+func (s *Server) deleteProject(ctx *gin.Context) {
+	projectReq := &DeleteProjectReq{}
+	if err := json.NewDecoder(ctx.Request.Body).Decode(projectReq); err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return
 	}
 
-	participants, err := s.svc.AddParticipant(c.Request.Context(), &model.Participant{
+	err := s.svc.DeleteProject(ctx.Request.Context(), projectReq)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, nil)
+}
+
+func (s *Server) addParticipant(ctx *gin.Context) {
+	req := &addParticipantReq{}
+	if err := json.NewDecoder(ctx.Request.Body).Decode(req); err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
+		return
+	}
+
+	participants, err := s.svc.AddParticipant(ctx.Request.Context(), &model.Participant{
 		Role:      model.ParticipantRole(req.Role),
 		UserID:    req.UserID,
 		ProjectID: req.ProjectID,
 	})
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"participants": participants})
-}
-
-func (s *Server) deleteProject(c *gin.Context) {
-	projectReq := &DeleteProjectReq{}
-	if err := json.NewDecoder(c.Request.Body).Decode(projectReq); err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
-		return
-	}
-
-	err := s.svc.DeleteProject(c.Request.Context(), projectReq)
-	if err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, nil)
+	ctx.JSON(http.StatusOK, gin.H{"participants": participants})
 }

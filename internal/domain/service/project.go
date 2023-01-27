@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"strings"
 	"time"
 
 	"be-project-monitoring/internal/api"
@@ -11,25 +12,30 @@ import (
 	ierr "be-project-monitoring/internal/errors"
 )
 
-func (s *service) GetProjects(ctx context.Context, projReq *api.GetProjectReq) ([]model.Project, int, error) {
+func (s *service) GetProjects(ctx context.Context, projectReq *api.GetProjectReq) ([]model.Project, int, error) {
 
-	filter := repository.NewProjectFilter().ByProjectNames(projReq.Name)
-	filter.Limit = uint64(projReq.Limit)
-	filter.Offset = uint64(projReq.Offset)
+	filter := repository.NewProjectFilter().
+		WithPaginator(uint64(projectReq.Limit), uint64(projectReq.Offset)).
+		ByProjectNames(projectReq.Name)
+
 	count, err := s.repo.GetProjectCountByFilter(ctx, filter)
 	if err != nil {
 		return nil, 0, err
 	}
-
 	projects, err := s.repo.GetProjects(ctx, filter)
 	if err != nil {
 		return nil, 0, err
 	}
-
 	return projects, count, nil
 }
 
 func (s *service) CreateProject(ctx context.Context, projectReq *api.CreateProjectReq) (*model.Project, error) {
+	if strings.Trim(projectReq.Name, " \n\r\t") == "" {
+		return nil, ierr.ErrProjectNameIsInvalid
+	}
+	if projectReq.ActiveTo.IsZero() || projectReq.ActiveTo.Before(time.Now()) {
+		return nil, ierr.ErrProjectActiveToIsInvalid
+	}
 
 	found, err := s.repo.GetProject(ctx, repository.NewProjectFilter().
 		ByProjectNames(projectReq.Name))
@@ -39,10 +45,6 @@ func (s *service) CreateProject(ctx context.Context, projectReq *api.CreateProje
 
 	if found != nil {
 		return nil, ierr.ErrProjectNameAlreadyExists
-	}
-
-	if projectReq.ActiveTo.IsZero() || projectReq.ActiveTo.Before(time.Now()) {
-		return nil, ierr.ErrProjectActiveToIsInvalid
 	}
 
 	project := &model.Project{
@@ -59,7 +61,6 @@ func (s *service) CreateProject(ctx context.Context, projectReq *api.CreateProje
 }
 
 func (s *service) UpdateProject(ctx context.Context, projectReq *api.UpdateProjectReq) (*model.Project, error) {
-
 	oldProject, err := s.repo.GetProject(ctx, repository.NewProjectFilter().
 		ByIDs(projectReq.ID))
 	if err != nil {
@@ -78,7 +79,6 @@ func (s *service) DeleteProject(ctx context.Context, projectReq *api.DeleteProje
 	if _, err := s.repo.GetProject(ctx, repository.NewProjectFilter().ByIDs(projectReq.ID)); err != nil {
 		return err
 	}
-
 	return s.repo.DeleteProject(ctx, projectReq.ID)
 }
 
