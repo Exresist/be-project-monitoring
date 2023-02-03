@@ -58,7 +58,7 @@ func main() {
 
 	repo := repository.NewRepository(conn, sugaredLogger)
 	ts := oauth2.StaticTokenSource(
-		&oauth2.Token{AccessToken: cfg.GHToken},
+		&oauth2.Token{AccessToken: cfg.GHTOKEN},
 	)
 	tc := oauth2.NewClient(ctx, ts)
 	githubCl := github.NewClient(tc)

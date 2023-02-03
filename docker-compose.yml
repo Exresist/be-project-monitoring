@@ -7,7 +7,7 @@ services:
       dockerfile: Dockerfile
     environment:
       APP_DSN: postgres://postgres:postgres@db:5432/postgres?sslmode=disable
-      APP_GHToken: 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
+      APP_GHTOKEN: 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
     restart: always
     ports:
       - "8080:8080"

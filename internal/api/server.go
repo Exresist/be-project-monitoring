@@ -32,20 +32,22 @@ type (
 	}
 	userService interface {
 		VerifyToken(ctx context.Context, token string, toAllow ...model.UserRole) error
+		GetUserIDFromToken(ctx context.Context, token string) (uuid.UUID, error)
 		CreateUser(ctx context.Context, user *CreateUserReq) (*model.User, string, error)
 		AuthUser(ctx context.Context, username, password string) (string, error)
 		GetUsers(ctx context.Context, userReq *GetUserReq) ([]model.User, int, error)
 		FindGithubUser(ctx context.Context, userReq string) bool
 		UpdateUser(ctx context.Context, userReq *UpdateUserReq) (*model.User, error)
 		DeleteUser(ctx context.Context, id uuid.UUID) error
-		GetUserProfile(ctx context.Context, id uuid.UUID) (*GetUserProfileResp, error)
+		GetUserProfile(ctx context.Context, id uuid.UUID) (*model.Profile, error)
 	}
 
 	projectService interface {
 		CreateProject(ctx context.Context, projectReq *CreateProjectReq) (*model.Project, error)
 		UpdateProject(ctx context.Context, projectReq *UpdateProjectReq) (*model.Project, error)
 		DeleteProject(ctx context.Context, projectReq *DeleteProjectReq) error
-		GetProjects(ctx context.Context, projectReq *GetProjectReq) ([]model.Project, int, error)
+		GetProjects(ctx context.Context, projectReq *GetProjectsReq) ([]model.Project, int, error)
+		GetProjectInfo(ctx context.Context, id int) (*model.ProjectInfo, error)
 	}
 
 	participantService interface {
@@ -57,7 +59,8 @@ type (
 		CreateTask(ctx context.Context, task *CreateTaskReq) (*model.Task, error)
 		UpdateTask(ctx context.Context, taskReq *UpdateTaskReq) (*model.Task, error)
 		DeleteTask(ctx context.Context, taskReq *DeleteTaskReq) error
-		GetTasks(ctx context.Context, taskReq *GetTaskReq) ([]model.Task, int, error)
+		GetTasks(ctx context.Context, taskReq *GetTasksReq) ([]model.Task, int, error)
+		GetTaskInfo(ctx context.Context, id int) (*model.TaskInfo, error)
 	}
 
 	OptionFunc func(s *Server)
@@ -84,11 +87,9 @@ func New(opts ...OptionFunc) *Server {
 	apiRtr.POST("/register", s.register)
 
 	usersRtr := apiRtr.Group("/users")
-
 	usersRtr.GET("/users", s.getUsers)
-
-	//TODO:
-	//usersRtr.GET("/users/:id", s.getUserByID)
+	usersRtr.GET("/users/:id", s.getUserProfile)
+	usersRtr.POST("/users/:id", s.updateUser)
 	//usersRtr.DELETE("/users/:id", s.deleteUser)
 
 	// /api/pm
@@ -97,18 +98,17 @@ func New(opts ...OptionFunc) *Server {
 	// api/pm/project
 	projectRtr := pmRtr.Group("/project")
 
-	projectRtr.PUT("/", s.createProject)
-	projectRtr.POST("/", s.updateProject)
+	projectRtr.POST("/", s.createProject)
+	projectRtr.PUT("/", s.updateProject)
 	projectRtr.POST("/:id", s.addParticipant)
 
 	// /api/admin
-	//adminRtr := apiRtr.Group("/admin", s.authMiddleware(model.Admin))
-
-	/*	// /api/admin/users
-		// TODO
-		adminRtr.GET("/users", s.getUsers)
-		// /api/admin/projects
-		adminRtr.GET("/projects", s.getProjects)*/
+	adminRtr := apiRtr.Group("/admin", s.authMiddleware(model.Admin))
+	// /api/admin/users
+	adminRtr.GET("/users", s.getUsers)
+	adminRtr.POST("/users", s.updateUser)
+	// /api/admin/projects
+	adminRtr.GET("/projects", s.getProjects)
 
 	s.Handler = rtr
 	return s

@@ -1,25 +1,23 @@
 package model
 
-import "github.com/google/uuid"
-
 const (
-	RoleTeamlead ParticipantRole = iota + 1
-	RoleParticipant
-	RoleOwner
+	RoleTeamlead    ParticipantRole = "Teamlead"
+	RoleParticipant ParticipantRole = "Participant"
+	RoleOwner       ParticipantRole = "Owner"
 )
 
 type (
-	ParticipantRole int
+	ParticipantRole string
 
 	Participant struct {
 		User
 		Role      ParticipantRole
-		UserID    uuid.UUID
+		ID        int
 		ProjectID int
 	}
 )
 
-var Roles = map[ParticipantRole]struct{}{
+var ParticipantRoles = map[ParticipantRole]struct{}{
 	RoleTeamlead:    {},
 	RoleParticipant: {},
 	RoleOwner:       {},

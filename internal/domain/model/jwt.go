@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
+	"github.com/google/uuid"
 )
 
 // Random letters.
@@ -12,8 +13,9 @@ import (
 var signingString = []byte("SomethingReallyStupid")
 
 type TokenClaims struct {
-	Role     UserRole `json:"role"`
-	Username string   `json:"username"`
+	ID       uuid.UUID `json:"id"`
+	Role     UserRole  `json:"role"`
+	Username string    `json:"username"`
 	jwt.RegisteredClaims
 }
 
@@ -27,6 +29,7 @@ func DecodeToken(token *jwt.Token) (interface{}, error) {
 
 func GenerateToken(user *User) (string, error) {
 	claims := &TokenClaims{
+		ID:       user.ID,
 		Role:     user.Role,
 		Username: user.Username,
 		RegisteredClaims: jwt.RegisteredClaims{

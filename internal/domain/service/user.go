@@ -15,10 +15,12 @@ import (
 )
 
 func (s *service) CreateUser(ctx context.Context, userReq *api.CreateUserReq) (*model.User, string, error) {
-	if _, ok := model.UserRoles[userReq.Role]; !ok {
-		return nil, "", ierr.ErrInvalidRole
+	if userReq.Role == "" {
+		userReq.Role = string(model.Student)
 	}
-
+	if _, ok := model.UserRoles[userReq.Role]; !ok {
+		return nil, "", ierr.ErrInvalidUserRole
+	}
 	user := &model.User{
 		Role:           model.UserRole(userReq.Role),
 		Email:          userReq.Email,
@@ -31,8 +33,8 @@ func (s *service) CreateUser(ctx context.Context, userReq *api.CreateUserReq) (*
 	}
 
 	found, err := s.repo.GetUser(ctx, repository.NewUserFilter().
-		ByEmails(user.Email).
-		ByUsernames(user.Username))
+		ByEmail(user.Email).
+		ByUsername(user.Username))
 	if err != nil && !errors.Is(err, ierr.ErrUserNotFound) {
 		return nil, "", err
 	}
@@ -52,7 +54,6 @@ func (s *service) CreateUser(ctx context.Context, userReq *api.CreateUserReq) (*
 	if err != nil {
 		return nil, "", err
 	}
-
 	user.ID = userUUID
 
 	if err = s.repo.InsertUser(ctx, user); err != nil {
@@ -64,7 +65,7 @@ func (s *service) CreateUser(ctx context.Context, userReq *api.CreateUserReq) (*
 }
 
 func (s *service) AuthUser(ctx context.Context, username, password string) (string, error) {
-	user, err := s.repo.GetUser(ctx, repository.NewUserFilter().ByUsernames(username))
+	user, err := s.repo.GetUser(ctx, repository.NewUserFilter().ByUsername(username))
 	if err != nil {
 		return "", fmt.Errorf("error while getting user: %w", err)
 	}
@@ -77,9 +78,8 @@ func (s *service) AuthUser(ctx context.Context, username, password string) (stri
 func (s *service) GetUsers(ctx context.Context, userReq *api.GetUserReq) ([]model.User, int, error) {
 	filter := repository.NewUserFilter().
 		WithPaginator(uint64(userReq.Limit), uint64(userReq.Offset)).
-		ByUsernames(userReq.Username).ByEmails(userReq.Email)
+		ByUsername(userReq.Username).ByEmail(userReq.Email)
 
-	//slushay, a nahuya mi eto cherez bazu ischem esli mozhem sdelat len(users) nizhe?????)))))
 	count, err := s.repo.GetCountByFilter(ctx, filter)
 	if err != nil {
 		return nil, 0, err
@@ -94,7 +94,7 @@ func (s *service) GetUsers(ctx context.Context, userReq *api.GetUserReq) ([]mode
 }
 
 func (s *service) UpdateUser(ctx context.Context, userReq *api.UpdateUserReq) (*model.User, error) {
-	oldUser, err := s.repo.GetUser(ctx, repository.NewUserFilter().ByIDs(userReq.ID))
+	oldUser, err := s.repo.GetUser(ctx, repository.NewUserFilter().ByID(userReq.ID))
 	if err != nil {
 		return nil, err
 	}
@@ -103,12 +103,11 @@ func (s *service) UpdateUser(ctx context.Context, userReq *api.UpdateUserReq) (*
 	if err != nil {
 		return nil, err
 	}
-
 	return newUser, s.repo.UpdateUser(ctx, newUser)
 }
 
 func (s *service) DeleteUser(ctx context.Context, guid uuid.UUID) error {
-	if _, err := s.repo.GetUser(ctx, repository.NewUserFilter().ByIDs(guid)); err != nil {
+	if _, err := s.repo.GetUser(ctx, repository.NewUserFilter().ByID(guid)); err != nil {
 		return err
 	}
 	return s.repo.DeleteUser(ctx, guid)
@@ -116,12 +115,12 @@ func (s *service) DeleteUser(ctx context.Context, guid uuid.UUID) error {
 
 func (s *service) FindGithubUser(ctx context.Context, username string) bool {
 	_, _, err := s.githubCl.Users.Get(ctx, username)
-	if err != nil {
-		return false
-	}
-	return true
+	return err == nil
 }
-func (s *service) GetUserProfile(ctx context.Context, guid uuid.UUID) (*api.GetUserProfileResp, error) {	
+func (s *service) GetUserProfile(ctx context.Context, guid uuid.UUID) (*model.Profile, error) {
+	if _, err := s.repo.GetUser(ctx, repository.NewUserFilter().ByID(guid)); err != nil {
+		return nil, err
+	}
 	return s.repo.GetUserProfile(ctx, guid)
 }
 
@@ -147,12 +146,11 @@ func mergeUserFields(oldUser *model.User, userReq *api.UpdateUserReq) (*model.Us
 	if _, ok := model.UserRoles[*userReq.Role]; ok {
 		newUser.Role = model.UserRole(*userReq.Role)
 	} else {
-		newUser.Role = oldUser.Role
-		// if userReq.Role == nil || *userReq.Role == "" {
-		// 	newUser.Role = oldUser.Role
-		// } else {
-		// 	return nil, ierr.ErrInvalidRole
-		// }
+		if userReq.Role == nil || *userReq.Role == "" {
+			newUser.Role = oldUser.Role
+		} else {
+			return nil, ierr.ErrInvalidUserRole
+		}
 	}
 
 	if userReq.Username == nil || *userReq.Username == "" {

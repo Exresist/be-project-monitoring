@@ -1,17 +1,18 @@
 package repository
 
 import (
-	"be-project-monitoring/internal/api"
 	"be-project-monitoring/internal/db"
 	"be-project-monitoring/internal/domain/model"
 	ierr "be-project-monitoring/internal/errors"
 	"context"
 	"database/sql"
 	"fmt"
+	"time"
 
 	"github.com/AvraamMavridis/randomcolor"
 	sq "github.com/Masterminds/squirrel"
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 	"go.uber.org/zap"
 )
 
@@ -32,19 +33,19 @@ func (r *Repository) GetUsers(ctx context.Context, filter *UserFilter) ([]model.
 		"u.id", "u.role",
 		"u.color_code", "u.email",
 		"u.username", "u.first_name",
-		"u.last_name", "\"u.group\"",
+		"u.last_name", "u.\"group\"",
 		"u.github_username", "u.hashed_password").
 		From("users u").
 		Where(conditionsFromUserFilter(filter)).
-		Limit(filter.Limit).   // max = filter.Limit numbers
-		Offset(filter.Offset). //  min = filter.Offset + 1
+		Limit(filter.Limit).
+		Offset(filter.Offset).
 		QueryContext(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("error while performing sql request: %w", err)
 	}
 
-	defer func(res *sql.Rows) {
-		err = res.Close()
+	defer func(rows *sql.Rows) {
+		err = rows.Close()
 		if err != nil {
 			r.logger.Error("error while closing sql rows", zap.Error(err))
 		}
@@ -109,48 +110,45 @@ func (r *Repository) DeleteUser(ctx context.Context, id uuid.UUID) error {
 		Where(sq.Eq{"id": id}).ExecContext(ctx)
 	return err
 }
-func (r *Repository) GetUserProfile(ctx context.Context, id uuid.UUID) (*api.GetUserProfileResp, error) {
-	rows, err := r.sq.Select(
-		"u.id", "u.role",
-		"u.color_code", "u.email",
-		"u.username", "u.first_name",
-		"u.last_name", "\"u.group\"",
-		"u.github_username", "p.id",
-		"p.name", "p.description",
-		"p.active_to").
-		From("participants part").
-		Join("users u ON part.user_id = u.id").
-		Join("projects p ON part.project_id = p.id").
-		Where(sq.Eq{"id": id}).
-		QueryContext(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("error while performing sql request: %w", err)
+func (r *Repository) GetUserProfile(ctx context.Context, id uuid.UUID) (*model.Profile, error) {
+	query := `SELECT u.id, u.role, u.color_code, u.email, u.username,
+	 			u.first_name, u.last_name, u."group", u.github_username,
+				ARRAY_AGG (p.id) projects_ids, ARRAY_AGG (p.name) projects_names,
+				ARRAY_AGG (p.description) projects_descriptions,
+				ARRAY_AGG (p.active_to) projects_active_tos
+			  FROM users u
+			  JOIN participants part ON part.user_id = u.id
+			  JOIN projects p ON part.project_id = p.id
+			  WHERE u.id = $1
+			  GROUP BY u.id, u.role, u.color_code, u.email, u.username,
+					   u.first_name, u.last_name, u."group", u.github_username`
+
+	projectsIDs := make(pq.Int64Array, 0)
+	projectsNames := make(pq.StringArray, 0)
+	projectsDescriptions := make(pq.StringArray, 0)
+	projectsActiveTos := make([]time.Time, 0)
+
+	profile := model.Profile{}
+	row := r.db.QueryRowContext(ctx, query, id)
+	if err := row.Scan(&profile.ID, &profile.Role,
+		&profile.ColorCode, &profile.Email,
+		&profile.Username, &profile.FirstName,
+		&profile.LastName, &profile.Group,
+		&profile.GithubUsername, &projectsIDs,
+		&projectsNames, &projectsDescriptions,
+		pq.Array(&projectsActiveTos)); err != nil {
+		return nil, fmt.Errorf("error while scanning sql row: %w", err)
 	}
 
-	defer func(res *sql.Rows) {
-		err = res.Close()
-		if err != nil {
-			r.logger.Error("error while closing sql rows", zap.Error(err))
-		}
-	}(rows)
-
-	//ну тут кароче получится что на каждую запись для юзера с id=x в таблице participants (т.е. для каждого его проекта) userProject будет постоянно перезаписываться
-	//можно сделать чтоб перед циклом 1 раз записался юзер в юзерПрофайл, а потом в цикле только проекты добавлялись
-	userProfile := &api.GetUserProfileResp{}
-	for rows.Next() {
-		userProject := &api.UserProjectsResp{}
-		if err = rows.Scan(
-			&userProfile.ID, &userProfile.Role,
-			&userProfile.ColorCode, &userProfile.Email,
-			&userProfile.Username, &userProfile.FirstName,
-			&userProfile.LastName, &userProfile.Group,
-			&userProfile.GithubUsername, &userProject.ID,
-			&userProject.Name, &userProject.Description,
-			&userProject.ActiveTo,
-		); err != nil {
-			return nil, fmt.Errorf("error while scanning sql row: %w", err)
-		}
-		userProfile.UserProjects = append(userProfile.UserProjects, userProject)
+	projects := make([]model.UserProjects, 0)
+	for i := range projectsIDs {
+		projects = append(projects, model.UserProjects{
+			ID:          int(projectsIDs[i]),
+			Name:        projectsNames[i],
+			Description: projectsDescriptions[i],
+			ActiveTo:    projectsActiveTos[i],
+		})
 	}
-	return userProfile, nil
+	profile.UserProjects = projects
+	return &profile, nil
 }

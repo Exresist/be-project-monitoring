@@ -30,7 +30,8 @@ func (r *Repository) GetTasks(ctx context.Context, filter *TaskFilter) ([]model.
 		"t.description", "t.suggested_estimate",
 		"t.real_estimate", "t.participant_id",
 		"t.creator_id", "t.status",
-		"t.created_at", "t.updated_at").
+		"t.created_at", "t.updated_at",
+		"t.project_id").
 		From("tasks t").
 		Where(conditionsFromTaskFilter(filter)).
 		Limit(filter.Limit).
@@ -55,6 +56,7 @@ func (r *Repository) GetTasks(ctx context.Context, filter *TaskFilter) ([]model.
 			&task.RealEstimate, &task.ParticipantID,
 			&task.CreatorID, &task.Status,
 			&task.CreatedAt, &task.UpdatedAt,
+			&task.ProjectID,
 		); err != nil {
 			return nil, fmt.Errorf("error while scanning sql row: %w", err)
 		}
@@ -76,12 +78,12 @@ func (r *Repository) InsertTask(ctx context.Context, task *model.Task) error {
 	row := r.sq.Insert("tasks").
 		Columns("name",
 			"description", "suggested_estimate",
-			"creator_id", "created_at",
-			"updated_at").
+			"participant_id", "creator_id",
+			"status", "project_id").
 		Values(task.Name,
 			task.Description, task.SuggestedEstimate,
-			task.CreatorID, task.CreatedAt,
-			task.UpdatedAt).
+			task.ParticipantID, task.CreatorID,
+			task.Status, task.ProjectID).
 		Suffix("RETURNING \"id\"").
 		QueryRowContext(ctx)
 	if err := row.Scan(&task.ID); err != nil {
@@ -107,4 +109,25 @@ func (r *Repository) DeleteTask(ctx context.Context, id int) error {
 	_, err := r.sq.Delete("tasks").
 		Where(sq.Eq{"id": id}).ExecContext(ctx)
 	return err
+}
+
+func (r *Repository) GetTaskInfo(ctx context.Context, id int) (*model.TaskInfo, error) {
+	//получить фулл таску, получить юзера креатора и партисипанта (джоин через партисипантов и юзеров)
+	r.sq.Select("t.id", "t.name", "t.description",
+		"t.suggested_estimate", "t.real_estimate",
+		"t.participant_id", "t.creator_id",
+		"t.status", "t.created_at",
+		"t.updated_at", "t.project_id",
+		"u1.id", "u1.role",
+		"u1.color_code", "u1.username",
+		"u1.first_name", "u1.last_name",
+		"u1.\"group\"", "u1.github_username",
+		"u2.id", "u2.role",
+		"u2.color_code", "u2.username",
+		"u2.first_name", "u2.last_name",
+		"u2.\"group\"", "u2.github_username").
+		From("tasks t")
+	// Join("participants part1 ON part1.id = t.creator_id").
+	// Join("participants part2 ON u2.id = t.participant_id").
+	return nil, nil
 }

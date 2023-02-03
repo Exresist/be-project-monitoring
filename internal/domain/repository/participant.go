@@ -2,6 +2,7 @@ package repository
 
 import (
 	"be-project-monitoring/internal/domain/model"
+	ierr "be-project-monitoring/internal/errors"
 	"context"
 	"fmt"
 )
@@ -15,21 +16,32 @@ func (r *Repository) AddParticipant(ctx context.Context, participant *model.Part
 		).
 		Values(
 			participant.Role,
-			participant.UserID,
+			participant.User.ID,
 			participant.ProjectID,
 		).ExecContext(ctx); err != nil {
 		return nil, fmt.Errorf("error while saving participant: %w", err)
 	}
 
-	return r.GetParticipants(ctx, participant.ProjectID)
+	return r.GetParticipants(ctx, NewParticipantFilter().ByProjectID(participant.ProjectID))
 }
 
-func (r *Repository) GetParticipants(ctx context.Context, projectID int) ([]model.Participant, error) {
+func (r *Repository) GetParticipant(ctx context.Context, filter *ParticipantFilter) (*model.Participant, error) {
+	participants, err := r.GetParticipants(ctx, filter.WithPaginator(1, 0))
+	switch {
+	case err != nil:
+		return nil, fmt.Errorf("failed to get participant by id: %w", err)
+	case len(participants) == 0:
+		return nil, ierr.ErrParticipantNotFound
+	default:
+		return &participants[0], nil
+	}
+}
+func (r *Repository) GetParticipants(ctx context.Context, filter *ParticipantFilter) ([]model.Participant, error) {
 	rows, err := r.sq.Select(
+		"p.id",
 		"p.role",
 		"p.user_id",
 		"p.project_id",
-		"u.id",
 		"u.role",
 		"u.color_code",
 		"u.email",
@@ -42,7 +54,8 @@ func (r *Repository) GetParticipants(ctx context.Context, projectID int) ([]mode
 	).
 		From("participants p").
 		Join("users u ON u.id = p.user_id").
-		Where("p.project_id = $1", projectID).QueryContext(ctx)
+		//Where("p.project_id = $1", projectID).QueryContext(ctx)
+		Where(conditionsFromParticipantFilter(filter)).QueryContext(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("error while querying participants: %w", err)
 	}
@@ -50,8 +63,8 @@ func (r *Repository) GetParticipants(ctx context.Context, projectID int) ([]mode
 	for rows.Next() {
 		p := model.Participant{}
 		if err := rows.Scan(
-			&p.Role, &p.UserID,
-			&p.ProjectID, &p.ID,
+			&p.ID, &p.Role,
+			&p.User.ID, &p.ProjectID,
 			&p.User.Role, &p.ColorCode,
 			&p.Email, &p.Username,
 			&p.FirstName, &p.LastName,
@@ -64,3 +77,4 @@ func (r *Repository) GetParticipants(ctx context.Context, projectID int) ([]mode
 	}
 	return participants, nil
 }
+

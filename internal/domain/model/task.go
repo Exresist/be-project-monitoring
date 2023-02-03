@@ -1,6 +1,9 @@
 package model
 
-import "time"
+import (
+	"database/sql"
+	"time"
+)
 
 const (
 	TODO       TaskStatus = "TODO"
@@ -18,11 +21,17 @@ type (
 		Description       string
 		SuggestedEstimate int
 		RealEstimate      int
+		ParticipantID     sql.NullInt64
+		CreatorID         int
 		Status            TaskStatus
 		CreatedAt         time.Time
 		UpdatedAt         time.Time
-		ParticipantID     int
-		CreatorID         int
+		ProjectID         int
+	}
+	TaskInfo struct {
+		Task
+		Creator     ShortUserInfo
+		Participant ShortUserInfo
 	}
 )
 

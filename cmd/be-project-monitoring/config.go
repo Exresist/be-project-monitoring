@@ -9,5 +9,5 @@ type config struct {
 	WriteTimeout    int    `required:"true" default:"10" split_words:"true" desc:"Таймаут на запись ответа"`
 	ShutdownTimeout int    `required:"true" default:"30" split_words:"true" desc:"Время до принудительного завершения сервиса после получения сигнала выхода (s)"`
 
-	GHToken string `required:"true" desc:"Github API token"`
+	GHTOKEN string `required:"true" desc:"Github API token"`
 }

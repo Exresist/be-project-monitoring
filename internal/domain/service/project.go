@@ -12,11 +12,11 @@ import (
 	ierr "be-project-monitoring/internal/errors"
 )
 
-func (s *service) GetProjects(ctx context.Context, projectReq *api.GetProjectReq) ([]model.Project, int, error) {
+func (s *service) GetProjects(ctx context.Context, projectReq *api.GetProjectsReq) ([]model.Project, int, error) {
 
 	filter := repository.NewProjectFilter().
 		WithPaginator(uint64(projectReq.Limit), uint64(projectReq.Offset)).
-		ByProjectNames(projectReq.Name)
+		ByProjectName(strings.TrimSpace(projectReq.Name))
 
 	count, err := s.repo.GetProjectCountByFilter(ctx, filter)
 	if err != nil {
@@ -30,7 +30,7 @@ func (s *service) GetProjects(ctx context.Context, projectReq *api.GetProjectReq
 }
 
 func (s *service) CreateProject(ctx context.Context, projectReq *api.CreateProjectReq) (*model.Project, error) {
-	if strings.Trim(projectReq.Name, " \n\r\t") == "" {
+	if strings.TrimSpace(projectReq.Name) == "" {
 		return nil, ierr.ErrProjectNameIsInvalid
 	}
 	if projectReq.ActiveTo.IsZero() || projectReq.ActiveTo.Before(time.Now()) {
@@ -38,7 +38,7 @@ func (s *service) CreateProject(ctx context.Context, projectReq *api.CreateProje
 	}
 
 	found, err := s.repo.GetProject(ctx, repository.NewProjectFilter().
-		ByProjectNames(projectReq.Name))
+		ByProjectName(projectReq.Name))
 	if err != nil && !errors.Is(err, ierr.ErrProjectNotFound) {
 		return nil, err
 	}
@@ -54,15 +54,12 @@ func (s *service) CreateProject(ctx context.Context, projectReq *api.CreateProje
 		PhotoURL:    projectReq.PhotoURL,
 	}
 
-	if err := s.repo.InsertProject(ctx, project); err != nil {
-		return nil, err
-	}
-	return project, nil
+	return project, s.repo.InsertProject(ctx, project)
 }
 
 func (s *service) UpdateProject(ctx context.Context, projectReq *api.UpdateProjectReq) (*model.Project, error) {
 	oldProject, err := s.repo.GetProject(ctx, repository.NewProjectFilter().
-		ByIDs(projectReq.ID))
+		ByID(projectReq.ID))
 	if err != nil {
 		return nil, err
 	}
@@ -76,10 +73,17 @@ func (s *service) UpdateProject(ctx context.Context, projectReq *api.UpdateProje
 }
 
 func (s *service) DeleteProject(ctx context.Context, projectReq *api.DeleteProjectReq) error {
-	if _, err := s.repo.GetProject(ctx, repository.NewProjectFilter().ByIDs(projectReq.ID)); err != nil {
+	if _, err := s.repo.GetProject(ctx, repository.NewProjectFilter().ByID(projectReq.ID)); err != nil {
 		return err
 	}
 	return s.repo.DeleteProject(ctx, projectReq.ID)
+}
+
+func (s *service) GetProjectInfo(ctx context.Context, id int) (*model.ProjectInfo, error) {
+	if _, err := s.repo.GetProject(ctx, repository.NewProjectFilter().ByID(id)); err != nil {
+		return nil, err
+	}
+	return s.repo.GetProjectInfo(ctx, id)
 }
 
 func mergeProjectFields(oldProject *model.Project, projectReq *api.UpdateProjectReq) (*model.Project, error) {

@@ -2,16 +2,15 @@ package repository
 
 import (
 	"be-project-monitoring/internal/db"
-	"time"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/google/uuid"
 )
 
 type UserFilter struct {
-	IDs       []uuid.UUID `json:"id"`
-	Usernames []string    `json:"username"`
-	Emails    []string    `json:"email"`
+	ID       uuid.UUID `json:"id"`
+	Username string    `json:"username"`
+	Email    string    `json:"email"`
 	*db.Paginator
 }
 
@@ -19,18 +18,18 @@ func NewUserFilter() *UserFilter {
 	return &UserFilter{Paginator: db.DefaultPaginator}
 }
 
-func (f *UserFilter) ByIDs(ids ...uuid.UUID) *UserFilter {
-	f.IDs = ids
+func (f *UserFilter) ByID(id uuid.UUID) *UserFilter {
+	f.ID = id
 	return f
 }
 
-func (f *UserFilter) ByUsernames(usernames ...string) *UserFilter {
-	f.Usernames = usernames
+func (f *UserFilter) ByUsername(username string) *UserFilter {
+	f.Username = username
 	return f
 }
 
-func (f *UserFilter) ByEmails(emails ...string) *UserFilter {
-	f.Emails = emails
+func (f *UserFilter) ByEmail(email string) *UserFilter {
+	f.Email = email
 	return f
 }
 
@@ -40,20 +39,20 @@ func (f *UserFilter) WithPaginator(limit, offset uint64) *UserFilter {
 }
 
 func conditionsFromUserFilter(filter *UserFilter) sq.Sqlizer {
-	eq := make(sq.Eq)
+	if filter.ID != uuid.Nil {
+		return sq.Eq{"u.id": filter.ID}
+	}
 	usernameEq := make(sq.Eq)
 	emailEq := make(sq.Eq)
-	if len(filter.IDs) != 0 {
-		eq["u.id"] = filter.IDs
+
+	if filter.Username != "" {
+		usernameEq["u.username"] = filter.Username
 	}
-	if len(filter.Usernames) != 0 {
-		eq["u.username"] = filter.Usernames
-	}
-	if len(filter.Emails) != 0 {
-		eq["u.email"] = filter.Emails
+	if filter.Email != "" {
+		emailEq["u.email"] = filter.Email
 	}
 
-	return sq.Or{eq, usernameEq, emailEq}
+	return sq.Or{usernameEq, emailEq}
 
 	// eq := make(sq.Eq)
 	// if filter.IDs != nil {
@@ -76,8 +75,8 @@ func conditionsFromUserFilter(filter *UserFilter) sq.Sqlizer {
 }
 
 type ProjectFilter struct {
-	IDs   []int
-	Names []string
+	ID   int
+	Name string
 	*db.Paginator
 }
 
@@ -85,13 +84,13 @@ func NewProjectFilter() *ProjectFilter {
 	return &ProjectFilter{Paginator: db.DefaultPaginator}
 }
 
-func (f *ProjectFilter) ByIDs(ids ...int) *ProjectFilter {
-	f.IDs = ids
+func (f *ProjectFilter) ByID(id int) *ProjectFilter {
+	f.ID = id
 	return f
 }
 
-func (f *ProjectFilter) ByProjectNames(names ...string) *ProjectFilter {
-	f.Names = names
+func (f *ProjectFilter) ByProjectName(name string) *ProjectFilter {
+	f.Name = name
 	return f
 }
 
@@ -101,21 +100,21 @@ func (f *ProjectFilter) WithPaginator(limit, offset uint64) *ProjectFilter {
 }
 
 func conditionsFromProjectFilter(filter *ProjectFilter) sq.Sqlizer {
-	eq := make(sq.Eq)
-	nameEq := make(sq.Eq)
-	if len(filter.IDs) != 0 {
-		eq["p.id"] = filter.IDs
+	if filter.ID > 0 {
+		return sq.Eq{"p.id": filter.ID}
 	}
-	if len(filter.Names) != 0 {
-		eq["p.name"] = filter.Names
+
+	if filter.Name != "" {
+		return sq.Eq{"p.name": filter.Name}
 	}
-	return sq.Or{eq, nameEq}
+	return nil
 }
 
 type TaskFilter struct {
-	IDs   []int
-	Names []string
-	Dates []time.Time
+	ID            int
+	ProjectID     int
+	ParticipantID *int
+	Name          *string
 	*db.Paginator
 }
 
@@ -123,18 +122,20 @@ func NewTaskFilter() *TaskFilter {
 	return &TaskFilter{Paginator: db.DefaultPaginator}
 }
 
-func (f *TaskFilter) ByIDs(ids ...int) *TaskFilter {
-	f.IDs = ids
+func (f *TaskFilter) ByID(id int) *TaskFilter {
+	f.ID = id
 	return f
 }
-
-func (f *TaskFilter) ByTaskNames(names ...string) *TaskFilter {
-	f.Names = names
+func (f *TaskFilter) ByProjectID(id int) *TaskFilter {
+	f.ProjectID = id
 	return f
 }
-
-func (f *TaskFilter) ByCreatedAt(dates ...time.Time) *TaskFilter {
-	f.Dates = dates
+func (f *TaskFilter) ByParticipantID(id int) *TaskFilter {
+	f.ParticipantID = &id
+	return f
+}
+func (f *TaskFilter) ByTaskName(name string) *TaskFilter {
+	f.Name = &name
 	return f
 }
 
@@ -144,6 +145,58 @@ func (f *TaskFilter) WithPaginator(limit, offset uint64) *TaskFilter {
 }
 
 func conditionsFromTaskFilter(filter *TaskFilter) sq.Sqlizer {
-	//TODO
+	if filter.ID > 0 {
+		return sq.Eq{"t.id": filter.ID}
+	}
+
+	projectEq := sq.Eq{"t.project_id": filter.ProjectID}
+	nameEq := make(sq.Eq)
+	participantEq := make(sq.Eq)
+	if filter.Name != nil {
+		nameEq["t.name"] = *filter.Name
+	}
+	if filter.ParticipantID != nil {
+		participantEq["t.participant_id"] = *filter.ParticipantID
+	}
+
+	return sq.And{projectEq, participantEq, nameEq}
+}
+
+type ParticipantFilter struct {
+	ID        int
+	UserID    uuid.UUID
+	ProjectID int
+	*db.Paginator
+}
+
+func NewParticipantFilter() *ParticipantFilter {
+	return &ParticipantFilter{Paginator: db.DefaultPaginator}
+}
+func (f *ParticipantFilter) ByID(id int) *ParticipantFilter {
+	f.ID = id
+	return f
+}
+func (f *ParticipantFilter) ByUserID(guid uuid.UUID) *ParticipantFilter {
+	f.UserID = guid
+	return f
+}
+func (f *ParticipantFilter) ByProjectID(id int) *ParticipantFilter {
+	f.ProjectID = id
+	return f
+}
+func (f *ParticipantFilter) WithPaginator(limit, offset uint64) *ParticipantFilter {
+	f.Paginator = db.NewPaginator(limit, offset)
+	return f
+}
+func conditionsFromParticipantFilter(filter *ParticipantFilter) sq.Sqlizer {
+	if filter.ID > 0 {
+		return sq.Eq{"id": filter.ID}
+	}
+	if filter.UserID != uuid.Nil {
+		return sq.Eq{"user_id": filter.UserID}
+	}
+	if filter.ProjectID > 0 {
+		return sq.Eq{"project_id": filter.ProjectID}
+	}
 	return nil
 }
