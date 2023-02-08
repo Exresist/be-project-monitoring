@@ -8,9 +8,12 @@ import (
 )
 
 type UserFilter struct {
-	ID       uuid.UUID `json:"id"`
-	Username string    `json:"username"`
-	Email    string    `json:"email"`
+	id          uuid.UUID
+	username    string
+	email       string
+	isLike      bool
+	projectID   int
+	isOnProject bool
 	*db.Paginator
 }
 
@@ -19,59 +22,73 @@ func NewUserFilter() *UserFilter {
 }
 
 func (f *UserFilter) ByID(id uuid.UUID) *UserFilter {
-	f.ID = id
+	f.id = id
 	return f
 }
 
 func (f *UserFilter) ByUsername(username string) *UserFilter {
-	f.Username = username
+	f.username = username
 	return f
 }
-
 func (f *UserFilter) ByEmail(email string) *UserFilter {
-	f.Email = email
+	f.email = email
 	return f
 }
-
+func (f *UserFilter) ByUsernameLike(username string) *UserFilter {
+	f.username = username
+	f.isLike = true
+	return f
+}
+func (f *UserFilter) ByEmailLike(email string) *UserFilter {
+	f.email = email
+	f.isLike = true
+	return f
+}
+func (f *UserFilter) ByAtProject(projectID int) *UserFilter {
+	f.projectID = projectID
+	f.isOnProject = true
+	return f
+}
+func (f *UserFilter) ByNotAtProject(projectID int) *UserFilter {
+	f.projectID = projectID
+	f.isOnProject = false
+	return f
+}
 func (f *UserFilter) WithPaginator(limit, offset uint64) *UserFilter {
 	f.Paginator = db.NewPaginator(limit, offset)
 	return f
 }
 
 func conditionsFromUserFilter(filter *UserFilter) sq.Sqlizer {
-	if filter.ID != uuid.Nil {
-		return sq.Eq{"u.id": filter.ID}
+	if filter.id != uuid.Nil {
+		return sq.Eq{"u.id": filter.id}
 	}
-	usernameEq := make(sq.Eq)
-	emailEq := make(sq.Eq)
-
-	if filter.Username != "" {
-		usernameEq["u.username"] = filter.Username
+	if !filter.isLike {
+		nameEq := make(sq.Eq)
+		emailEq := make(sq.Eq)
+		if filter.username != "" {
+			nameEq["u.username"] = filter.username
+		}
+		if filter.email != "" {
+			emailEq["u.email"] = filter.email
+		}
+		return sq.Or{nameEq, emailEq}
 	}
-	if filter.Email != "" {
-		emailEq["u.email"] = filter.Email
+
+	like := make(sq.Like)
+	if filter.username != "" {
+		like["u.username"] = "%" + filter.username + "%"
 	}
-
-	return sq.Or{usernameEq, emailEq}
-
-	// eq := make(sq.Eq)
-	// if filter.IDs != nil {
-	// 	eq["u.id"] = filter.IDs
-	// }
-	// if len(filter.Usernames) != 0 && len(filter.Emails) != 0 {
-	// 	usernameEq := make(sq.Eq)
-	// 	emailEq := make(sq.Eq)
-	// 	usernameEq["u.username"] = filter.Usernames
-	// 	emailEq["u.email"] = filter.Emails
-	// 	return sq.Or{eq, usernameEq, emailEq}
-	// }
-	// if filter.Usernames != nil {
-	// 	eq["u.username"] = filter.Usernames
-	// }
-	// if filter.Emails != nil {
-	// 	eq["u.email"] = filter.Emails
-	// }
-	// return eq
+	if filter.email != "" {
+		like["u.email"] = "%" + filter.email + "%"
+	}
+	if !filter.isOnProject && filter.projectID > 0 {
+		return sq.And{like, sq.NotEq{"p.project_id": filter.projectID}} //проверить будет ли добавляться AND, если не будет like
+	}
+	if filter.isOnProject && filter.projectID > 0 {
+		return sq.And{like, sq.Eq{"p.project_id": filter.projectID}} //проверить будет ли добавляться AND, если не будет like
+	}
+	return like
 }
 
 type ProjectFilter struct {
@@ -149,17 +166,28 @@ func conditionsFromTaskFilter(filter *TaskFilter) sq.Sqlizer {
 		return sq.Eq{"t.id": filter.ID}
 	}
 
-	projectEq := sq.Eq{"t.project_id": filter.ProjectID}
-	nameEq := make(sq.Eq)
-	participantEq := make(sq.Eq)
+	// projectEq := sq.Eq{"t.project_id": filter.ProjectID}
+	// nameEq := make(sq.Eq)
+	// participantEq := make(sq.Eq)
+	// if filter.Name != nil {
+	// 	nameEq["t.name"] = *filter.Name
+	// }
+	// if filter.ParticipantID != nil {
+	// 	participantEq["t.participant_id"] = *filter.ParticipantID
+	// }
+
+	// return sq.And{projectEq, participantEq, nameEq}
+
+	//можно одну eq, т.к. под капотом используется AND, но проверить!
+	eq := make(sq.Eq)
+	eq["t.project_id"] = filter.ProjectID
 	if filter.Name != nil {
-		nameEq["t.name"] = *filter.Name
+		eq["t.name"] = *filter.Name
 	}
 	if filter.ParticipantID != nil {
-		participantEq["t.participant_id"] = *filter.ParticipantID
+		eq["t.participant_id"] = *filter.ParticipantID
 	}
-
-	return sq.And{projectEq, participantEq, nameEq}
+	return eq
 }
 
 type ParticipantFilter struct {
@@ -192,11 +220,13 @@ func conditionsFromParticipantFilter(filter *ParticipantFilter) sq.Sqlizer {
 	if filter.ID > 0 {
 		return sq.Eq{"id": filter.ID}
 	}
+
+	eq := make(sq.Eq) //можно одну eq, т.к. под капотом используется AND
 	if filter.UserID != uuid.Nil {
-		return sq.Eq{"user_id": filter.UserID}
+		eq["p.user_id"] = filter.UserID
 	}
 	if filter.ProjectID > 0 {
-		return sq.Eq{"project_id": filter.ProjectID}
+		eq["p.project_id"] = filter.ProjectID
 	}
-	return nil
+	return eq
 }

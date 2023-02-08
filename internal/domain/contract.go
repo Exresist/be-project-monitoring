@@ -19,8 +19,10 @@ type (
 
 	userRepo interface {
 		GetUser(ctx context.Context, filter *repository.UserFilter) (*model.User, error)
-		GetUsers(ctx context.Context, filter *repository.UserFilter) ([]model.User, error)
-		GetCountByFilter(ctx context.Context, filter *repository.UserFilter) (int, error)
+		GetFullUsers(ctx context.Context, filter *repository.UserFilter) ([]model.User, error)
+		GetFullCountByFilter(ctx context.Context, filter *repository.UserFilter) (int, error)
+		GetPartialUsers(ctx context.Context, filter *repository.UserFilter) ([]model.ShortUser, error)
+		GetPartialCountByFilter(ctx context.Context, filter *repository.UserFilter) (int, error)
 		GetUserProfile(ctx context.Context, id uuid.UUID) (*model.Profile, error)
 
 		InsertUser(ctx context.Context, user *model.User) error
@@ -40,9 +42,10 @@ type (
 	}
 
 	participantRepo interface {
-		AddParticipant(ctx context.Context, participant *model.Participant) ([]model.Participant, error)
+		AddParticipant(ctx context.Context, participant *model.Participant) error
 		GetParticipant(ctx context.Context, filter *repository.ParticipantFilter) (*model.Participant, error)
 		GetParticipants(ctx context.Context, filter *repository.ParticipantFilter) ([]model.Participant, error)
+		DeleteParticipant(ctx context.Context, id int) error
 	}
 
 	taskRepo interface {
@@ -54,5 +57,7 @@ type (
 		InsertTask(ctx context.Context, task *model.Task) error
 		UpdateTask(ctx context.Context, task *model.Task) error
 		DeleteTask(ctx context.Context, id int) error
+
+		DeleteParticipantsFromTask(ctx context.Context, participantID int) error
 	}
 )

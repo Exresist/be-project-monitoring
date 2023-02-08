@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	"be-project-monitoring/internal/domain"
 	"be-project-monitoring/internal/domain/model"
 
 	"github.com/gin-gonic/gin"
@@ -19,11 +20,15 @@ type (
 		ActiveTo    time.Time `json:"active_to"`
 		PhotoURL    string    `json:"photo_url"`
 	}
+	CreateProjectResp struct {
+		Project     *model.Project
+		Participant *model.Participant
+	}
 
 	GetProjectsReq struct {
 		Name   string `json:"name"`
-		Offset int     `json:"offset"`
-		Limit  int     `json:"limit"`
+		Offset int    `json:"offset"`
+		Limit  int    `json:"limit"`
 	}
 
 	getProjectResp struct {
@@ -44,7 +49,7 @@ type (
 	DeleteProjectReq struct {
 		ID int `json:"id"`
 	}
-	addParticipantReq struct {
+	AddParticipantReq struct {
 		Role      string    `json:"role"`
 		UserID    uuid.UUID `json:"user_id"`
 		ProjectID int       `json:"project_id"`
@@ -52,19 +57,29 @@ type (
 )
 
 func (s *Server) createProject(c *gin.Context) {
-	newProject := &CreateProjectReq{}
-	if err := json.NewDecoder(c.Request.Body).Decode(newProject); err != nil {
+	projectReq := &CreateProjectReq{}
+	if err := json.NewDecoder(c.Request.Body).Decode(projectReq); err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return
 	}
 
-	project, err := s.svc.CreateProject(c.Request.Context(), newProject)
+	project, err := s.svc.CreateProject(c.Request.Context(), projectReq)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return
 	}
-
-	c.JSON(http.StatusCreated, project)
+	participant, err := s.svc.AddParticipant(c.Request.Context(), &AddParticipantReq{
+		Role:      "Owner",
+		UserID:    uuid.MustParse(c.GetString(string(domain.UserIDCtx))), //как лучше? так или c.MustGet(string(domain.UserIDCtx)).(uuid.UUID)?
+		ProjectID: project.ID,
+	})
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
+		return
+	}
+	c.JSON(http.StatusCreated, CreateProjectResp{
+		Project:     project,
+		Participant: participant})
 
 }
 
@@ -102,14 +117,13 @@ func (s *Server) updateProject(c *gin.Context) {
 }
 
 func (s *Server) deleteProject(c *gin.Context) {
-	projectReq := &DeleteProjectReq{}
-	if err := json.NewDecoder(c.Request.Body).Decode(projectReq); err != nil {
+	userID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return
 	}
 
-	err := s.svc.DeleteProject(c.Request.Context(), projectReq)
-	if err != nil {
+	if err := s.svc.DeleteProject(c.Request.Context(), userID); err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return
 	}
@@ -118,27 +132,34 @@ func (s *Server) deleteProject(c *gin.Context) {
 }
 
 func (s *Server) addParticipant(c *gin.Context) {
-	req := &addParticipantReq{}
+	req := &AddParticipantReq{}
 	if err := json.NewDecoder(c.Request.Body).Decode(req); err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return
 	}
 
-	participants, err := s.svc.AddParticipant(c.Request.Context(), &model.Participant{
-		Role:      model.ParticipantRole(req.Role),
-		ProjectID: req.ProjectID,
-		User: model.User{
-			ID: req.UserID,
-		},
-	})
+	_, err := s.svc.AddParticipant(c.Request.Context(), req)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return
 	}
-
+	participants, err := s.svc.GetParticipants(c.Request.Context(), req.ProjectID)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
+		return
+	}
 	c.JSON(http.StatusOK, gin.H{"participants": participants})
 }
 
+func (s *Server) deleteParticipant(c *gin.Context) {
+	userID, _ := uuid.Parse(c.Param("user_id"))
+	projectID, _ := strconv.Atoi(c.Param("id"))
+	if err := s.svc.DeleteParticipant(c.Request.Context(), userID, projectID); err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, nil)
+}
 func (s *Server) getProjectInfo(c *gin.Context) {
 	projectID, err := strconv.Atoi(c.Param("id"))
 	if err != nil {

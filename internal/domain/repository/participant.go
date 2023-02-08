@@ -5,9 +5,11 @@ import (
 	ierr "be-project-monitoring/internal/errors"
 	"context"
 	"fmt"
+
+	sq "github.com/Masterminds/squirrel"
 )
 
-func (r *Repository) AddParticipant(ctx context.Context, participant *model.Participant) ([]model.Participant, error) {
+func (r *Repository) AddParticipant(ctx context.Context, participant *model.Participant)  error {
 	if _, err := r.sq.Insert("participants").
 		Columns(
 			"role",
@@ -19,10 +21,9 @@ func (r *Repository) AddParticipant(ctx context.Context, participant *model.Part
 			participant.User.ID,
 			participant.ProjectID,
 		).ExecContext(ctx); err != nil {
-		return nil, fmt.Errorf("error while saving participant: %w", err)
+		return fmt.Errorf("error while saving participant: %w", err)
 	}
-
-	return r.GetParticipants(ctx, NewParticipantFilter().ByProjectID(participant.ProjectID))
+	return nil
 }
 
 func (r *Repository) GetParticipant(ctx context.Context, filter *ParticipantFilter) (*model.Participant, error) {
@@ -76,5 +77,11 @@ func (r *Repository) GetParticipants(ctx context.Context, filter *ParticipantFil
 		participants = append(participants, p)
 	}
 	return participants, nil
+}
+
+func (r *Repository) DeleteParticipant(ctx context.Context, id int) error {	
+	_, err := r.sq.Delete("participants").
+		Where(sq.Eq{"id": id}).ExecContext(ctx)
+	return err
 }
 

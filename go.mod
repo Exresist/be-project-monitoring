@@ -5,7 +5,6 @@ go 1.18
 require (
 	github.com/AvraamMavridis/randomcolor v0.0.0-20180822172341-208aff70bf2c
 	github.com/Masterminds/squirrel v1.5.3
-	github.com/docker/distribution v2.8.1+incompatible
 	github.com/gin-gonic/gin v1.8.2
 	github.com/golang-jwt/jwt/v4 v4.4.2
 	github.com/golang-migrate/migrate/v4 v4.15.2

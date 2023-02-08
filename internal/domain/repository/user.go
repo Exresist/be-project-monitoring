@@ -17,7 +17,7 @@ import (
 )
 
 func (r *Repository) GetUser(ctx context.Context, filter *UserFilter) (*model.User, error) {
-	users, err := r.GetUsers(ctx, filter.WithPaginator(1, 0))
+	users, err := r.GetFullUsers(ctx, filter.WithPaginator(1, 0))
 	switch {
 	case err != nil:
 		return nil, fmt.Errorf("failed to get user by id: %w", err)
@@ -27,7 +27,7 @@ func (r *Repository) GetUser(ctx context.Context, filter *UserFilter) (*model.Us
 		return &users[0], nil
 	}
 }
-func (r *Repository) GetUsers(ctx context.Context, filter *UserFilter) ([]model.User, error) {
+func (r *Repository) GetFullUsers(ctx context.Context, filter *UserFilter) ([]model.User, error) {
 	filter.Limit = db.NormalizeLimit(filter.Limit)
 	rows, err := r.sq.Select(
 		"u.id", "u.role",
@@ -66,10 +66,63 @@ func (r *Repository) GetUsers(ctx context.Context, filter *UserFilter) ([]model.
 	}
 	return users, nil
 }
-func (r *Repository) GetCountByFilter(ctx context.Context, filter *UserFilter) (int, error) {
+func (r *Repository) GetFullCountByFilter(ctx context.Context, filter *UserFilter) (int, error) {
 	var count int
 	if err := r.sq.Select("COUNT(1)").
 		From("users u").
+		Where(conditionsFromUserFilter(filter)).
+		QueryRowContext(ctx).Scan(&count); err != nil {
+		return 0, fmt.Errorf("error while scanning sql row: %w", err)
+	}
+	return count, nil
+}
+func (r *Repository) GetPartialUsers(ctx context.Context, filter *UserFilter) ([]model.ShortUser, error) {
+	filter.Limit = db.NormalizeLimit(filter.Limit)
+	rows, err := r.sq.Select(
+		"u.id", "u.role",
+		"u.color_code", "u.email",
+		"u.username", "u.first_name",
+		"u.last_name", "u.\"group\"",
+		"u.github_username").
+		Distinct().
+		From("users u").
+		LeftJoin("participants p on p.user_id = u.id").
+		Where(conditionsFromUserFilter(filter)).
+		Limit(filter.Limit).
+		Offset(filter.Offset).
+		QueryContext(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("error while performing sql request: %w", err)
+	}
+
+	defer func(rows *sql.Rows) {
+		err = rows.Close()
+		if err != nil {
+			r.logger.Error("error while closing sql rows", zap.Error(err))
+		}
+	}(rows)
+	users := make([]model.ShortUser, 0)
+	for rows.Next() {
+		user := model.ShortUser{}
+		if err = rows.Scan(
+			&user.ID, &user.Role,
+			&user.ColorCode, &user.Email,
+			&user.Username, &user.FirstName,
+			&user.LastName, &user.Group,
+			&user.GithubUsername,
+		); err != nil {
+			return nil, fmt.Errorf("error while scanning sql row: %w", err)
+		}
+		users = append(users, user)
+	}
+	return users, nil
+}
+func (r *Repository) GetPartialCountByFilter(ctx context.Context, filter *UserFilter) (int, error) {
+	var count int
+	if err := r.sq.Select("COUNT(DISTINCT u.id)").
+		Distinct().
+		From("users u").
+		LeftJoin("participants p on p.user_id = u.id").
 		Where(conditionsFromUserFilter(filter)).
 		QueryRowContext(ctx).Scan(&count); err != nil {
 		return 0, fmt.Errorf("error while scanning sql row: %w", err)

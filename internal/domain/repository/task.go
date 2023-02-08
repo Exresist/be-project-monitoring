@@ -112,22 +112,64 @@ func (r *Repository) DeleteTask(ctx context.Context, id int) error {
 }
 
 func (r *Repository) GetTaskInfo(ctx context.Context, id int) (*model.TaskInfo, error) {
-	//получить фулл таску, получить юзера креатора и партисипанта (джоин через партисипантов и юзеров)
-	r.sq.Select("t.id", "t.name", "t.description",
+	taskInfo := model.TaskInfo{}
+	err := r.sq.Select("t.id", "t.name", "t.description",
 		"t.suggested_estimate", "t.real_estimate",
 		"t.participant_id", "t.creator_id",
 		"t.status", "t.created_at",
 		"t.updated_at", "t.project_id",
 		"u1.id", "u1.role",
-		"u1.color_code", "u1.username",
-		"u1.first_name", "u1.last_name",
-		"u1.\"group\"", "u1.github_username",
+		"u1.color_code", "u1.email",
+		"u1.username", "u1.first_name",
+		"u1.last_name", "u1.\"group\"",
+		"u1.github_username",
 		"u2.id", "u2.role",
-		"u2.color_code", "u2.username",
-		"u2.first_name", "u2.last_name",
-		"u2.\"group\"", "u2.github_username").
-		From("tasks t")
-	// Join("participants part1 ON part1.id = t.creator_id").
-	// Join("participants part2 ON u2.id = t.participant_id").
-	return nil, nil
+		"u2.color_code", "u2.email",
+		"u2.username", "u2.first_name",
+		"u2.last_name", "u2.\"group\"",
+		"u2.github_username").
+		From("tasks t").
+		LeftJoin("participants p_c ON p_c.id = t.creator_id").
+		LeftJoin("participants p_p ON p_p.id = t.participant_id").
+		LeftJoin("users u1 ON u1.id = p_c.user_id").
+		LeftJoin("users u2 ON u2.id = p_p.user_id").
+		Where(sq.Eq{"t.id": id}).
+		QueryRowContext(ctx).
+		Scan(&taskInfo.ID, &taskInfo.Name, &taskInfo.Description,
+			&taskInfo.SuggestedEstimate, &taskInfo.RealEstimate,
+			&taskInfo.ParticipantID, &taskInfo.CreatorID,
+			&taskInfo.Status, &taskInfo.CreatedAt,
+			&taskInfo.UpdatedAt, &taskInfo.ProjectID,
+			&taskInfo.Creator.ID, &taskInfo.Creator.Role,
+			&taskInfo.Creator.ColorCode, &taskInfo.Creator.Email,
+			&taskInfo.Creator.Username, &taskInfo.Creator.FirstName,
+			&taskInfo.Creator.LastName, &taskInfo.Creator.Group,
+			&taskInfo.Creator.GithubUsername,
+			&taskInfo.Participant.ID, &taskInfo.Participant.Role,
+			&taskInfo.Participant.ColorCode, &taskInfo.Participant.Email,
+			&taskInfo.Participant.Username, &taskInfo.Participant.FirstName,
+			&taskInfo.Participant.LastName, &taskInfo.Participant.Group,
+			&taskInfo.Participant.GithubUsername,
+		)
+	if err != nil {
+		return nil, fmt.Errorf("error while performing sql request: %w", err)
+	}
+
+	return &taskInfo, nil
+}
+
+func (r *Repository) DeleteParticipantsFromTask(ctx context.Context, participantID int) error {
+	if _, err := r.sq.Update("tasks").
+		SetMap(map[string]interface{}{
+			"creator_id": "NULL",
+		}).Where(sq.Eq{"creator_id": participantID}).
+		ExecContext(ctx); err != nil {
+		return err
+	}
+	_, err := r.sq.Update("tasks").
+		SetMap(map[string]interface{}{
+			"participant_id": "NULL",
+		}).Where(sq.Eq{"participant_id": participantID}).
+		ExecContext(ctx)
+	return err
 }

@@ -22,7 +22,7 @@ type (
 		SuggestedEstimate int
 		RealEstimate      int
 		ParticipantID     sql.NullInt64
-		CreatorID         int
+		CreatorID         sql.NullInt64
 		Status            TaskStatus
 		CreatedAt         time.Time
 		UpdatedAt         time.Time
@@ -30,8 +30,8 @@ type (
 	}
 	TaskInfo struct {
 		Task
-		Creator     ShortUserInfo
-		Participant ShortUserInfo
+		Creator     ShortUser
+		Participant ShortUser
 	}
 )
 

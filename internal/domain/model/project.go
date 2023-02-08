@@ -18,7 +18,7 @@ type (
 
 	ProjectInfo struct {
 		Project
-		Users []ShortUserInfo
+		Users []ShortUser
 		Tasks []ProjectTask
 	}
 

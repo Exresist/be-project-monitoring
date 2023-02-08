@@ -18,7 +18,7 @@ func (s *service) CreateUser(ctx context.Context, userReq *api.CreateUserReq) (*
 	if userReq.Role == "" {
 		userReq.Role = string(model.Student)
 	}
-	if _, ok := model.UserRoles[userReq.Role]; !ok {
+	if _, ok := model.UserRoles[model.UserRole(userReq.Role)]; !ok {
 		return nil, "", ierr.ErrInvalidUserRole
 	}
 	user := &model.User{
@@ -75,21 +75,44 @@ func (s *service) AuthUser(ctx context.Context, username, password string) (stri
 	return model.GenerateToken(user)
 }
 
-func (s *service) GetUsers(ctx context.Context, userReq *api.GetUserReq) ([]model.User, int, error) {
+func (s *service) GetFullUsers(ctx context.Context, userReq *api.GetUserReq) ([]model.User, int, error) {
 	filter := repository.NewUserFilter().
 		WithPaginator(uint64(userReq.Limit), uint64(userReq.Offset)).
 		ByUsername(userReq.Username).ByEmail(userReq.Email)
 
-	count, err := s.repo.GetCountByFilter(ctx, filter)
+	count, err := s.repo.GetFullCountByFilter(ctx, filter)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	users, err := s.repo.GetUsers(ctx, filter)
+	users, err := s.repo.GetFullUsers(ctx, filter)
 	if err != nil {
 		return nil, 0, err
 	}
 
+	return users, count, nil
+}
+func (s *service) GetPartialUsers(ctx context.Context, userReq *api.GetUserReq) ([]model.ShortUser, int, error) {
+	if userReq.ProjectID <= 0 {
+		return nil, 0, ierr.ErrInvalidProjectID
+	}
+	filter := repository.NewUserFilter().
+		WithPaginator(uint64(userReq.Limit), uint64(userReq.Offset)).
+		ByUsernameLike(userReq.Username).ByEmailLike(userReq.Email)
+	if userReq.IsOnProject {
+		filter = filter.ByAtProject(userReq.ProjectID)
+	} else {
+		filter = filter.ByNotAtProject(userReq.ProjectID)
+	}
+
+	count, err := s.repo.GetPartialCountByFilter(ctx, filter)
+	if err != nil {
+		return nil, 0, err
+	}
+	users, err := s.repo.GetPartialUsers(ctx, filter)
+	if err != nil {
+		return nil, 0, err
+	}
 	return users, count, nil
 }
 
@@ -143,7 +166,7 @@ func mergeUserFields(oldUser *model.User, userReq *api.UpdateUserReq) (*model.Us
 		HashedPassword: hashPass(*userReq.Password),
 	}
 
-	if _, ok := model.UserRoles[*userReq.Role]; ok {
+	if _, ok := model.UserRoles[model.UserRole(*userReq.Role)]; ok {
 		newUser.Role = model.UserRole(*userReq.Role)
 	} else {
 		if userReq.Role == nil || *userReq.Role == "" {

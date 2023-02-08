@@ -1,13 +1,12 @@
 package api
 
 import (
+	"be-project-monitoring/internal/domain"
 	"be-project-monitoring/internal/domain/model"
 	ierr "be-project-monitoring/internal/errors"
 	"encoding/json"
 	"net/http"
 	"strconv"
-	"strings"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -30,8 +29,8 @@ type (
 		Offset        int
 		Limit         int
 	}
-	getTaskResp struct {
-		Tasks []TaskResp
+	getTasksResp struct {
+		Tasks []model.Task
 		Count int
 	}
 	UpdateTaskReq struct {
@@ -41,24 +40,8 @@ type (
 		SuggestedEstimate *int      `json:"suggested_estimate"`
 		RealEstimate      *int      `json:"real_estimate"`
 		Status            *string   `json:"status"`
-		UpdatedAt         time.Time `json:"updated_at"`
 		ParticipantUserID uuid.UUID `json:"participant_user_id"`
-	}
-	TaskResp struct {
-		ID                int
-		Name              string
-		Description       string
-		SuggestedEstimate int
-		RealEstimate      int
-		ParticipantID     int
-		CreatorID         int
-		Status            string
-		CreatedAt         time.Time
-		UpdatedAt         time.Time
-		ProjectID         int
-	}
-	DeleteTaskReq struct {
-		ID int `json:"id"`
+		ChangeParticipant *bool     `json:"change_participant"`
 	}
 )
 
@@ -85,28 +68,15 @@ func (s *Server) getTasks(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, getTaskResp{
-		Tasks: makeTasksResponse(tasks),
+	c.JSON(http.StatusOK, getTasksResp{
+		Tasks: tasks,
 		Count: count,
 	})
 
 }
 func (s *Server) createTask(c *gin.Context) {
-	token := c.Request.Header.Get("Authorization")
-	if token == "" {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, "unauthorized")
-		return
-	}
-	parts := strings.Split(strings.TrimSpace(token), " ")
-
-	id, err := s.svc.GetUserIDFromToken(c.Request.Context(), parts[1])
-	if err != nil {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, err)
-		return
-	}
-
 	taskReq := &CreateTaskReq{
-		CreatorUserID: id,
+		CreatorUserID: c.MustGet(string(domain.UserIDCtx)).(uuid.UUID), //ОБЯЗАТЕЛЬНО ПРОВЕРИТЬ!
 	}
 	if err := json.NewDecoder(c.Request.Body).Decode(taskReq); err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, err)
@@ -119,7 +89,7 @@ func (s *Server) createTask(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, makeTaskResponse(task))
+	c.JSON(http.StatusOK, task)
 }
 func (s *Server) updateTask(c *gin.Context) {
 	taskReq := &UpdateTaskReq{}
@@ -134,16 +104,15 @@ func (s *Server) updateTask(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, makeTaskResponse(task))
+	c.JSON(http.StatusOK, task)
 }
 func (s *Server) deleteTask(c *gin.Context) {
-	taskReq := &DeleteTaskReq{}
-	if err := json.NewDecoder(c.Request.Body).Decode(taskReq); err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, err)
+	taskID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return
 	}
-
-	if err := s.svc.DeleteTask(c, taskReq); err != nil {
+	if err := s.svc.DeleteTask(c, taskID); err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, err)
 		return
 	}
@@ -166,25 +135,25 @@ func (s *Server) getTaskInfo(c *gin.Context) {
 	c.JSON(http.StatusOK, taskInfo)
 }
 
-func makeTaskResponse(task *model.Task) *TaskResp {
-	return &TaskResp{
-		ID:                task.ID,
-		Name:              task.Name,
-		Description:       task.Description,
-		SuggestedEstimate: task.SuggestedEstimate,
-		RealEstimate:      task.RealEstimate,
-		ParticipantID:     int(task.ParticipantID.Int64),
-		CreatorID:         task.CreatorID,
-		Status:            string(task.Status),
-		CreatedAt:         task.CreatedAt,
-		UpdatedAt:         task.UpdatedAt,
-		ProjectID:         task.ProjectID,
-	}
-}
-func makeTasksResponse(tasks []model.Task) []TaskResp {
-	var taskResponses []TaskResp
-	for _, task := range tasks {
-		taskResponses = append(taskResponses, *makeTaskResponse(&task))
-	}
-	return taskResponses
-}
+// func makeTaskResponse(task *model.Task) *TaskResp {
+// 	return &TaskResp{
+// 		ID:                task.ID,
+// 		Name:              task.Name,
+// 		Description:       task.Description,
+// 		SuggestedEstimate: task.SuggestedEstimate,
+// 		RealEstimate:      task.RealEstimate,
+// 		ParticipantID:     int(task.ParticipantID.Int64),
+// 		CreatorID:         task.CreatorID,
+// 		Status:            string(task.Status),
+// 		CreatedAt:         task.CreatedAt,
+// 		UpdatedAt:         task.UpdatedAt,
+// 		ProjectID:         task.ProjectID,
+// 	}
+// }
+// func makeTasksResponse(tasks []model.Task) []TaskResp {
+// 	var taskResponses []TaskResp
+// 	for _, task := range tasks {
+// 		taskResponses = append(taskResponses, *makeTaskResponse(&task))
+// 	}
+// 	return taskResponses
+// }

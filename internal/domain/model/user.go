@@ -24,10 +24,11 @@ type (
 		GithubUsername string
 		HashedPassword string
 	}
-	ShortUserInfo struct {
+	ShortUser struct {
 		ID             uuid.UUID `json:"user_id"`
 		Role           string    `json:"role"`
 		ColorCode      string    `json:"color_code"`
+		Email          string    `json:"email"`
 		Username       string    `json:"username"`
 		FirstName      string    `json:"first_name"`
 		LastName       string    `json:"last_name"`
@@ -36,8 +37,8 @@ type (
 	}
 )
 
-var UserRoles = map[string]struct{}{
-	"student":         {},
-	"admin":           {},
-	"project_manager": {},
+var UserRoles = map[UserRole]struct{}{
+	Student:        {},
+	Admin:          {},
+	ProjectManager: {},
 }

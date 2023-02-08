@@ -54,7 +54,7 @@ func (s *service) CreateProject(ctx context.Context, projectReq *api.CreateProje
 		PhotoURL:    projectReq.PhotoURL,
 	}
 
-	return project, s.repo.InsertProject(ctx, project)
+	return project, s.repo.InsertProject(ctx, project) //добавить партисипанта!!!!!!!!!!
 }
 
 func (s *service) UpdateProject(ctx context.Context, projectReq *api.UpdateProjectReq) (*model.Project, error) {
@@ -72,11 +72,11 @@ func (s *service) UpdateProject(ctx context.Context, projectReq *api.UpdateProje
 	return newProject, s.repo.UpdateProject(ctx, newProject)
 }
 
-func (s *service) DeleteProject(ctx context.Context, projectReq *api.DeleteProjectReq) error {
-	if _, err := s.repo.GetProject(ctx, repository.NewProjectFilter().ByID(projectReq.ID)); err != nil {
+func (s *service) DeleteProject(ctx context.Context, id int) error {
+	if _, err := s.repo.GetProject(ctx, repository.NewProjectFilter().ByID(id)); err != nil {
 		return err
 	}
-	return s.repo.DeleteProject(ctx, projectReq.ID)
+	return s.repo.DeleteProject(ctx, id)
 }
 
 func (s *service) GetProjectInfo(ctx context.Context, id int) (*model.ProjectInfo, error) {
