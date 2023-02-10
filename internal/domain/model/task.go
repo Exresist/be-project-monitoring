@@ -16,17 +16,20 @@ const (
 type (
 	TaskStatus string
 	Task       struct {
-		ID                int
-		Name              string
-		Description       string
-		SuggestedEstimate int
-		RealEstimate      int
-		ParticipantID     sql.NullInt64
-		CreatorID         sql.NullInt64
-		Status            TaskStatus
-		CreatedAt         time.Time
-		UpdatedAt         time.Time
-		ProjectID         int
+		ShortTask
+		SuggestedEstimate sql.NullInt64 `json:"suggested_estimate"`
+		RealEstimate      sql.NullInt64 `json:"real_estimate"`
+		CreatorID         sql.NullInt64 `json:"creator_id"`
+		CreatedAt         time.Time     `json:"created_at"`
+		UpdatedAt         time.Time     `json:"updated_at"`
+		ProjectID         int           `json:"project_id"`
+	}
+	ShortTask struct {
+		ID            int            `json:"id"`
+		Name          string         `json:"name"`
+		Description   sql.NullString `json:"description"`
+		ParticipantID sql.NullInt64  `json:"participant_id"`
+		Status        TaskStatus     `json:"status"`
 	}
 	TaskInfo struct {
 		Task

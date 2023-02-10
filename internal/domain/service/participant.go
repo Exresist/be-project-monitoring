@@ -32,11 +32,14 @@ func (s *service) AddParticipant(ctx context.Context, participantReq *api.AddPar
 	participant := &model.Participant{
 		Role:      model.ParticipantRole(participantReq.Role),
 		ProjectID: participantReq.ProjectID,
-		User: model.User{
+		ShortUser: model.ShortUser{
 			ID: participantReq.UserID,
 		},
 	}
-	return participant, s.repo.AddParticipant(ctx, participant)
+	if err := s.repo.AddParticipant(ctx, participant); err != nil {
+		return nil, err
+	}	
+	return s.GetParticipantByID(ctx, participant.ID)
 }
 func (s *service) GetParticipantByID(ctx context.Context, id int) (*model.Participant, error) {
 	return s.repo.GetParticipant(ctx, repository.NewParticipantFilter().ByID(id))
@@ -54,7 +57,7 @@ func (s *service) DeleteParticipant(ctx context.Context, userID uuid.UUID, proje
 	}
 	participant, err := s.repo.GetParticipant(ctx, repository.NewParticipantFilter().
 		ByUserID(userID).ByProjectID(projectID))
-	if err != nil{
+	if err != nil {
 		return err
 	}
 	if err := s.repo.DeleteParticipantsFromTask(ctx, participant.ID); err != nil {

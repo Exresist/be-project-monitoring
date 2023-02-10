@@ -1,7 +1,7 @@
 package repository
 
 import (
-	"be-project-monitoring/internal/db"
+	"be-project-monitoring/internal/db"	
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/google/uuid"
@@ -66,13 +66,20 @@ func conditionsFromUserFilter(filter *UserFilter) sq.Sqlizer {
 	if !filter.isLike {
 		nameEq := make(sq.Eq)
 		emailEq := make(sq.Eq)
+		if filter.username != "" && filter.email != "" {
+			nameEq["u.username"] = filter.username
+			emailEq["u.email"] = filter.email
+			return sq.Or{nameEq, emailEq}
+		}
 		if filter.username != "" {
 			nameEq["u.username"] = filter.username
+			return nameEq
 		}
 		if filter.email != "" {
 			emailEq["u.email"] = filter.email
+			return emailEq
 		}
-		return sq.Or{nameEq, emailEq}
+		return nil
 	}
 
 	like := make(sq.Like)
@@ -218,7 +225,7 @@ func (f *ParticipantFilter) WithPaginator(limit, offset uint64) *ParticipantFilt
 }
 func conditionsFromParticipantFilter(filter *ParticipantFilter) sq.Sqlizer {
 	if filter.ID > 0 {
-		return sq.Eq{"id": filter.ID}
+		return sq.Eq{"p.id": filter.ID}
 	}
 
 	eq := make(sq.Eq) //можно одну eq, т.к. под капотом используется AND

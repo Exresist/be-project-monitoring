@@ -7,6 +7,7 @@ import (
 
 	"be-project-monitoring/internal/domain"
 	"be-project-monitoring/internal/domain/model"
+	ierr "be-project-monitoring/internal/errors"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -14,9 +15,9 @@ import (
 
 func (s *Server) authMiddleware(toAllow ...model.UserRole) func(c *gin.Context) {
 	return func(c *gin.Context) {
-		token, ok := getTokenFromHeader(c.Request.Header.Get("Authorization"))
-		if !ok {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, "invalid token")
+		token, err := getTokenFromHeader(c.Request.Header.Get("Authorization"))
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, err)
 			return
 		}
 		ctx := c.Request.Context()
@@ -30,16 +31,16 @@ func (s *Server) authMiddleware(toAllow ...model.UserRole) func(c *gin.Context) 
 			c.AbortWithStatusJSON(http.StatusUnauthorized, err)
 			return
 		}
-		c.Keys[string(domain.UserIDCtx)] = id
+		c.Set(string(domain.UserIDCtx), id)
 		//c.Request = c.Request.WithContext(context.WithValue(ctx, domain.UserIDCtx, id))
 	}
 }
 
 func (s *Server) selfUpdateMiddleware() func(c *gin.Context) {
 	return func(c *gin.Context) {
-		token, ok := getTokenFromHeader(c.Request.Header.Get("Authorization"))
-		if !ok {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, "invalid token")
+		token, err := getTokenFromHeader(c.Request.Header.Get("Authorization"))
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, err)
 			return
 		}
 		userID, err := uuid.Parse(c.Param("id"))
@@ -57,7 +58,7 @@ func (s *Server) selfUpdateMiddleware() func(c *gin.Context) {
 func (s *Server) verifyParticipantMiddleware() func(c *gin.Context) {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
-		userID := uuid.MustParse(c.GetString(string(domain.UserIDCtx))) //аналог: c.MustGet(string(domain.UserIDCtx)).(uuid.UUID)
+		userID := c.MustGet(string(domain.UserIDCtx)).(uuid.UUID)
 		projectID, err := strconv.Atoi(c.Param("project_id"))
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
@@ -84,13 +85,13 @@ func (s *Server) verifyParticipantRoleMiddleware(toAllow ...model.ParticipantRol
 		}
 	}
 }
-func getTokenFromHeader(tokenHeader string) (string, bool) {
+func getTokenFromHeader(tokenHeader string) (string, error) {
 	if tokenHeader == "" {
-		return "unauthorized", false
+		return "", ierr.ErrTokenHeaderIsEmpty
 	}
 	parts := strings.Split(strings.TrimSpace(tokenHeader), " ")
 	if len(parts) != 2 || parts[0] != "Bearer" {
-		return "Invalid token", false
+		return "", ierr.ErrInvalidToken
 	}
-	return parts[1], true
+	return parts[1], nil
 }

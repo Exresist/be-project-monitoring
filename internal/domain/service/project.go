@@ -42,19 +42,19 @@ func (s *service) CreateProject(ctx context.Context, projectReq *api.CreateProje
 	if err != nil && !errors.Is(err, ierr.ErrProjectNotFound) {
 		return nil, err
 	}
-
 	if found != nil {
 		return nil, ierr.ErrProjectNameAlreadyExists
 	}
 
 	project := &model.Project{
-		Name:        projectReq.Name,
-		Description: projectReq.Description,
-		ActiveTo:    projectReq.ActiveTo,
-		PhotoURL:    projectReq.PhotoURL,
-	}
+		ShortProject: model.ShortProject{
+			Name:     projectReq.Name,
+			ActiveTo: projectReq.ActiveTo,
+		}}
+	project.Description.Scan(projectReq.Description)
+	project.PhotoURL.Scan(projectReq.PhotoURL)
 
-	return project, s.repo.InsertProject(ctx, project) //добавить партисипанта!!!!!!!!!!
+	return project, s.repo.InsertProject(ctx, project)
 }
 
 func (s *service) UpdateProject(ctx context.Context, projectReq *api.UpdateProjectReq) (*model.Project, error) {
@@ -87,39 +87,45 @@ func (s *service) GetProjectInfo(ctx context.Context, id int) (*model.ProjectInf
 }
 
 func mergeProjectFields(oldProject *model.Project, projectReq *api.UpdateProjectReq) (*model.Project, error) {
-
 	newProject := &model.Project{
-		ID:          projectReq.ID,
-		Name:        *projectReq.Name,
-		Description: *projectReq.Description,
-		PhotoURL:    *projectReq.PhotoURL,
-		ReportURL:   *projectReq.ReportURL,
-		ReportName:  *projectReq.ReportName,
-		RepoURL:     *projectReq.RepoURL,
-		ActiveTo:    projectReq.ActiveTo,
-	}
+		ShortProject: model.ShortProject{
+			ID: 	 projectReq.ID,
+			ActiveTo: projectReq.ActiveTo,
+		}}
 
-	if projectReq.Name == nil {
-		newProject.Name = oldProject.Name
-	}
-	if projectReq.Description == nil {
-		newProject.Description = oldProject.Description
-	}
-	if projectReq.PhotoURL == nil {
-		newProject.PhotoURL = oldProject.PhotoURL
-	}
-	if projectReq.ReportURL == nil {
-		newProject.ReportURL = oldProject.ReportURL
-	}
-	if projectReq.ReportName == nil {
-		newProject.ReportName = oldProject.ReportName
-	}
-	if projectReq.RepoURL == nil {
-		newProject.RepoURL = oldProject.RepoURL
-	}
 	if projectReq.ActiveTo.IsZero() || projectReq.ActiveTo.Before(time.Now()) {
 		newProject.ActiveTo = oldProject.ActiveTo
 	}
 
+	if projectReq.Name == nil {
+		newProject.Name = oldProject.Name
+	} else {
+		newProject.Name = *projectReq.Name
+	}
+	if projectReq.Description == nil {
+		newProject.Description = oldProject.Description
+	} else {
+		newProject.Description.Scan(*projectReq.Description)
+	}
+	if projectReq.PhotoURL == nil {
+		newProject.PhotoURL = oldProject.PhotoURL
+	} else {
+		newProject.PhotoURL.Scan(*projectReq.PhotoURL)
+	}
+	if projectReq.ReportURL == nil {
+		newProject.ReportURL = oldProject.ReportURL
+	} else {
+		newProject.ReportURL.Scan(*projectReq.ReportURL)
+	}
+	if projectReq.ReportName == nil {
+		newProject.ReportName = oldProject.ReportName
+	} else {
+		newProject.ReportName.Scan(*projectReq.ReportName)
+	}
+	if projectReq.RepoURL == nil {
+		newProject.RepoURL = oldProject.RepoURL
+	} else {
+		newProject.RepoURL.Scan(*projectReq.RepoURL)
+	}
 	return newProject, nil
 }

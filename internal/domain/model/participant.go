@@ -1,19 +1,19 @@
 package model
 
 const (
-	RoleTeamlead    ParticipantRole = "Teamlead"
-	RoleParticipant ParticipantRole = "Participant"
-	RoleOwner       ParticipantRole = "Owner"
+	RoleTeamlead    ParticipantRole = "team_lead"
+	RoleParticipant ParticipantRole = "participant"
+	RoleOwner       ParticipantRole = "owner"
 )
 
 type (
 	ParticipantRole string
 
 	Participant struct {
-		User
-		Role      ParticipantRole
-		ID        int
-		ProjectID int
+		ShortUser
+		Role      ParticipantRole `json:"role"`
+		ID        int             `json:"id"`
+		ProjectID int             `json:"project_id"`
 	}
 )
 

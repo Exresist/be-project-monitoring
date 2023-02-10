@@ -13,20 +13,12 @@ const (
 type (
 	UserRole string
 	User     struct {
-		ID             uuid.UUID
-		Role           UserRole
-		ColorCode      string
-		Email          string
-		Username       string
-		FirstName      string
-		LastName       string
-		Group          string
-		GithubUsername string
-		HashedPassword string
+		ShortUser
+		HashedPassword string `json:"hashed_password"`
 	}
 	ShortUser struct {
-		ID             uuid.UUID `json:"user_id"`
-		Role           string    `json:"role"`
+		ID             uuid.UUID `json:"id"`
+		Role           UserRole  `json:"role"`
 		ColorCode      string    `json:"color_code"`
 		Email          string    `json:"email"`
 		Username       string    `json:"username"`
@@ -34,6 +26,10 @@ type (
 		LastName       string    `json:"last_name"`
 		Group          string    `json:"group"`
 		GithubUsername string    `json:"github_username"`
+	}
+	Profile struct {
+		ShortUser
+		UserProjects []ShortProject
 	}
 )
 

@@ -29,16 +29,14 @@ func (s *service) GetTasks(ctx context.Context, taskReq *api.GetTasksReq) ([]mod
 }
 
 func (s *service) CreateTask(ctx context.Context, taskReq *api.CreateTaskReq) (*model.Task, error) {
-	var (
-		creatorID,
-		participantID sql.NullInt64
-	)
+	creatorID := &sql.NullInt64{}
+	participantID := &sql.NullInt64{}
 
 	if creator, err := s.repo.GetParticipant(ctx, repository.NewParticipantFilter().
 		ByUserID(taskReq.CreatorUserID).ByProjectID(taskReq.ProjectID)); err != nil {
 		return nil, ierr.ErrTaskCreatorUserIDNotFound
 	} else {
-		creatorID.Scan(&creator.ID)
+		creatorID.Scan(creator.ID)
 	}
 
 	if taskReq.ParticipantUserID != uuid.Nil {
@@ -46,7 +44,7 @@ func (s *service) CreateTask(ctx context.Context, taskReq *api.CreateTaskReq) (*
 			ByUserID(taskReq.ParticipantUserID).ByProjectID(taskReq.ProjectID)); err != nil {
 			return nil, ierr.ErrTaskParticipantUserIDNotFound
 		} else {
-			participantID.Scan(&participant.ID)
+			participantID.Scan(participant.ID)
 		}
 	}
 
@@ -64,38 +62,44 @@ func (s *service) CreateTask(ctx context.Context, taskReq *api.CreateTaskReq) (*
 	}
 
 	task := &model.Task{
-		Name:              taskReq.Name,
-		Description:       taskReq.Description,
-		SuggestedEstimate: taskReq.SuggestedEstimate,
-		ParticipantID:     participantID,
-		CreatorID:         creatorID,
-		Status:            model.TaskStatus(taskReq.Status),
-		ProjectID:         taskReq.ProjectID,
+		ShortTask: model.ShortTask{
+			Name: taskReq.Name,
+			ParticipantID: *participantID,
+			Status: model.TaskStatus(taskReq.Status),
+		},
+		CreatorID:     *creatorID,
+		ProjectID:     taskReq.ProjectID,
 	}
+	task.Description.Scan(taskReq.Description)
+	task.SuggestedEstimate.Scan(taskReq.SuggestedEstimate)
+
 	return task, s.repo.InsertTask(ctx, task)
 }
 func (s *service) UpdateTask(ctx context.Context, taskReq *api.UpdateTaskReq) (*model.Task, error) {
+	if taskReq.ID == 0 {
+		return nil, ierr.ErrTaskIDIsInvalid
+	}
 	oldTask, err := s.repo.GetTask(ctx, repository.NewTaskFilter().
 		ByID(taskReq.ID))
 	if err != nil {
 		return nil, err
 	}
 
-	var participantID sql.NullInt64
+	participantID := &sql.NullInt64{}
 	if taskReq.ChangeParticipant != nil && *taskReq.ChangeParticipant {
 		if taskReq.ParticipantUserID != uuid.Nil {
 			if participant, err := s.repo.GetParticipant(ctx, repository.NewParticipantFilter().
 				ByUserID(taskReq.ParticipantUserID).ByProjectID(oldTask.ProjectID)); err != nil {
 				return nil, ierr.ErrTaskParticipantUserIDNotFound
 			} else {
-				participantID.Scan(&participant.ID)
+				participantID.Scan(participant.ID)
 			}
 		}
 	} else {
 		participantID.Scan(&oldTask.ParticipantID)
 	}
 
-	newTask, err := mergeTaskFields(oldTask, taskReq, participantID)
+	newTask, err := mergeTaskFields(oldTask, taskReq, *participantID)
 	if err != nil {
 		return nil, err
 	}
@@ -118,16 +122,13 @@ func (s *service) GetTaskInfo(ctx context.Context, id int) (*model.TaskInfo, err
 
 func mergeTaskFields(oldTask *model.Task, taskReq *api.UpdateTaskReq, newParticipantID sql.NullInt64) (*model.Task, error) {
 	newTask := &model.Task{
-		ID:                taskReq.ID,
-		Name:              *taskReq.Name,
-		Description:       *taskReq.Description,
-		SuggestedEstimate: *taskReq.SuggestedEstimate,
-		RealEstimate:      *taskReq.RealEstimate,
-		Status:            model.TaskStatus(*taskReq.Status),
-		UpdatedAt:         time.Now(),
-		CreatorID:         oldTask.CreatorID,
-		ParticipantID:     newParticipantID,
-		ProjectID:         oldTask.ProjectID,
+		ShortTask: model.ShortTask{
+			ID: taskReq.ID,
+			ParticipantID: newParticipantID,
+		},
+		UpdatedAt:     time.Now(),
+		CreatorID:     oldTask.CreatorID,
+		ProjectID:     oldTask.ProjectID,
 	}
 	if _, ok := model.TaskStatuses[*taskReq.Status]; ok {
 		newTask.Status = model.TaskStatus(*taskReq.Status)
@@ -140,15 +141,23 @@ func mergeTaskFields(oldTask *model.Task, taskReq *api.UpdateTaskReq, newPartici
 
 	if taskReq.Name == nil {
 		newTask.Name = oldTask.Name
+	} else {
+		newTask.Name = *taskReq.Name
 	}
 	if taskReq.Description == nil {
 		newTask.Description = oldTask.Description
+	} else {
+		newTask.Description.Scan(*taskReq.Description)
 	}
-	if taskReq.SuggestedEstimate == nil || *taskReq.SuggestedEstimate < 0 {
+	if taskReq.SuggestedEstimate == nil {
 		newTask.SuggestedEstimate = oldTask.SuggestedEstimate
+	} else if *taskReq.SuggestedEstimate < 0 {
+		newTask.SuggestedEstimate.Scan(*taskReq.SuggestedEstimate)
 	}
-	if taskReq.RealEstimate == nil || *taskReq.RealEstimate < 0 {
+	if taskReq.RealEstimate == nil {
 		newTask.RealEstimate = oldTask.RealEstimate
+	} else if *taskReq.RealEstimate < 0 {
+		newTask.RealEstimate.Scan(*taskReq.RealEstimate)
 	}
 
 	return newTask, nil

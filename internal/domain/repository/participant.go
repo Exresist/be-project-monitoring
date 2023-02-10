@@ -9,8 +9,8 @@ import (
 	sq "github.com/Masterminds/squirrel"
 )
 
-func (r *Repository) AddParticipant(ctx context.Context, participant *model.Participant)  error {
-	if _, err := r.sq.Insert("participants").
+func (r *Repository) AddParticipant(ctx context.Context, participant *model.Participant) error {
+	row := r.sq.Insert("participants").
 		Columns(
 			"role",
 			"user_id",
@@ -18,11 +18,16 @@ func (r *Repository) AddParticipant(ctx context.Context, participant *model.Part
 		).
 		Values(
 			participant.Role,
-			participant.User.ID,
+			participant.ShortUser.ID,
 			participant.ProjectID,
-		).ExecContext(ctx); err != nil {
-		return fmt.Errorf("error while saving participant: %w", err)
+		).
+		Suffix("RETURNING \"id\"").
+		QueryRowContext(ctx)
+
+	if err := row.Scan(&participant.ID); err != nil {
+		return fmt.Errorf("error while scanning sql row: %w", err)
 	}
+
 	return nil
 }
 
@@ -38,6 +43,27 @@ func (r *Repository) GetParticipant(ctx context.Context, filter *ParticipantFilt
 	}
 }
 func (r *Repository) GetParticipants(ctx context.Context, filter *ParticipantFilter) ([]model.Participant, error) {
+	// query := r.sq.Select(
+	// 	"p.id",
+	// 	"p.role",
+	// 	"p.user_id",
+	// 	"p.project_id",
+	// 	"u.role",
+	// 	"u.color_code",
+	// 	"u.email",
+	// 	"u.username",
+	// 	"u.first_name",
+	// 	"u.last_name",
+	// 	"u.group",
+	// 	"u.github_username",
+	// 	"u.hashed_password",
+	// ).
+	// 	From("participants p").
+	// 	Join("users u ON u.id = p.user_id").
+	// 	//Where("p.project_id = $1", projectID).QueryContext(ctx)
+	// 	Where(conditionsFromParticipantFilter(filter))
+	// fmt.Println(query.ToSql())
+	// rows, err := query.QueryContext(ctx)
 	rows, err := r.sq.Select(
 		"p.id",
 		"p.role",
@@ -51,7 +77,6 @@ func (r *Repository) GetParticipants(ctx context.Context, filter *ParticipantFil
 		"u.last_name",
 		"u.group",
 		"u.github_username",
-		"u.hashed_password",
 	).
 		From("participants p").
 		Join("users u ON u.id = p.user_id").
@@ -65,12 +90,11 @@ func (r *Repository) GetParticipants(ctx context.Context, filter *ParticipantFil
 		p := model.Participant{}
 		if err := rows.Scan(
 			&p.ID, &p.Role,
-			&p.User.ID, &p.ProjectID,
-			&p.User.Role, &p.ColorCode,
+			&p.ShortUser.ID, &p.ProjectID,
+			&p.ShortUser.Role, &p.ColorCode,
 			&p.Email, &p.Username,
 			&p.FirstName, &p.LastName,
 			&p.Group, &p.GithubUsername,
-			&p.HashedPassword,
 		); err != nil {
 			return nil, fmt.Errorf("error while scanning row: %w", err)
 		}
@@ -79,9 +103,8 @@ func (r *Repository) GetParticipants(ctx context.Context, filter *ParticipantFil
 	return participants, nil
 }
 
-func (r *Repository) DeleteParticipant(ctx context.Context, id int) error {	
+func (r *Repository) DeleteParticipant(ctx context.Context, id int) error {
 	_, err := r.sq.Delete("participants").
 		Where(sq.Eq{"id": id}).ExecContext(ctx)
 	return err
 }
-

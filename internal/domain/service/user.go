@@ -22,13 +22,15 @@ func (s *service) CreateUser(ctx context.Context, userReq *api.CreateUserReq) (*
 		return nil, "", ierr.ErrInvalidUserRole
 	}
 	user := &model.User{
-		Role:           model.UserRole(userReq.Role),
-		Email:          userReq.Email,
-		Username:       userReq.Username,
-		FirstName:      userReq.FirstName,
-		LastName:       userReq.LastName,
-		Group:          userReq.Group,
-		GithubUsername: userReq.GithubUsername,
+		ShortUser: model.ShortUser{
+			Role:           model.UserRole(userReq.Role),
+			Email:          userReq.Email,
+			Username:       userReq.Username,
+			FirstName:      userReq.FirstName,
+			LastName:       userReq.LastName,
+			Group:          userReq.Group,
+			GithubUsername: userReq.GithubUsername,
+		},
 		HashedPassword: hashPass(userReq.Password),
 	}
 
@@ -117,6 +119,9 @@ func (s *service) GetPartialUsers(ctx context.Context, userReq *api.GetUserReq) 
 }
 
 func (s *service) UpdateUser(ctx context.Context, userReq *api.UpdateUserReq) (*model.User, error) {
+	if userReq.ID == uuid.Nil {
+		return nil, ierr.ErrInvalidUserID
+	}
 	oldUser, err := s.repo.GetUser(ctx, repository.NewUserFilter().ByID(userReq.ID))
 	if err != nil {
 		return nil, err
@@ -125,6 +130,9 @@ func (s *service) UpdateUser(ctx context.Context, userReq *api.UpdateUserReq) (*
 	newUser, err := mergeUserFields(oldUser, userReq)
 	if err != nil {
 		return nil, err
+	}
+	if !s.FindGithubUser(ctx, newUser.GithubUsername) {
+		return nil, ierr.ErrGithubUserNotFound
 	}
 	return newUser, s.repo.UpdateUser(ctx, newUser)
 }
@@ -154,16 +162,11 @@ func hashPass(pwd string) string {
 
 func mergeUserFields(oldUser *model.User, userReq *api.UpdateUserReq) (*model.User, error) {
 	newUser := &model.User{
-		ColorCode:      oldUser.ColorCode,
-		Email:          oldUser.Email,
-		ID:             userReq.ID,
-		Role:           model.UserRole(*userReq.Role),
-		Username:       *userReq.Username,
-		FirstName:      *userReq.FirstName,
-		LastName:       *userReq.LastName,
-		Group:          *userReq.Group,
-		GithubUsername: *userReq.GithubUsername,
-		HashedPassword: hashPass(*userReq.Password),
+		ShortUser: model.ShortUser{
+			ColorCode: oldUser.ColorCode,
+			Email:     oldUser.Email,
+			ID:        userReq.ID,
+		},
 	}
 
 	if _, ok := model.UserRoles[model.UserRole(*userReq.Role)]; ok {
@@ -178,21 +181,33 @@ func mergeUserFields(oldUser *model.User, userReq *api.UpdateUserReq) (*model.Us
 
 	if userReq.Username == nil || *userReq.Username == "" {
 		newUser.Username = oldUser.Username
+	} else {
+		newUser.Username = *userReq.Username
 	}
 	if userReq.FirstName == nil || *userReq.FirstName == "" {
 		newUser.FirstName = oldUser.FirstName
+	} else {
+		newUser.FirstName = *userReq.FirstName
 	}
 	if userReq.LastName == nil || *userReq.LastName == "" {
 		newUser.LastName = oldUser.LastName
+	} else {
+		newUser.LastName = *userReq.LastName
 	}
 	if userReq.Group == nil || *userReq.Group == "" {
 		newUser.Group = oldUser.Group
+	} else {
+		newUser.Group = *userReq.Group
 	}
 	if userReq.GithubUsername == nil || *userReq.GithubUsername == "" {
 		newUser.GithubUsername = oldUser.GithubUsername
+	} else {
+		newUser.GithubUsername = *userReq.GithubUsername
 	}
 	if userReq.Password == nil || *userReq.Password == "" {
 		newUser.HashedPassword = oldUser.HashedPassword
+	} else {
+		newUser.HashedPassword = hashPass(*userReq.Password)
 	}
 
 	return newUser, nil

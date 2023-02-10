@@ -39,6 +39,8 @@ var (
 	ErrInvalidUserID                    = errors.New("invalid user id")
 	ErrAccessDeniedWrongParticipantRole = errors.New("access denied - wrong participant role")
 	ErrParticipantAlreadyExists         = errors.New("participant already exists")
+	ErrTaskIDIsInvalid                  = errors.New("task id is not valid")
+	ErrTokenHeaderIsEmpty               = errors.New("token header is empty")
 )
 
 // package ierr

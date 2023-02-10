@@ -22,7 +22,10 @@ func (s *service) VerifyToken(ctx context.Context, token string, toAllow ...mode
 	}
 
 	cl := claims.Claims.(jwt.MapClaims)
-	roleID := cl["role"].(string)
+	roleID, ok := cl["role"].(string)
+	if !ok {
+		return ierr.ErrInvalidToken
+	}
 	// Checking if role is in the list of the allowed roles
 	for _, v := range toAllow {
 		if roleID == string(v) {
@@ -44,9 +47,7 @@ func (s *service) GetUserIDFromToken(ctx context.Context, token string) (uuid.UU
 	}
 
 	cl := claims.Claims.(jwt.MapClaims)
-	userID := cl["id"].(uuid.UUID)
-
-	return userID, nil
+	return uuid.Parse(cl["id"].(string))
 }
 
 func (s *service) VerifySelf(ctx context.Context, token string, id uuid.UUID) error {

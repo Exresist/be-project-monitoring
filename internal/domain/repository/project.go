@@ -80,7 +80,7 @@ func (r *Repository) InsertProject(ctx context.Context, project *model.Project) 
 		Values(project.Name,
 			project.Description, project.PhotoURL,
 			project.ActiveTo).
-		Suffix("RETURNING \"id\"").RunWith(r.db).
+		Suffix("RETURNING \"id\"").
 		QueryRowContext(ctx)
 
 	if err := row.Scan(&project.ID); err != nil {
@@ -166,7 +166,7 @@ func (r *Repository) GetProjectInfo(ctx context.Context, id int) (*model.Project
 		}
 		users = append(users, model.ShortUser{
 			ID:             userID,
-			Role:           usersRoles[i],
+			Role:           model.UserRole(usersRoles[i]),
 			ColorCode:      usersColorCodes[i],
 			Email:          usersEmails[i],
 			Username:       usersUsernames[i],
@@ -178,15 +178,16 @@ func (r *Repository) GetProjectInfo(ctx context.Context, id int) (*model.Project
 	}
 	projectInfo.Users = users
 
-	tasks := make([]model.ProjectTask, 0)
+	tasks := make([]model.ShortTask, 0)
 	for i := range tasksIDs {
-		tasks = append(tasks, model.ProjectTask{
+		shortTask := model.ShortTask{
 			ID:            int(tasksIDs[i]),
 			Name:          tasksNames[i],
-			Description:   tasksDescriptions[i],
-			ParticipantID: int(participantsIDs[i]), //be careful
-			Status:        tasksStatuses[i],
-		})
+			Status:        model.TaskStatus(tasksStatuses[i]),
+		}
+		shortTask.Description.Scan(tasksDescriptions[i])
+		shortTask.ParticipantID.Scan(participantsIDs[i]) //be careful
+		tasks = append(tasks, shortTask)
 	}
 	projectInfo.Tasks = tasks
 	return &projectInfo, nil

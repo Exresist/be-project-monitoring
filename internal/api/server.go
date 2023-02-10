@@ -117,11 +117,11 @@ func New(opts ...OptionFunc) *Server {
 	projectRtr.DELETE("/:id/:user_id", s.verifyParticipantRoleMiddleware(model.RoleOwner, model.RoleTeamlead), s.deleteParticipant)
 
 	// /api/project/task
-	taskRtr := projectRtr.Group("/:project_id/task", s.verifyParticipantMiddleware())
+	taskRtr := projectRtr.Group("/:id/task", s.verifyParticipantMiddleware())
 	taskRtr.POST("/", s.createTask)
 	taskRtr.PUT("/", s.updateTask)
-	taskRtr.GET("/:id", s.getTaskInfo)
-	taskRtr.DELETE("/:id", s.deleteTask)
+	taskRtr.GET("/:task_id", s.getTaskInfo)
+	taskRtr.DELETE("/:task_id", s.deleteTask)
 
 	// /api/admin
 	adminRtr := apiRtr.Group("/admin", s.authMiddleware(model.Admin))

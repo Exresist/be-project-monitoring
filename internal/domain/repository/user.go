@@ -168,6 +168,7 @@ func (r *Repository) GetUserProfile(ctx context.Context, id uuid.UUID) (*model.P
 	 			u.first_name, u.last_name, u."group", u.github_username,
 				ARRAY_AGG (p.id) projects_ids, ARRAY_AGG (p.name) projects_names,
 				ARRAY_AGG (p.description) projects_descriptions,
+				ARRAY_AGG (p.photo_url) projects_photo_urls,
 				ARRAY_AGG (p.active_to) projects_active_tos
 			  FROM users u
 			  JOIN participants part ON part.user_id = u.id
@@ -179,6 +180,7 @@ func (r *Repository) GetUserProfile(ctx context.Context, id uuid.UUID) (*model.P
 	projectsIDs := make(pq.Int64Array, 0)
 	projectsNames := make(pq.StringArray, 0)
 	projectsDescriptions := make(pq.StringArray, 0)
+	projectsPhotoURLs := make(pq.StringArray, 0)
 	projectsActiveTos := make([]time.Time, 0)
 
 	profile := model.Profile{}
@@ -189,18 +191,20 @@ func (r *Repository) GetUserProfile(ctx context.Context, id uuid.UUID) (*model.P
 		&profile.LastName, &profile.Group,
 		&profile.GithubUsername, &projectsIDs,
 		&projectsNames, &projectsDescriptions,
-		pq.Array(&projectsActiveTos)); err != nil {
+		&projectsPhotoURLs, pq.Array(&projectsActiveTos)); err != nil {
 		return nil, fmt.Errorf("error while scanning sql row: %w", err)
 	}
 
-	projects := make([]model.UserProjects, 0)
+	projects := make([]model.ShortProject, 0)
 	for i := range projectsIDs {
-		projects = append(projects, model.UserProjects{
-			ID:          int(projectsIDs[i]),
-			Name:        projectsNames[i],
-			Description: projectsDescriptions[i],
-			ActiveTo:    projectsActiveTos[i],
-		})
+		shortProject := model.ShortProject{
+			ID:       int(projectsIDs[i]),
+			Name:     projectsNames[i],
+			ActiveTo: projectsActiveTos[i],
+		}
+		shortProject.Description.Scan(projectsDescriptions[i])
+		shortProject.PhotoURL.Scan(projectsPhotoURLs[i])
+		projects = append(projects, shortProject)
 	}
 	profile.UserProjects = projects
 	return &profile, nil
