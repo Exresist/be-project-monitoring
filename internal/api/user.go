@@ -30,7 +30,7 @@ type (
 		Users []model.ShortUser `json:"users"`
 		Count int               `json:"count"`
 	}
-	UpdateUserReq struct {
+		UpdateUserReq struct {
 		ID             uuid.UUID `json:"id"`
 		Role           *string   `json:"role"`
 		Username       *string   `json:"username"`
@@ -64,7 +64,6 @@ func (s *Server) getPartialUsers(c *gin.Context) {
 	userReq.ProjectID, _ = strconv.Atoi(c.Query("project_id"))
 	userReq.Offset, _ = strconv.Atoi(c.Query("offset"))
 	userReq.Limit, _ = strconv.Atoi(c.Query("limit"))
-
 	users, count, err := s.svc.GetPartialUsers(c.Request.Context(), userReq)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
@@ -113,5 +112,11 @@ func (s *Server) getUserProfile(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, userProfile)
+	c.JSON(http.StatusOK, struct {
+		User         model.ShortUser `json:"user"`
+		UserProjects []projectResp   `json:"user_projects"`
+	}{
+		User:         userProfile.ShortUser,
+		UserProjects: makeShortProjectResponses(userProfile.UserProjects),
+	})
 }

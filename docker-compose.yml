@@ -6,8 +6,10 @@ services:
       context: .
       dockerfile: Dockerfile
     environment:
+      VIRTUAL_HOST: be-project-monitoring.com
+      LETSENCRYPT_HOST: be-project-monitoring.com
       APP_DSN: postgres://postgres:postgres@db:5432/postgres?sslmode=disable
-      APP_GHTOKEN: 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
+      APP_GHTOKEN: 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
     restart: always
     ports:
       - "8080:8080"

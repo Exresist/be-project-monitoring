@@ -137,8 +137,8 @@ func (r *Repository) GetProjectInfo(ctx context.Context, id int) (*model.Project
 	usersGithubUsernames := make(pq.StringArray, 0)
 	tasksIDs := make(pq.Int64Array, 0)
 	tasksNames := make(pq.StringArray, 0)
-	tasksDescriptions := make(pq.StringArray, 0)
-	participantsIDs := make(pq.Int64Array, 0) //ЗДЕСЬ МОЖЕТ БЫТЬ ОШИБКА - НЕ ПОНЯТНО BIGINT ИЛИ sql.NullInt64
+	tasksDescriptions := make(pq.ByteaArray, 0)
+	participantsIDs := make(pq.Int64Array, 0)
 	tasksStatuses := make(pq.StringArray, 0)
 
 	projectInfo := model.ProjectInfo{}
@@ -186,7 +186,8 @@ func (r *Repository) GetProjectInfo(ctx context.Context, id int) (*model.Project
 			Status:        model.TaskStatus(tasksStatuses[i]),
 		}
 		shortTask.Description.Scan(tasksDescriptions[i])
-		shortTask.ParticipantID.Scan(participantsIDs[i]) //be careful
+		err := shortTask.ParticipantID.Scan(participantsIDs[i]) //be careful
+		fmt.Println(err, " !!!!!!!!!!!!!!!!!!")
 		tasks = append(tasks, shortTask)
 	}
 	projectInfo.Tasks = tasks

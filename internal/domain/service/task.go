@@ -51,9 +51,6 @@ func (s *service) CreateTask(ctx context.Context, taskReq *api.CreateTaskReq) (*
 	if strings.TrimSpace(taskReq.Name) == "" {
 		return nil, ierr.ErrTaskNameIsInvalid
 	}
-	if taskReq.SuggestedEstimate < 0 {
-		return nil, ierr.ErrTaskSuggestedEstimateIsInvalid
-	}
 	if strings.TrimSpace(taskReq.Status) == "" {
 		taskReq.Status = string(model.TODO)
 	}
@@ -63,15 +60,23 @@ func (s *service) CreateTask(ctx context.Context, taskReq *api.CreateTaskReq) (*
 
 	task := &model.Task{
 		ShortTask: model.ShortTask{
-			Name: taskReq.Name,
+			Name:          taskReq.Name,
 			ParticipantID: *participantID,
-			Status: model.TaskStatus(taskReq.Status),
+			Status:        model.TaskStatus(taskReq.Status),
 		},
-		CreatorID:     *creatorID,
-		ProjectID:     taskReq.ProjectID,
+		CreatorID: *creatorID,
+		ProjectID: taskReq.ProjectID,
 	}
-	task.Description.Scan(taskReq.Description)
-	task.SuggestedEstimate.Scan(taskReq.SuggestedEstimate)
+	if strings.TrimSpace(taskReq.Description) != "" {
+		task.Description.Scan(taskReq.Description)
+	}
+	if taskReq.SuggestedEstimate != nil {
+		if *taskReq.SuggestedEstimate > 0 {
+			task.SuggestedEstimate.Scan(*taskReq.SuggestedEstimate)
+		} else {
+			return nil, ierr.ErrTaskSuggestedEstimateIsInvalid
+		}
+	}
 
 	return task, s.repo.InsertTask(ctx, task)
 }
@@ -123,12 +128,12 @@ func (s *service) GetTaskInfo(ctx context.Context, id int) (*model.TaskInfo, err
 func mergeTaskFields(oldTask *model.Task, taskReq *api.UpdateTaskReq, newParticipantID sql.NullInt64) (*model.Task, error) {
 	newTask := &model.Task{
 		ShortTask: model.ShortTask{
-			ID: taskReq.ID,
+			ID:            taskReq.ID,
 			ParticipantID: newParticipantID,
 		},
-		UpdatedAt:     time.Now(),
-		CreatorID:     oldTask.CreatorID,
-		ProjectID:     oldTask.ProjectID,
+		UpdatedAt: time.Now(),
+		CreatorID: oldTask.CreatorID,
+		ProjectID: oldTask.ProjectID,
 	}
 	if _, ok := model.TaskStatuses[*taskReq.Status]; ok {
 		newTask.Status = model.TaskStatus(*taskReq.Status)
@@ -149,15 +154,21 @@ func mergeTaskFields(oldTask *model.Task, taskReq *api.UpdateTaskReq, newPartici
 	} else {
 		newTask.Description.Scan(*taskReq.Description)
 	}
+
 	if taskReq.SuggestedEstimate == nil {
 		newTask.SuggestedEstimate = oldTask.SuggestedEstimate
-	} else if *taskReq.SuggestedEstimate < 0 {
+	} else if *taskReq.SuggestedEstimate > 0 {
 		newTask.SuggestedEstimate.Scan(*taskReq.SuggestedEstimate)
+	} else {
+		return nil, ierr.ErrTaskSuggestedEstimateIsInvalid
 	}
+
 	if taskReq.RealEstimate == nil {
 		newTask.RealEstimate = oldTask.RealEstimate
-	} else if *taskReq.RealEstimate < 0 {
+	} else if *taskReq.RealEstimate > 0 {
 		newTask.RealEstimate.Scan(*taskReq.RealEstimate)
+	} else {
+		return nil, ierr.ErrTaskRealEstimateIsInvalid
 	}
 
 	return newTask, nil

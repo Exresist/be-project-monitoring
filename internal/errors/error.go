@@ -41,6 +41,9 @@ var (
 	ErrParticipantAlreadyExists         = errors.New("participant already exists")
 	ErrTaskIDIsInvalid                  = errors.New("task id is not valid")
 	ErrTokenHeaderIsEmpty               = errors.New("token header is empty")
+	ErrTaskRealEstimateIsInvalid        = errors.New("task real estimate is not valid")
+	ErrUsersNotFound                    = errors.New("users not found")
+	ErrEmptyUsernameOrPassword          = errors.New("username or password is empty")
 )
 
 // package ierr

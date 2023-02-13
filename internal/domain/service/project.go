@@ -51,8 +51,12 @@ func (s *service) CreateProject(ctx context.Context, projectReq *api.CreateProje
 			Name:     projectReq.Name,
 			ActiveTo: projectReq.ActiveTo,
 		}}
-	project.Description.Scan(projectReq.Description)
-	project.PhotoURL.Scan(projectReq.PhotoURL)
+	if strings.TrimSpace(projectReq.Description) != "" {
+		project.Description.Scan(projectReq.Description)
+	}
+	if strings.TrimSpace(projectReq.PhotoURL) != "" {
+		project.PhotoURL.Scan(projectReq.PhotoURL)
+	}
 
 	return project, s.repo.InsertProject(ctx, project)
 }
@@ -89,7 +93,7 @@ func (s *service) GetProjectInfo(ctx context.Context, id int) (*model.ProjectInf
 func mergeProjectFields(oldProject *model.Project, projectReq *api.UpdateProjectReq) (*model.Project, error) {
 	newProject := &model.Project{
 		ShortProject: model.ShortProject{
-			ID: 	 projectReq.ID,
+			ID:       projectReq.ID,
 			ActiveTo: projectReq.ActiveTo,
 		}}
 

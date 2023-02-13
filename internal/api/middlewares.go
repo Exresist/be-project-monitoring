@@ -17,18 +17,18 @@ func (s *Server) authMiddleware(toAllow ...model.UserRole) func(c *gin.Context) 
 	return func(c *gin.Context) {
 		token, err := getTokenFromHeader(c.Request.Header.Get("Authorization"))
 		if err != nil {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, err)
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{errField: err.Error()})
 			return
 		}
 		ctx := c.Request.Context()
 		if err := s.svc.VerifyToken(ctx, token, toAllow...); err != nil {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, err)
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{errField: err.Error()})
 			return
 		}
 		//добавление id в контекст - по-хорошему делать в отдельной мидлваре
 		id, err := s.svc.GetUserIDFromToken(ctx, token)
 		if err != nil {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, err)
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{errField: err.Error()})
 			return
 		}
 		c.Set(string(domain.UserIDCtx), id)
@@ -40,7 +40,7 @@ func (s *Server) selfUpdateMiddleware() func(c *gin.Context) {
 	return func(c *gin.Context) {
 		token, err := getTokenFromHeader(c.Request.Header.Get("Authorization"))
 		if err != nil {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, err)
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{errField: err.Error()})
 			return
 		}
 		userID, err := uuid.Parse(c.Param("id"))
@@ -50,7 +50,7 @@ func (s *Server) selfUpdateMiddleware() func(c *gin.Context) {
 		}
 		ctx := c.Request.Context()
 		if err := s.svc.VerifySelf(ctx, token, userID); err != nil {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, err)
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{errField: err.Error()})
 			return
 		}
 	}
@@ -65,7 +65,7 @@ func (s *Server) verifyParticipantMiddleware() func(c *gin.Context) {
 			return
 		}
 		if err := s.svc.VerifyParticipant(ctx, userID, projectID); err != nil {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, "unauthorized - not a participant")
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{errField: err.Error()})
 			return
 		}
 	}
@@ -80,7 +80,7 @@ func (s *Server) verifyParticipantRoleMiddleware(toAllow ...model.ParticipantRol
 			return
 		}
 		if err := s.svc.VerifyParticipantRole(ctx, userID, projectID, toAllow...); err != nil {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, err)
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{errField: err.Error()})
 			return
 		}
 	}

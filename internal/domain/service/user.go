@@ -36,7 +36,8 @@ func (s *service) CreateUser(ctx context.Context, userReq *api.CreateUserReq) (*
 
 	found, err := s.repo.GetUser(ctx, repository.NewUserFilter().
 		ByEmail(user.Email).
-		ByUsername(user.Username))
+		ByUsername(user.Username).
+		ByGithubUsername(user.GithubUsername))
 	if err != nil && !errors.Is(err, ierr.ErrUserNotFound) {
 		return nil, "", err
 	}
@@ -67,6 +68,9 @@ func (s *service) CreateUser(ctx context.Context, userReq *api.CreateUserReq) (*
 }
 
 func (s *service) AuthUser(ctx context.Context, username, password string) (string, error) {
+	if username == "" || password == "" {
+		return "", ierr.ErrEmptyUsernameOrPassword
+	}
 	user, err := s.repo.GetUser(ctx, repository.NewUserFilter().ByUsername(username))
 	if err != nil {
 		return "", fmt.Errorf("error while getting user: %w", err)
@@ -101,20 +105,24 @@ func (s *service) GetPartialUsers(ctx context.Context, userReq *api.GetUserReq) 
 	filter := repository.NewUserFilter().
 		WithPaginator(uint64(userReq.Limit), uint64(userReq.Offset)).
 		ByUsernameLike(userReq.Username).ByEmailLike(userReq.Email)
+
 	if userReq.IsOnProject {
 		filter = filter.ByAtProject(userReq.ProjectID)
 	} else {
 		filter = filter.ByNotAtProject(userReq.ProjectID)
 	}
-
 	count, err := s.repo.GetPartialCountByFilter(ctx, filter)
 	if err != nil {
 		return nil, 0, err
+	}
+	if count == 0 {
+		return nil, 0, ierr.ErrUsersNotFound
 	}
 	users, err := s.repo.GetPartialUsers(ctx, filter)
 	if err != nil {
 		return nil, 0, err
 	}
+
 	return users, count, nil
 }
 
@@ -126,13 +134,21 @@ func (s *service) UpdateUser(ctx context.Context, userReq *api.UpdateUserReq) (*
 	if err != nil {
 		return nil, err
 	}
-
 	newUser, err := mergeUserFields(oldUser, userReq)
 	if err != nil {
 		return nil, err
 	}
 	if !s.FindGithubUser(ctx, newUser.GithubUsername) {
 		return nil, ierr.ErrGithubUserNotFound
+	}
+	if found, err := s.repo.GetUser(ctx, repository.NewUserFilter().
+		ByUsername(newUser.Username).ByGithubUsername(newUser.GithubUsername)); err != nil && !errors.Is(err, ierr.ErrUserNotFound) {
+		return nil, err
+	} else if found != nil && found.ID != newUser.ID {
+		if found.Username == newUser.Username {
+			return nil, ierr.ErrUsernameAlreadyExists
+		}
+		return nil, ierr.ErrGithubUsernameAlreadyExists
 	}
 	return newUser, s.repo.UpdateUser(ctx, newUser)
 }
@@ -165,18 +181,17 @@ func mergeUserFields(oldUser *model.User, userReq *api.UpdateUserReq) (*model.Us
 		ShortUser: model.ShortUser{
 			ColorCode: oldUser.ColorCode,
 			Email:     oldUser.Email,
-			ID:        userReq.ID,
+			ID:        oldUser.ID,
 		},
 	}
 
-	if _, ok := model.UserRoles[model.UserRole(*userReq.Role)]; ok {
-		newUser.Role = model.UserRole(*userReq.Role)
-	} else {
-		if userReq.Role == nil || *userReq.Role == "" {
-			newUser.Role = oldUser.Role
-		} else {
+	if userReq.Role != nil {
+		if _, ok := model.UserRoles[model.UserRole(*userReq.Role)]; !ok {
 			return nil, ierr.ErrInvalidUserRole
 		}
+		newUser.Role = model.UserRole(*userReq.Role)
+	} else {
+		newUser.Role = oldUser.Role
 	}
 
 	if userReq.Username == nil || *userReq.Username == "" {

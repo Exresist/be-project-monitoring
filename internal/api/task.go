@@ -17,7 +17,7 @@ type (
 	CreateTaskReq struct {
 		Name              string    `json:"name"`
 		Description       string    `json:"description"`
-		SuggestedEstimate int       `json:"suggested_estimate"`
+		SuggestedEstimate *int      `json:"suggested_estimate"`
 		CreatorUserID     uuid.UUID `json:"creator_user_id"`
 		ParticipantUserID uuid.UUID `json:"paticipant_user_id"`
 		Status            string    `json:"status"`
@@ -42,10 +42,6 @@ type (
 		ParticipantID *int
 		Offset        int
 		Limit         int
-	}
-	getTasksResp struct {
-		Tasks []taskResp
-		Count int
 	}
 	UpdateTaskReq struct {
 		ID                int       `json:"id"`
@@ -82,7 +78,10 @@ func (s *Server) getTasks(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, getTasksResp{
+	c.JSON(http.StatusOK, struct {
+		Tasks []taskResp `json:"tasks"`
+		Count int        `json:"count"`
+	}{
 		Tasks: makeTasksResponses(tasks),
 		Count: count,
 	})
@@ -175,6 +174,16 @@ func makeTasksResponses(tasks []model.Task) []taskResp {
 	var taskResponses []taskResp
 	for _, task := range tasks {
 		taskResponses = append(taskResponses, *makeTaskResponse(task))
+	}
+	return taskResponses
+}
+func makeShortTasksResponses(tasks []model.ShortTask) []taskResp {
+	var taskResponses []taskResp
+	for _, task := range tasks {
+		taskResponses = append(taskResponses,
+			*makeTaskResponse(model.Task{
+				ShortTask: task,
+			}))
 	}
 	return taskResponses
 }

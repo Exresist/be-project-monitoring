@@ -195,11 +195,11 @@ func (s *Server) getProjectInfo(c *gin.Context) {
 	c.JSON(http.StatusOK, struct {
 		Project *projectResp
 		Users   []model.ShortUser
-		Tasks   []model.ShortTask
+		Tasks   []taskResp
 	}{
 		Project: makeProjectResponse(projectInfo.Project),
 		Users:   projectInfo.Users,
-		Tasks:   projectInfo.Tasks,
+		Tasks:   makeShortTasksResponses(projectInfo.Tasks),
 	})
 }
 func makeProjectResponse(project model.Project) *projectResp {
@@ -216,8 +216,18 @@ func makeProjectResponse(project model.Project) *projectResp {
 }
 func makeProjectResponses(projects []model.Project) []projectResp {
 	var projectResponses []projectResp
-	for _, task := range projects {
-		projectResponses = append(projectResponses, *makeProjectResponse(task))
+	for _, project := range projects {
+		projectResponses = append(projectResponses, *makeProjectResponse(project))
+	}
+	return projectResponses
+}
+func makeShortProjectResponses(projects []model.ShortProject) []projectResp {
+	var projectResponses []projectResp
+	for _, project := range projects {
+		projectResponses = append(projectResponses,
+			*makeProjectResponse(model.Project{
+				ShortProject: project,
+			}))
 	}
 	return projectResponses
 }
