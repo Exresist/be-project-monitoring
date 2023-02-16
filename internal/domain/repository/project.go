@@ -9,6 +9,8 @@ import (
 	"fmt"
 
 	sq "github.com/Masterminds/squirrel"
+	"github.com/google/uuid"
+	"github.com/lib/pq"
 	"go.uber.org/zap"
 )
 
@@ -25,15 +27,15 @@ func (r *Repository) GetProject(ctx context.Context, filter *ProjectFilter) (*mo
 }
 func (r *Repository) GetProjects(ctx context.Context, filter *ProjectFilter) ([]model.Project, error) {
 	filter.Limit = db.NormalizeLimit(filter.Limit)
-	rows, err := sq.Select(
+	rows, err := r.sq.Select(
 		"p.id", "p.name",
 		"p.description", "p.photo_url",
 		"p.report_url", "p.report_name",
 		"p.repo_url", "p.active_to").
 		From("projects p").
 		Where(conditionsFromProjectFilter(filter)).
-		Limit(filter.Limit).   // max = filter.Limit numbers
-		Offset(filter.Offset). //  min = filter.Offset + 1
+		Limit(filter.Limit).
+		Offset(filter.Offset).
 		QueryContext(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("error while performing sql request: %w", err)
@@ -104,4 +106,90 @@ func (r *Repository) DeleteProject(ctx context.Context, id int) error {
 	_, err := r.sq.Delete("projects").
 		Where(sq.Eq{"id": id}).ExecContext(ctx)
 	return err
+}
+func (r *Repository) GetProjectInfo(ctx context.Context, id int) (*model.ProjectInfo, error) {
+	query := `SELECT p.id, p.name, p.description, p.photo_url, p.report_url,
+	 			p.report_name, p.repo_url, p.active_to,
+				ARRAY_AGG (u.id) users_ids, ARRAY_AGG (u.role) users_roles,
+				ARRAY_AGG (u.color_code) users_color_codes, ARRAY_AGG (u.email) users_emails,
+				ARRAY_AGG (u.username) users_usernames, ARRAY_AGG (u.first_name) users_first_names,
+				ARRAY_AGG (u.last_name) users_last_names, ARRAY_AGG (u."group") users_groups,
+				ARRAY_AGG (u.github_username) users_github_usernames,
+				ARRAY_AGG (t.id) tasks_ids, ARRAY_AGG (t.name) tasks_names,
+				ARRAY_AGG (t.description) tasks_descriptions, ARRAY_AGG (t.participant_id) participants_ids,
+				ARRAY_AGG (t.status) tasks_statuses
+			  FROM projects p
+			  JOIN participants part ON part.project_id = p.id
+			  JOIN users u ON part.user_id = u.id
+			  JOIN tasks t ON t.project_id = p.id
+			  WHERE p.id = $1
+			  GROUP BY p.id, p.name, p.description, p.photo_url, p.report_url,
+					   p.report_name, p.repo_url, p.active_to`
+
+	usersIDs := make(pq.StringArray, 0)
+	usersRoles := make(pq.StringArray, 0)
+	usersColorCodes := make(pq.StringArray, 0)
+	usersEmails := make(pq.StringArray, 0)
+	usersUsernames := make(pq.StringArray, 0)
+	usersFirstNames := make(pq.StringArray, 0)
+	usersLastNames := make(pq.StringArray, 0)
+	usersGroups := make(pq.StringArray, 0)
+	usersGithubUsernames := make(pq.StringArray, 0)
+	tasksIDs := make(pq.Int64Array, 0)
+	tasksNames := make(pq.StringArray, 0)
+	tasksDescriptions := make(pq.ByteaArray, 0)
+	participantsIDs := make(pq.Int64Array, 0)
+	tasksStatuses := make(pq.StringArray, 0)
+
+	projectInfo := model.ProjectInfo{}
+	row := r.db.QueryRowContext(ctx, query, id)
+	if err := row.Scan(&projectInfo.Project.ID, &projectInfo.Project.Name,
+		&projectInfo.Project.Description, &projectInfo.Project.PhotoURL,
+		&projectInfo.Project.ReportURL, &projectInfo.Project.ReportName,
+		&projectInfo.Project.RepoURL, &projectInfo.Project.ActiveTo,
+		&usersIDs, &usersRoles,
+		&usersColorCodes, &usersEmails,
+		&usersUsernames, &usersFirstNames,
+		&usersLastNames, &usersGroups,
+		&usersGithubUsernames,
+		&tasksIDs, &tasksNames,
+		&tasksDescriptions, &participantsIDs,
+		&tasksStatuses); err != nil {
+		return nil, fmt.Errorf("error while scanning sql row: %w", err)
+	}
+
+	users := make([]model.ShortUser, 0)
+	for i := range usersIDs {
+		userID, err := uuid.Parse(usersIDs[i])
+		if err != nil {
+			return nil, fmt.Errorf("error while parsing user id: %w", err)
+		}
+		users = append(users, model.ShortUser{
+			ID:             userID,
+			Role:           model.UserRole(usersRoles[i]),
+			ColorCode:      usersColorCodes[i],
+			Email:          usersEmails[i],
+			Username:       usersUsernames[i],
+			FirstName:      usersFirstNames[i],
+			LastName:       usersLastNames[i],
+			Group:          usersGroups[i],
+			GithubUsername: usersGithubUsernames[i],
+		})
+	}
+	projectInfo.Users = users
+
+	tasks := make([]model.ShortTask, 0)
+	for i := range tasksIDs {
+		shortTask := model.ShortTask{
+			ID:            int(tasksIDs[i]),
+			Name:          tasksNames[i],
+			Status:        model.TaskStatus(tasksStatuses[i]),
+		}
+		shortTask.Description.Scan(tasksDescriptions[i])
+		err := shortTask.ParticipantID.Scan(participantsIDs[i]) //be careful
+		fmt.Println(err, " !!!!!!!!!!!!!!!!!!")
+		tasks = append(tasks, shortTask)
+	}
+	projectInfo.Tasks = tasks
+	return &projectInfo, nil
 }

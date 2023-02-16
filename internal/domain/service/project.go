@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"strings"
 	"time"
 
 	"be-project-monitoring/internal/api"
@@ -11,57 +12,58 @@ import (
 	ierr "be-project-monitoring/internal/errors"
 )
 
-func (s *service) GetProjects(ctx context.Context, projReq *api.GetProjectReq) ([]model.Project, int, error) {
+func (s *service) GetProjects(ctx context.Context, projectReq *api.GetProjectsReq) ([]model.Project, int, error) {
 
-	filter := repository.NewProjectFilter().ByProjectNames(projReq.Name)
-	filter.Limit = uint64(projReq.Limit)
-	filter.Offset = uint64(projReq.Offset)
+	filter := repository.NewProjectFilter().
+		WithPaginator(uint64(projectReq.Limit), uint64(projectReq.Offset)).
+		ByProjectName(strings.TrimSpace(projectReq.Name))
+
 	count, err := s.repo.GetProjectCountByFilter(ctx, filter)
 	if err != nil {
 		return nil, 0, err
 	}
-
 	projects, err := s.repo.GetProjects(ctx, filter)
 	if err != nil {
 		return nil, 0, err
 	}
-
 	return projects, count, nil
 }
 
 func (s *service) CreateProject(ctx context.Context, projectReq *api.CreateProjectReq) (*model.Project, error) {
-
-	found, err := s.repo.GetProject(ctx, repository.NewProjectFilter().
-		ByProjectNames(projectReq.Name))
-	if err != nil && !errors.Is(err, ierr.ErrProjectNotFound) {
-		return nil, err
+	if strings.TrimSpace(projectReq.Name) == "" {
+		return nil, ierr.ErrProjectNameIsInvalid
 	}
-
-	if found != nil {
-		return nil, ierr.ErrProjectNameAlreadyExists
-	}
-
 	if projectReq.ActiveTo.IsZero() || projectReq.ActiveTo.Before(time.Now()) {
 		return nil, ierr.ErrProjectActiveToIsInvalid
 	}
 
-	project := &model.Project{
-		Name:        projectReq.Name,
-		Description: projectReq.Description,
-		ActiveTo:    projectReq.ActiveTo,
-		PhotoURL:    projectReq.PhotoURL,
-	}
-
-	if err := s.repo.InsertProject(ctx, project); err != nil {
+	found, err := s.repo.GetProject(ctx, repository.NewProjectFilter().
+		ByProjectName(projectReq.Name))
+	if err != nil && !errors.Is(err, ierr.ErrProjectNotFound) {
 		return nil, err
 	}
-	return project, nil
+	if found != nil {
+		return nil, ierr.ErrProjectNameAlreadyExists
+	}
+
+	project := &model.Project{
+		ShortProject: model.ShortProject{
+			Name:     projectReq.Name,
+			ActiveTo: projectReq.ActiveTo,
+		}}
+	if strings.TrimSpace(projectReq.Description) != "" {
+		project.Description.Scan(projectReq.Description)
+	}
+	if strings.TrimSpace(projectReq.PhotoURL) != "" {
+		project.PhotoURL.Scan(projectReq.PhotoURL)
+	}
+
+	return project, s.repo.InsertProject(ctx, project)
 }
 
 func (s *service) UpdateProject(ctx context.Context, projectReq *api.UpdateProjectReq) (*model.Project, error) {
-
 	oldProject, err := s.repo.GetProject(ctx, repository.NewProjectFilter().
-		ByIDs(projectReq.ID))
+		ByID(projectReq.ID))
 	if err != nil {
 		return nil, err
 	}
@@ -74,48 +76,60 @@ func (s *service) UpdateProject(ctx context.Context, projectReq *api.UpdateProje
 	return newProject, s.repo.UpdateProject(ctx, newProject)
 }
 
-func (s *service) DeleteProject(ctx context.Context, projectReq *api.DeleteProjectReq) error {
-	if _, err := s.repo.GetProject(ctx, repository.NewProjectFilter().ByIDs(projectReq.ID)); err != nil {
+func (s *service) DeleteProject(ctx context.Context, id int) error {
+	if _, err := s.repo.GetProject(ctx, repository.NewProjectFilter().ByID(id)); err != nil {
 		return err
 	}
+	return s.repo.DeleteProject(ctx, id)
+}
 
-	return s.repo.DeleteProject(ctx, projectReq.ID)
+func (s *service) GetProjectInfo(ctx context.Context, id int) (*model.ProjectInfo, error) {
+	if _, err := s.repo.GetProject(ctx, repository.NewProjectFilter().ByID(id)); err != nil {
+		return nil, err
+	}
+	return s.repo.GetProjectInfo(ctx, id)
 }
 
 func mergeProjectFields(oldProject *model.Project, projectReq *api.UpdateProjectReq) (*model.Project, error) {
-
 	newProject := &model.Project{
-		ID:          projectReq.ID,
-		Name:        *projectReq.Name,
-		Description: *projectReq.Description,
-		PhotoURL:    *projectReq.PhotoURL,
-		ReportURL:   *projectReq.ReportURL,
-		ReportName:  *projectReq.ReportName,
-		RepoURL:     *projectReq.RepoURL,
-		ActiveTo:    projectReq.ActiveTo,
-	}
+		ShortProject: model.ShortProject{
+			ID:       projectReq.ID,
+			ActiveTo: projectReq.ActiveTo,
+		}}
 
-	if projectReq.Name == nil {
-		newProject.Name = oldProject.Name
-	}
-	if projectReq.Description == nil {
-		newProject.Description = oldProject.Description
-	}
-	if projectReq.PhotoURL == nil {
-		newProject.PhotoURL = oldProject.PhotoURL
-	}
-	if projectReq.ReportURL == nil {
-		newProject.ReportURL = oldProject.ReportURL
-	}
-	if projectReq.ReportName == nil {
-		newProject.ReportName = oldProject.ReportName
-	}
-	if projectReq.RepoURL == nil {
-		newProject.RepoURL = oldProject.RepoURL
-	}
 	if projectReq.ActiveTo.IsZero() || projectReq.ActiveTo.Before(time.Now()) {
 		newProject.ActiveTo = oldProject.ActiveTo
 	}
 
+	if projectReq.Name == nil {
+		newProject.Name = oldProject.Name
+	} else {
+		newProject.Name = *projectReq.Name
+	}
+	if projectReq.Description == nil {
+		newProject.Description = oldProject.Description
+	} else {
+		newProject.Description.Scan(*projectReq.Description)
+	}
+	if projectReq.PhotoURL == nil {
+		newProject.PhotoURL = oldProject.PhotoURL
+	} else {
+		newProject.PhotoURL.Scan(*projectReq.PhotoURL)
+	}
+	if projectReq.ReportURL == nil {
+		newProject.ReportURL = oldProject.ReportURL
+	} else {
+		newProject.ReportURL.Scan(*projectReq.ReportURL)
+	}
+	if projectReq.ReportName == nil {
+		newProject.ReportName = oldProject.ReportName
+	} else {
+		newProject.ReportName.Scan(*projectReq.ReportName)
+	}
+	if projectReq.RepoURL == nil {
+		newProject.RepoURL = oldProject.RepoURL
+	} else {
+		newProject.RepoURL.Scan(*projectReq.RepoURL)
+	}
 	return newProject, nil
 }

@@ -11,7 +11,7 @@ require (
 	github.com/google/go-github/v49 v49.1.1-0.20230111123143-ced4abd274f3
 	github.com/google/uuid v1.3.0
 	github.com/kelseyhightower/envconfig v1.4.0
-	github.com/lib/pq v1.10.0
+	github.com/lib/pq v1.10.7
 	github.com/oklog/run v1.1.0
 	go.uber.org/zap v1.23.0
 	golang.org/x/crypto v0.1.0
