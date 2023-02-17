@@ -4,12 +4,12 @@ services:
   be-project-monitoring:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile_debug
     environment:
       VIRTUAL_HOST: be-project-monitoring.com
       LETSENCRYPT_HOST: be-project-monitoring.com
-      APP_DSN: postgres://postgres:postgres@db:5432/postgres?sslmode=disable
-      APP_GHTOKEN: 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
+      APP_DSN: postgres://postgres:postgres@db:5432/postgres?sslmode=disable      
+      APP_GHTOKEN: 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
     restart: always
     ports:
       - "8080:8080"

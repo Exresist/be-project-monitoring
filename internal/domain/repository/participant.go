@@ -4,9 +4,11 @@ import (
 	"be-project-monitoring/internal/domain/model"
 	ierr "be-project-monitoring/internal/errors"
 	"context"
+	"database/sql"
 	"fmt"
 
 	sq "github.com/Masterminds/squirrel"
+	"go.uber.org/zap"
 )
 
 func (r *Repository) AddParticipant(ctx context.Context, participant *model.Participant) error {
@@ -85,6 +87,13 @@ func (r *Repository) GetParticipants(ctx context.Context, filter *ParticipantFil
 	if err != nil {
 		return nil, fmt.Errorf("error while querying participants: %w", err)
 	}
+	defer func(res *sql.Rows) {
+		err = res.Close()
+		if err != nil {
+			r.logger.Error("error while closing sql rows", zap.Error(err))
+		}
+	}(rows)
+	
 	participants := make([]model.Participant, 0)
 	for rows.Next() {
 		p := model.Participant{}

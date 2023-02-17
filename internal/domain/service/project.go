@@ -31,7 +31,7 @@ func (s *service) GetProjects(ctx context.Context, projectReq *api.GetProjectsRe
 
 func (s *service) CreateProject(ctx context.Context, projectReq *api.CreateProjectReq) (*model.Project, error) {
 	if strings.TrimSpace(projectReq.Name) == "" {
-		return nil, ierr.ErrProjectNameIsInvalid
+		return nil, ierr.ErrInvalidProjectName
 	}
 	if projectReq.ActiveTo.IsZero() || projectReq.ActiveTo.Before(time.Now()) {
 		return nil, ierr.ErrProjectActiveToIsInvalid
@@ -84,9 +84,16 @@ func (s *service) DeleteProject(ctx context.Context, id int) error {
 }
 
 func (s *service) GetProjectInfo(ctx context.Context, id int) (*model.ProjectInfo, error) {
-	if _, err := s.repo.GetProject(ctx, repository.NewProjectFilter().ByID(id)); err != nil {
-		return nil, err
-	}
+	// if _, err := s.repo.GetProject(ctx, repository.NewProjectFilter().ByID(id)); err != nil {
+	// 	return nil, err
+	// }
+	// if _, err := s.repo.GetTask(ctx, repository.NewTaskFilter().ByProjectID(id)); err != nil {
+	// 	if err != ierr.ErrTaskNotFound {
+	// 		return nil, err
+	// 	}
+	// 	return s.repo.GetProjectInfo(ctx, id, false)
+	// }
+	// return s.repo.GetProjectInfo(ctx, id, true)
 	return s.repo.GetProjectInfo(ctx, id)
 }
 
@@ -97,15 +104,23 @@ func mergeProjectFields(oldProject *model.Project, projectReq *api.UpdateProject
 			ActiveTo: projectReq.ActiveTo,
 		}}
 
+	if projectReq.ActiveTo.IsZero() {
+		newProject.ActiveTo = oldProject.ActiveTo
+	} else if projectReq.ActiveTo.Before(time.Now()) {
+		return nil, ierr.ErrInvalidActiveTo
+	}
 	if projectReq.ActiveTo.IsZero() || projectReq.ActiveTo.Before(time.Now()) {
 		newProject.ActiveTo = oldProject.ActiveTo
 	}
 
 	if projectReq.Name == nil {
 		newProject.Name = oldProject.Name
+	} else if strings.TrimSpace(*projectReq.Name) == "" {
+		return nil, ierr.ErrInvalidProjectName
 	} else {
 		newProject.Name = *projectReq.Name
 	}
+
 	if projectReq.Description == nil {
 		newProject.Description = oldProject.Description
 	} else {

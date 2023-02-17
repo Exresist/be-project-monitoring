@@ -119,9 +119,9 @@ func (s *service) DeleteTask(ctx context.Context, id int) error {
 }
 
 func (s *service) GetTaskInfo(ctx context.Context, id int) (*model.TaskInfo, error) {
-	if _, err := s.repo.GetTask(ctx, repository.NewTaskFilter().ByID(id)); err != nil {
-		return nil, err
-	}
+	// if _, err := s.repo.GetTask(ctx, repository.NewTaskFilter().ByID(id)); err != nil {
+	// 	return nil, err
+	// }
 	return s.repo.GetTaskInfo(ctx, id)
 }
 

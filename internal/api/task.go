@@ -171,14 +171,14 @@ func makeTaskResponse(task model.Task) *taskResp {
 	}
 }
 func makeTasksResponses(tasks []model.Task) []taskResp {
-	var taskResponses []taskResp
+	taskResponses := make([]taskResp, 0, len(tasks))
 	for _, task := range tasks {
 		taskResponses = append(taskResponses, *makeTaskResponse(task))
 	}
 	return taskResponses
 }
 func makeShortTasksResponses(tasks []model.ShortTask) []taskResp {
-	var taskResponses []taskResp
+	taskResponses := make([]taskResp, 0, len(tasks))
 	for _, task := range tasks {
 		taskResponses = append(taskResponses,
 			*makeTaskResponse(model.Task{

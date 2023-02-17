@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"be-project-monitoring/internal/api"
 	"be-project-monitoring/internal/domain/model"
@@ -73,7 +72,7 @@ func (s *service) AuthUser(ctx context.Context, username, password string) (stri
 	}
 	user, err := s.repo.GetUser(ctx, repository.NewUserFilter().ByUsername(username))
 	if err != nil {
-		return "", fmt.Errorf("error while getting user: %w", err)
+		return "", err
 	}
 	if err = bcrypt.CompareHashAndPassword([]byte(user.HashedPassword), []byte(password)); err != nil {
 		return "", err
@@ -165,9 +164,6 @@ func (s *service) FindGithubUser(ctx context.Context, username string) bool {
 	return err == nil
 }
 func (s *service) GetUserProfile(ctx context.Context, guid uuid.UUID) (*model.Profile, error) {
-	if _, err := s.repo.GetUser(ctx, repository.NewUserFilter().ByID(guid)); err != nil {
-		return nil, err
-	}
 	return s.repo.GetUserProfile(ctx, guid)
 }
 

@@ -64,7 +64,7 @@ func (s *service) VerifyParticipant(ctx context.Context, userID uuid.UUID, proje
 	_, err := s.repo.GetParticipant(ctx, repository.NewParticipantFilter().
 		ByUserID(userID).ByProjectID(projectID))
 	if err != nil {
-		return err
+		return ierr.ErrUserIsNotOnProject
 	}
 	return nil
 }

@@ -25,7 +25,7 @@ func (r *Repository) GetTask(ctx context.Context, filter *TaskFilter) (*model.Ta
 }
 func (r *Repository) GetTasks(ctx context.Context, filter *TaskFilter) ([]model.Task, error) {
 	filter.Limit = db.NormalizeLimit(filter.Limit)
-	rows, err := sq.Select(
+	rows, err := r.sq.Select(
 		"t.id", "t.name",
 		"t.description", "t.suggested_estimate",
 		"t.real_estimate", "t.participant_id",
@@ -112,8 +112,7 @@ func (r *Repository) DeleteTask(ctx context.Context, id int) error {
 }
 
 func (r *Repository) GetTaskInfo(ctx context.Context, id int) (*model.TaskInfo, error) {
-	taskInfo := model.TaskInfo{}
-	err := r.sq.Select("t.id", "t.name", "t.description",
+	rows, err := r.sq.Select("t.id", "t.name", "t.description",
 		"t.suggested_estimate", "t.real_estimate",
 		"t.participant_id", "t.creator_id",
 		"t.status", "t.created_at",
@@ -134,8 +133,20 @@ func (r *Repository) GetTaskInfo(ctx context.Context, id int) (*model.TaskInfo, 
 		LeftJoin("users u1 ON u1.id = p_c.user_id").
 		LeftJoin("users u2 ON u2.id = p_p.user_id").
 		Where(sq.Eq{"t.id": id}).
-		QueryRowContext(ctx).
-		Scan(&taskInfo.ID, &taskInfo.Name, &taskInfo.Description,
+		QueryContext(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("error while performing sql request: %w", err)
+	}
+	defer func(rows *sql.Rows) {
+		err := rows.Close()
+		if err != nil {
+			r.logger.Error("error while closing sql rows", zap.Error(err))
+		}
+	}(rows)
+
+	if rows.Next() {
+		taskInfo := model.TaskInfo{}
+		if err := rows.Scan(&taskInfo.ID, &taskInfo.Name, &taskInfo.Description,
 			&taskInfo.SuggestedEstimate, &taskInfo.RealEstimate,
 			&taskInfo.ParticipantID, &taskInfo.CreatorID,
 			&taskInfo.Status, &taskInfo.CreatedAt,
@@ -150,12 +161,12 @@ func (r *Repository) GetTaskInfo(ctx context.Context, id int) (*model.TaskInfo, 
 			&taskInfo.Participant.Username, &taskInfo.Participant.FirstName,
 			&taskInfo.Participant.LastName, &taskInfo.Participant.Group,
 			&taskInfo.Participant.GithubUsername,
-		)
-	if err != nil {
-		return nil, fmt.Errorf("error while performing sql request: %w", err)
+		);err != nil {
+			return nil, fmt.Errorf("error while performing sql request: %w", err)
+		}
+		return &taskInfo, nil
 	}
-
-	return &taskInfo, nil
+	return nil, ierr.ErrTaskNotFound
 }
 
 func (r *Repository) DeleteParticipantsFromTask(ctx context.Context, participantID int) error {

@@ -6,6 +6,7 @@ import (
 	ierr "be-project-monitoring/internal/errors"
 	"context"
 	"database/sql"
+	"encoding/binary"
 	"fmt"
 	"time"
 
@@ -17,8 +18,6 @@ import (
 )
 
 func (r *Repository) GetUser(ctx context.Context, filter *UserFilter) (*model.User, error) {
-	fmt.Println("AAAAAAAAA")
-	fmt.Println(conditionsFromUserFilter(filter).ToSql())
 	users, err := r.GetFullUsers(ctx, filter.WithPaginator(1, 0))
 	switch {
 	case err != nil:
@@ -210,44 +209,58 @@ func (r *Repository) GetUserProfile(ctx context.Context, id uuid.UUID) (*model.P
 				ARRAY_AGG (p.photo_url) projects_photo_urls,
 				ARRAY_AGG (p.active_to) projects_active_tos
 			  FROM users u
-			  JOIN participants part ON part.user_id = u.id
-			  JOIN projects p ON part.project_id = p.id
+			  LEFT JOIN participants part ON part.user_id = u.id
+			  LEFT JOIN projects p ON part.project_id = p.id
 			  WHERE u.id = $1
 			  GROUP BY u.id, u.role, u.color_code, u.email, u.username,
 					   u.first_name, u.last_name, u."group", u.github_username`
-
-	projectsIDs := make(pq.Int64Array, 0)
-	projectsNames := make(pq.StringArray, 0)
-	projectsDescriptions := make(pq.ByteaArray, 0)
-	projectsPhotoURLs := make(pq.ByteaArray, 0)
-	projectsActiveTos := make(pq.ByteaArray, 0)
-
-	profile := model.Profile{}
-	row := r.db.QueryRowContext(ctx, query, id)
-	if err := row.Scan(&profile.ShortUser.ID, &profile.Role,
-		&profile.ColorCode, &profile.Email,
-		&profile.Username, &profile.FirstName,
-		&profile.LastName, &profile.Group,
-		&profile.GithubUsername, &projectsIDs,
-		&projectsNames, &projectsDescriptions,
-		&projectsPhotoURLs, &projectsActiveTos); err != nil {
-		return nil, fmt.Errorf("error while scanning sql row: %w", err)
+	rows, err := r.db.QueryContext(ctx, query, id)
+	if err != nil {
+		return nil, fmt.Errorf("error while performing sql request: %w", err)
 	}
-	projects := make([]model.ShortProject, 0)
-	for i := range projectsIDs {
-		activeTo, err := time.Parse("2006-01-02", string(projectsActiveTos[i]))
+	defer func(rows *sql.Rows) {
+		err := rows.Close()
 		if err != nil {
-			return nil, fmt.Errorf("error while parsing time: %w", err)
+			r.logger.Error("error while closing sql rows", zap.Error(err))
 		}
-		shortProject := model.ShortProject{
-			ID:       int(projectsIDs[i]),
-			Name:     projectsNames[i],
-			ActiveTo: activeTo,
+	}(rows)
+
+	if rows.Next() {
+		profile := model.Profile{}
+		projectsIDs := make(pq.ByteaArray, 0)
+		projectsNames := make(pq.ByteaArray, 0)
+		projectsDescriptions := make(pq.ByteaArray, 0)
+		projectsPhotoURLs := make(pq.ByteaArray, 0)
+		projectsActiveTos := make(pq.ByteaArray, 0)
+
+		if err := rows.Scan(&profile.ShortUser.ID, &profile.Role,
+			&profile.ColorCode, &profile.Email,
+			&profile.Username, &profile.FirstName,
+			&profile.LastName, &profile.Group,
+			&profile.GithubUsername, &projectsIDs,
+			&projectsNames, &projectsDescriptions,
+			&projectsPhotoURLs, &projectsActiveTos); err != nil {
+			return nil, fmt.Errorf("error while scanning sql row: %w", err)
 		}
-		shortProject.Description.Scan(projectsDescriptions[i])
-		shortProject.PhotoURL.Scan(projectsPhotoURLs[i])
-		projects = append(projects, shortProject)
+		projects := make([]model.ShortProject, 0)
+		for i := range projectsIDs {
+			if projectsIDs[i] != nil {
+				activeTo, err := time.Parse("2006-01-02", string(projectsActiveTos[i]))
+				if err != nil {
+					return nil, fmt.Errorf("error while parsing time: %w", err)
+				}
+				shortProject := model.ShortProject{
+					ID:       int(binary.BigEndian.Uint64(projectsIDs[i])),
+					Name:     string(projectsNames[i]),
+					ActiveTo: activeTo,
+				}
+				shortProject.Description.Scan(projectsDescriptions[i])
+				shortProject.PhotoURL.Scan(projectsPhotoURLs[i])
+				projects = append(projects, shortProject)
+			}
+		}
+		profile.UserProjects = projects
+		return &profile, nil
 	}
-	profile.UserProjects = projects
-	return &profile, nil
+	return nil, ierr.ErrUserNotFound
 }
