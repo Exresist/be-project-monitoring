@@ -101,14 +101,14 @@ func (s *Server) setProjectIDIntoCtxMiddleware(toAllow ...model.ParticipantRole)
 		ctx := c.Request.Context()
 		userID := c.MustGet(string(domain.UserIDCtx)).(uuid.UUID)
 		//userID = uuid.MustParse(c.GetString(string(domain.UserIDCtx)))
-		str := &struct{
-			ProjectID string `json:"project_id"`
-		}{}
-		if err := json.NewDecoder(c.Request.Body).Decode(str); err != nil{
-			fmt.Println("11111")
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{errField: err.Error()})
-			return
-		}
+		// str := &struct{
+		// 	ProjectID string `json:"project_id"`
+		// }{}
+		// if err := json.NewDecoder(c.Request.Body).Decode(str); err != nil{
+		// 	fmt.Println("11111")
+		// 	c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{errField: err.Error()})
+		// 	return
+		// }
 		projectID, err := strconv.Atoi(c.Param("project_id"))
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{errField: err.Error()})
