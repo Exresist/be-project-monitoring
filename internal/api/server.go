@@ -1,16 +1,14 @@
 package api
 
 import (
+	"be-project-monitoring/internal/domain/model"
 	"context"
 	"fmt"
 	"net/http"
 	"time"
 
-	"github.com/google/uuid"
-
-	"be-project-monitoring/internal/domain/model"
-
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/oklog/run"
 	"go.uber.org/zap"
 )
@@ -88,6 +86,12 @@ func New(opts ...OptionFunc) *Server {
 	}
 
 	rtr := gin.Default()
+
+	rtr.LoadHTMLGlob("templates/*.tmpl.html")
+	rtr.Static("/static", "static")
+	rtr.GET("/", func(c *gin.Context) {
+		c.HTML(http.StatusOK, "index.tmpl.html", nil)
+	})
 
 	// /api/*
 	apiRtr := rtr.Group("/api")
