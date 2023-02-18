@@ -1,6 +1,8 @@
 package api
 
 import (
+	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -61,7 +63,7 @@ func (s *Server) verifyParticipantMiddleware() func(c *gin.Context) {
 		userID := c.MustGet(string(domain.UserIDCtx)).(uuid.UUID)
 		projectID, err := strconv.Atoi(c.Param("project_id"))
 		if err != nil {
-			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{errField: err.Error()})
 			return
 		}
 		if err := s.svc.VerifyParticipant(ctx, userID, projectID); err != nil {
@@ -73,10 +75,43 @@ func (s *Server) verifyParticipantMiddleware() func(c *gin.Context) {
 func (s *Server) verifyParticipantRoleMiddleware(toAllow ...model.ParticipantRole) func(c *gin.Context) {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
-		userID := uuid.MustParse(c.GetString(string(domain.UserIDCtx)))
-		projectID, err := strconv.Atoi(c.Param("id"))
+		userID := c.MustGet(string(domain.UserIDCtx)).(uuid.UUID)
+		//userID = uuid.MustParse(c.GetString(string(domain.UserIDCtx)))
+		str := &struct{
+			ProjectID string `json:"project_id"`
+		}{}
+		if err := json.NewDecoder(c.Request.Body).Decode(str); err != nil{
+			fmt.Println("11111")
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{errField: err.Error()})
+			return
+		}
+		projectID, err := strconv.Atoi(c.Param("project_id"))
 		if err != nil {
-			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{errField: err.Error()})
+			return
+		}
+		if err := s.svc.VerifyParticipantRole(ctx, userID, projectID, toAllow...); err != nil {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{errField: err.Error()})
+			return
+		}
+	}
+}
+func (s *Server) setProjectIDIntoCtxMiddleware(toAllow ...model.ParticipantRole) func(c *gin.Context) {
+	return func(c *gin.Context) {
+		ctx := c.Request.Context()
+		userID := c.MustGet(string(domain.UserIDCtx)).(uuid.UUID)
+		//userID = uuid.MustParse(c.GetString(string(domain.UserIDCtx)))
+		// str := &struct{
+		// 	ProjectID string `json:"project_id"`
+		// }{}
+		// if err := json.NewDecoder(c.Request.Body).Decode(str); err != nil{
+		// 	fmt.Println("11111")
+		// 	c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{errField: err.Error()})
+		// 	return
+		// }
+		projectID, err := strconv.Atoi(c.Param("project_id"))
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{errField: err.Error()})
 			return
 		}
 		if err := s.svc.VerifyParticipantRole(ctx, userID, projectID, toAllow...); err != nil {

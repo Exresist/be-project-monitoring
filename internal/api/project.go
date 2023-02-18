@@ -2,7 +2,6 @@ package api
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -90,7 +89,6 @@ func (s *Server) createProject(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return
 	}
-	fmt.Println(participant.ShortUser.ID)
 	c.JSON(http.StatusCreated, CreateProjectResp{
 		Project: makeProjectResponse(*project),
 		Participant: partcipantResp{
@@ -136,7 +134,7 @@ func (s *Server) updateProject(c *gin.Context) {
 }
 
 func (s *Server) deleteProject(c *gin.Context) {
-	userID, err := strconv.Atoi(c.Param("id"))
+	userID, err := strconv.Atoi(c.Param("project_id"))
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return
@@ -172,7 +170,7 @@ func (s *Server) addParticipant(c *gin.Context) {
 
 func (s *Server) deleteParticipant(c *gin.Context) {
 	userID, _ := uuid.Parse(c.Param("user_id"))
-	projectID, _ := strconv.Atoi(c.Param("id"))
+	projectID, _ := strconv.Atoi(c.Param("project_id"))
 	if err := s.svc.DeleteParticipant(c.Request.Context(), userID, projectID); err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return
@@ -180,7 +178,7 @@ func (s *Server) deleteParticipant(c *gin.Context) {
 	c.JSON(http.StatusOK, nil)
 }
 func (s *Server) getProjectInfo(c *gin.Context) {
-	projectID, err := strconv.Atoi(c.Param("id"))
+	projectID, err := strconv.Atoi(c.Param("project_id"))
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, err)
 		return
@@ -215,14 +213,14 @@ func makeProjectResponse(project model.Project) *projectResp {
 	}
 }
 func makeProjectResponses(projects []model.Project) []projectResp {
-	var projectResponses []projectResp
+	projectResponses := make([]projectResp, 0, len(projects))
 	for _, project := range projects {
 		projectResponses = append(projectResponses, *makeProjectResponse(project))
 	}
 	return projectResponses
 }
 func makeShortProjectResponses(projects []model.ShortProject) []projectResp {
-	var projectResponses []projectResp
+	projectResponses := make([]projectResp, 0, len(projects))
 	for _, project := range projects {
 		projectResponses = append(projectResponses,
 			*makeProjectResponse(model.Project{

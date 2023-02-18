@@ -110,14 +110,15 @@ func New(opts ...OptionFunc) *Server {
 	// /api/project
 	projectRtr := apiRtr.Group("/project", s.authMiddleware(model.Admin, model.ProjectManager, model.Student))
 	//projectRtr.GET("/projects", s.getProjects) ПОИСК ПРОЕКТОВ
+	//projectRtr.POST("/", s.verifyParticipantMiddleware(), s.verifyParticipantRoleMiddleware(model.RoleOwner), s.updateProject)
 	projectRtr.POST("/", s.updateProject)
-	projectRtr.GET("/:id", s.getProjectInfo)
-	projectRtr.DELETE("/:id", s.verifyParticipantRoleMiddleware(model.RoleOwner), s.deleteProject)
-	projectRtr.POST("/:id/", s.verifyParticipantRoleMiddleware(model.RoleOwner, model.RoleTeamlead), s.addParticipant)
-	projectRtr.DELETE("/:id/:user_id", s.verifyParticipantRoleMiddleware(model.RoleOwner, model.RoleTeamlead), s.deleteParticipant)
+	projectRtr.GET("/:project_id", s.getProjectInfo)
+	projectRtr.DELETE("/:project_id", s.verifyParticipantRoleMiddleware(model.RoleOwner), s.deleteProject)
+	projectRtr.POST("/:project_id/", s.verifyParticipantRoleMiddleware(model.RoleOwner, model.RoleTeamlead), s.addParticipant)
+	projectRtr.DELETE("/:project_id/:user_id", s.verifyParticipantRoleMiddleware(model.RoleOwner, model.RoleTeamlead), s.deleteParticipant)
 
 	// /api/project/task
-	taskRtr := projectRtr.Group("/:id/task", s.verifyParticipantMiddleware())
+	taskRtr := projectRtr.Group("/:project_id/task", s.verifyParticipantMiddleware())
 	taskRtr.POST("/", s.createTask)
 	taskRtr.PUT("/", s.updateTask)
 	taskRtr.GET("/:task_id", s.getTaskInfo)

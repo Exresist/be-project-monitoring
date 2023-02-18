@@ -24,7 +24,7 @@ var (
 	ErrGithubUsernameAlreadyExists      = errors.New("github username already exists")
 	ErrInvalidUserRole                  = errors.New("invalid user role")
 	ErrProjectNameAlreadyExists         = errors.New("project name already exists")
-	ErrProjectNameIsInvalid             = errors.New("project name is not valid")
+	ErrInvalidProjectName               = errors.New("invalid project name")
 	ErrProjectActiveToIsInvalid         = errors.New("project date is not valid")
 	ErrTaskNameIsInvalid                = errors.New("task name is not valid")
 	ErrTaskCreatorUserIDNotFound        = errors.New("task creator id not found")
@@ -44,6 +44,8 @@ var (
 	ErrTaskRealEstimateIsInvalid        = errors.New("task real estimate is not valid")
 	ErrUsersNotFound                    = errors.New("users not found")
 	ErrEmptyUsernameOrPassword          = errors.New("username or password is empty")
+	ErrUserIsNotOnProject               = errors.New("user is not on project")
+	ErrInvalidActiveTo                  = errors.New("invalid active_to date")
 )
 
 // package ierr

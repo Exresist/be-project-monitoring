@@ -48,6 +48,6 @@ CREATE TABLE tasks
     creator_id         BIGINT REFERENCES participants (id) ON DELETE CASCADE,
     status             status    NOT NULL DEFAULT 'TODO',
     created_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    updated_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     project_id         BIGINT REFERENCES projects (id) ON DELETE CASCADE
 );
