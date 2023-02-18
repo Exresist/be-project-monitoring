@@ -1,0 +1,1 @@
+web: cmd/be-project-monitoring/be-project-monitoring
