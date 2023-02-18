@@ -3,11 +3,11 @@ package main
 //nolint:wsl
 type config struct {
 	Env             string `required:"true" default:"development" desc:"production, development"`
-	DSN             string `required:"true" desc:"DSN для соединения с базой данных"`
+	DSN             string `required:"true" default:"postgres://sascha.panin2011:xBA1rPcGYK2X@ep-lively-morning-098612.eu-central-1.aws.neon.tech/penis2" desc:"DSN для соединения с базой данных"`
 	BindAddr        string `required:"true" default:":8080" split_words:"true" desc:"Адрес и порт входящих соединений"`
 	ReadTimeout     int    `required:"true" default:"10" split_words:"true" desc:"Таймаут на чтение запроса"`
 	WriteTimeout    int    `required:"true" default:"10" split_words:"true" desc:"Таймаут на запись ответа"`
 	ShutdownTimeout int    `required:"true" default:"30" split_words:"true" desc:"Время до принудительного завершения сервиса после получения сигнала выхода (s)"`
 
-	GHTOKEN string `required:"true" desc:"Github API token"`
+	GHTOKEN string `required:"true" default:"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" desc:"Github API token"`
 }
