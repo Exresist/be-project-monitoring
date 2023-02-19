@@ -80,12 +80,12 @@ type (
 func New(opts ...OptionFunc) *Server {
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = ":8080"
+		port = "8080"
 	}
 
 	s := &Server{
 		Server: &http.Server{
-			Addr:         port,
+			Addr:         ":" + port,
 			ReadTimeout:  time.Duration(10) * time.Second,
 			WriteTimeout: time.Duration(10) * time.Second},
 	}
@@ -94,11 +94,7 @@ func New(opts ...OptionFunc) *Server {
 	}
 
 	rtr := gin.Default()
-	rtr.LoadHTMLGlob("templates/*.tmpl.html")
-	rtr.Static("/static", "static")
-	rtr.GET("/", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "index.tmpl.html", nil)
-	})
+
 	rtr.GET("/index", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "index.tmpl.html", nil)
 	})
