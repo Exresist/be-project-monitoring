@@ -10,9 +10,9 @@ import (
 
 	"be-project-monitoring/internal/domain/model"
 
+	cors "github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/oklog/run"
-	cors "github.com/rs/cors/wrapper/gin"
 	"go.uber.org/zap"
 )
 
@@ -89,7 +89,11 @@ func New(opts ...OptionFunc) *Server {
 	}
 
 	rtr := gin.Default()
-	rtr.Use(cors.Default())
+	cfg := cors.DefaultConfig()
+	cfg.AllowHeaders = append(cfg.AllowHeaders, "Authorization", "Access-Control-Allow-Origin")
+	cfg.AllowAllOrigins = true
+	cors.New(cfg)
+	rtr.Use(cors.New(cfg))
 	// /api/*
 	apiRtr := rtr.Group("/api")
 	// /api/auth

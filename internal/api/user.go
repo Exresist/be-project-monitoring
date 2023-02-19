@@ -31,7 +31,7 @@ type (
 		Users []model.ShortUser `json:"users"`
 		Count int               `json:"count"`
 	}
-		UpdateUserReq struct {
+	UpdateUserReq struct {
 		ID             uuid.UUID `json:"id"`
 		Role           *string   `json:"role"`
 		Username       *string   `json:"username"`
@@ -40,6 +40,17 @@ type (
 		Group          *string   `json:"group"`
 		GithubUsername *string   `json:"ghUsername"`
 		Password       *string   `json:"password"`
+	}
+	GetUserResp struct {
+		ID             uuid.UUID     `json:"id"`
+		Role           string        `json:"role"`
+		Username       string        `json:"username"`
+		FirstName      string        `json:"firstName"`
+		LastName       string        `json:"lastName"`
+		ColorCode      string        `json:"avatarColor"`
+		Group          string        `json:"group"`
+		GithubUsername string        `json:"ghUsername"`
+		Projects       []projectResp `json:"projects"`
 	}
 )
 
@@ -128,11 +139,16 @@ func (s *Server) getUserProfileFromToken(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, struct {
-		User         model.ShortUser `json:"user"`
-		UserProjects []projectResp   `json:"userProjects"`
-	}{
-		User:         userProfile.ShortUser,
-		UserProjects: makeShortProjectResponses(userProfile.UserProjects),
+
+	c.JSON(http.StatusOK, GetUserResp{
+		ID:             userProfile.ShortUser.ID,
+		Username:       userProfile.ShortUser.Username,
+		FirstName:      userProfile.ShortUser.FirstName,
+		LastName:       userProfile.ShortUser.LastName,
+		Group:          userProfile.ShortUser.Group,
+		GithubUsername: userProfile.ShortUser.GithubUsername,
+		ColorCode:      userProfile.ShortUser.ColorCode,
+		Role:           string(userProfile.ShortUser.Role),
+		Projects:       makeShortProjectResponses(userProfile.UserProjects),
 	})
 }
