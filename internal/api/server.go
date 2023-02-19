@@ -5,7 +5,9 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
+	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -76,9 +78,14 @@ type (
 )
 
 func New(opts ...OptionFunc) *Server {
+	port := os.Getenv("PORT")
+	if port == "" {
+		log.Fatal("$PORT must be set")
+	}
+
 	s := &Server{
 		Server: &http.Server{
-			Addr:         ":8080",
+			Addr:         port,
 			ReadTimeout:  time.Duration(10) * time.Second,
 			WriteTimeout: time.Duration(10) * time.Second},
 	}
