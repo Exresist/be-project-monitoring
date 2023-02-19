@@ -3,6 +3,7 @@ package api
 import (
 	"be-project-monitoring/internal/domain/model"
 	"context"
+	_ "embed"
 	"fmt"
 	"net/http"
 	"time"
@@ -86,8 +87,7 @@ func New(opts ...OptionFunc) *Server {
 	}
 
 	rtr := gin.Default()
-
-	rtr.LoadHTMLGlob("templates/*")
+	rtr.LoadHTMLGlob("templates/*.tmpl.html")
 	rtr.Static("/static", "static")
 	rtr.GET("/", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "index.tmpl.html", nil)

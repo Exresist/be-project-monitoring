@@ -1,11 +1,10 @@
 package api
 
 import (
-	"encoding/json"
-	"net/http"
-
 	"be-project-monitoring/internal/domain/model"
 	ierr "be-project-monitoring/internal/errors"
+	"encoding/json"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
