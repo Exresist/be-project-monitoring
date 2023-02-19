@@ -10,6 +10,7 @@ import (
 
 	"be-project-monitoring/internal/domain/model"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/oklog/run"
@@ -95,14 +96,13 @@ func New(opts ...OptionFunc) *Server {
 
 	rtr := gin.Default()
 
-	rtr.GET("/index", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "index.tmpl.html", nil)
-	})
+	rtr.Use(cors.Default())
 
 	// /api/*
 	apiRtr := rtr.Group("/api")
 	// /api/auth
 	apiRtr.POST("/auth", s.auth)
+	apiRtr.OPTIONS("/auth", cors.Default())
 	// /api/register
 	apiRtr.POST("/register", s.register)
 
