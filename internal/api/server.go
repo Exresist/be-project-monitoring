@@ -12,6 +12,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/oklog/run"
+	cors "github.com/rs/cors/wrapper/gin"
 	"go.uber.org/zap"
 )
 
@@ -33,7 +34,7 @@ type (
 	}
 	userService interface {
 		CreateUser(ctx context.Context, user *CreateUserReq) (*model.User, string, error)
-		AuthUser(ctx context.Context, username, password string) (string, error)
+		AuthUser(ctx context.Context, username, password string) (*model.User, string, error)
 		GetFullUsers(ctx context.Context, userReq *GetUserReq) ([]model.User, int, error)
 		GetPartialUsers(ctx context.Context, userReq *GetUserReq) ([]model.ShortUser, int, error)
 		FindGithubUser(ctx context.Context, userReq string) bool
@@ -88,7 +89,7 @@ func New(opts ...OptionFunc) *Server {
 	}
 
 	rtr := gin.Default()
-
+	rtr.Use(cors.Default())
 	// /api/*
 	apiRtr := rtr.Group("/api")
 	// /api/auth

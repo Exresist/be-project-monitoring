@@ -27,7 +27,7 @@ type (
 	}
 
 	userResp struct {
-		User  *model.User `json:"user,omitempty"`
+		User  *model.User `json:"user"`
 		Token string      `json:"token"`
 	}
 )
@@ -64,11 +64,11 @@ func (s *Server) auth(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return
 	}
-	token, err := s.svc.AuthUser(c.Request.Context(), userReq.Username, userReq.Password)
+	user, token, err := s.svc.AuthUser(c.Request.Context(), userReq.Username, userReq.Password)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{errField: err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, userResp{Token: token})
+	c.JSON(http.StatusOK, userResp{User: user, Token: token})
 }

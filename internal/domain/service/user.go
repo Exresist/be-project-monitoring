@@ -66,18 +66,22 @@ func (s *service) CreateUser(ctx context.Context, userReq *api.CreateUserReq) (*
 	return user, token, err
 }
 
-func (s *service) AuthUser(ctx context.Context, username, password string) (string, error) {
+func (s *service) AuthUser(ctx context.Context, username, password string) (*model.User, string, error) {
 	if username == "" || password == "" {
-		return "", ierr.ErrEmptyUsernameOrPassword
+		return nil, "", ierr.ErrEmptyUsernameOrPassword
 	}
 	user, err := s.repo.GetUser(ctx, repository.NewUserFilter().ByUsername(username))
 	if err != nil {
-		return "", err
+		return nil, "", err
 	}
 	if err = bcrypt.CompareHashAndPassword([]byte(user.HashedPassword), []byte(password)); err != nil {
-		return "", err
+		return nil, "", err
 	}
-	return model.GenerateToken(user)
+	token, err := model.GenerateToken(user)
+	if err != nil {
+		return nil, "", err
+	}
+	return user, token, nil
 }
 
 func (s *service) GetFullUsers(ctx context.Context, userReq *api.GetUserReq) ([]model.User, int, error) {
