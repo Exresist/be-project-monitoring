@@ -4,7 +4,6 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"time"
@@ -81,7 +80,7 @@ type (
 func New(opts ...OptionFunc) *Server {
 	port := os.Getenv("PORT")
 	if port == "" {
-		log.Fatal("$PORT must be set")
+		port = ":8080"
 	}
 
 	s := &Server{
