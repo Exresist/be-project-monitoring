@@ -1,7 +1,6 @@
 package api
 
 import (
-	"be-project-monitoring/internal/domain/model"
 	"context"
 	_ "embed"
 	"fmt"
@@ -9,6 +8,8 @@ import (
 	"net/http"
 	"os"
 	"time"
+
+	"be-project-monitoring/internal/domain/model"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
