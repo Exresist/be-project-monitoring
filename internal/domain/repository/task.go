@@ -28,7 +28,7 @@ func (r *Repository) GetTasks(ctx context.Context, filter *TaskFilter) ([]model.
 	rows, err := r.sq.Select(
 		"t.id", "t.name",
 		"t.description", "t.suggested_estimate",
-		"t.real_estimate", "t.participant_id",
+		"t.participant_id",
 		"t.creator_id", "t.status",
 		"t.created_at", "t.updated_at",
 		"t.project_id").
@@ -52,8 +52,8 @@ func (r *Repository) GetTasks(ctx context.Context, filter *TaskFilter) ([]model.
 		task := model.Task{}
 		if err = rows.Scan(
 			&task.ID, &task.Name,
-			&task.Description, &task.SuggestedEstimate,
-			&task.RealEstimate, &task.ParticipantID,
+			&task.Description, &task.Estimate,
+			&task.ParticipantID,
 			&task.CreatorID, &task.Status,
 			&task.CreatedAt, &task.UpdatedAt,
 			&task.ProjectID,
@@ -81,7 +81,7 @@ func (r *Repository) InsertTask(ctx context.Context, task *model.Task) error {
 			"participant_id", "creator_id",
 			"status", "project_id").
 		Values(task.Name,
-			task.Description, task.SuggestedEstimate,
+			task.Description, task.Estimate,
 			task.ParticipantID, task.CreatorID,
 			task.Status, task.ProjectID).
 		Suffix("RETURNING \"id\"").
@@ -96,8 +96,7 @@ func (r *Repository) UpdateTask(ctx context.Context, task *model.Task) error {
 		SetMap(map[string]interface{}{
 			"name":               task.Name,
 			"description":        task.Description,
-			"suggested_estimate": task.SuggestedEstimate,
-			"real_estimate":      task.RealEstimate,
+			"suggested_estimate": task.Estimate,
 			"participant_id":     task.ParticipantID,
 			"status":             task.Status,
 			"updated_at":         task.UpdatedAt,
@@ -113,7 +112,7 @@ func (r *Repository) DeleteTask(ctx context.Context, id int) error {
 
 func (r *Repository) GetTaskInfo(ctx context.Context, id int) (*model.TaskInfo, error) {
 	rows, err := r.sq.Select("t.id", "t.name", "t.description",
-		"t.suggested_estimate", "t.real_estimate",
+		"t.suggested_estimate",
 		"t.participant_id", "t.creator_id",
 		"t.status", "t.created_at",
 		"t.updated_at", "t.project_id",
@@ -147,7 +146,7 @@ func (r *Repository) GetTaskInfo(ctx context.Context, id int) (*model.TaskInfo, 
 	if rows.Next() {
 		taskInfo := model.TaskInfo{}
 		if err := rows.Scan(&taskInfo.ID, &taskInfo.Name, &taskInfo.Description,
-			&taskInfo.SuggestedEstimate, &taskInfo.RealEstimate,
+			&taskInfo.Estimate,
 			&taskInfo.ParticipantID, &taskInfo.CreatorID,
 			&taskInfo.Status, &taskInfo.CreatedAt,
 			&taskInfo.UpdatedAt, &taskInfo.ProjectID,
@@ -161,7 +160,7 @@ func (r *Repository) GetTaskInfo(ctx context.Context, id int) (*model.TaskInfo, 
 			&taskInfo.Participant.Username, &taskInfo.Participant.FirstName,
 			&taskInfo.Participant.LastName, &taskInfo.Participant.Group,
 			&taskInfo.Participant.GithubUsername,
-		);err != nil {
+		); err != nil {
 			return nil, fmt.Errorf("error while performing sql request: %w", err)
 		}
 		return &taskInfo, nil

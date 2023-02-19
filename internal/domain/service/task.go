@@ -9,8 +9,6 @@ import (
 	"database/sql"
 	"strings"
 	"time"
-
-	"github.com/google/uuid"
 )
 
 func (s *service) GetTasks(ctx context.Context, taskReq *api.GetTasksReq) ([]model.Task, int, error) {
@@ -32,19 +30,19 @@ func (s *service) CreateTask(ctx context.Context, taskReq *api.CreateTaskReq) (*
 	creatorID := &sql.NullInt64{}
 	participantID := &sql.NullInt64{}
 
-	if creator, err := s.repo.GetParticipant(ctx, repository.NewParticipantFilter().
-		ByUserID(taskReq.CreatorUserID).ByProjectID(taskReq.ProjectID)); err != nil {
+	if _, err := s.repo.GetParticipant(ctx, repository.NewParticipantFilter().
+		ByID(taskReq.CreatorID)); err != nil {
 		return nil, ierr.ErrTaskCreatorUserIDNotFound
 	} else {
-		creatorID.Scan(creator.ID)
+		creatorID.Scan(taskReq.CreatorID)
 	}
 
-	if taskReq.ParticipantUserID != uuid.Nil {
-		if participant, err := s.repo.GetParticipant(ctx, repository.NewParticipantFilter().
-			ByUserID(taskReq.ParticipantUserID).ByProjectID(taskReq.ProjectID)); err != nil {
+	if taskReq.ParticipantID != nil {
+		if _, err := s.repo.GetParticipant(ctx, repository.NewParticipantFilter().
+			ByID(*taskReq.ParticipantID)); err != nil {
 			return nil, ierr.ErrTaskParticipantUserIDNotFound
 		} else {
-			participantID.Scan(participant.ID)
+			participantID.Scan(*taskReq.ParticipantID)
 		}
 	}
 
@@ -71,11 +69,7 @@ func (s *service) CreateTask(ctx context.Context, taskReq *api.CreateTaskReq) (*
 		task.Description.Scan(taskReq.Description)
 	}
 	if taskReq.SuggestedEstimate != nil {
-		if *taskReq.SuggestedEstimate > 0 {
-			task.SuggestedEstimate.Scan(*taskReq.SuggestedEstimate)
-		} else {
-			return nil, ierr.ErrTaskSuggestedEstimateIsInvalid
-		}
+		task.Estimate.Scan(*taskReq.SuggestedEstimate)
 	}
 
 	return task, s.repo.InsertTask(ctx, task)
@@ -91,17 +85,15 @@ func (s *service) UpdateTask(ctx context.Context, taskReq *api.UpdateTaskReq) (*
 	}
 
 	participantID := &sql.NullInt64{}
-	if taskReq.ChangeParticipant != nil && *taskReq.ChangeParticipant {
-		if taskReq.ParticipantUserID != uuid.Nil {
-			if participant, err := s.repo.GetParticipant(ctx, repository.NewParticipantFilter().
-				ByUserID(taskReq.ParticipantUserID).ByProjectID(oldTask.ProjectID)); err != nil {
-				return nil, ierr.ErrTaskParticipantUserIDNotFound
-			} else {
-				participantID.Scan(participant.ID)
-			}
+	if taskReq.ParticipantID != nil {
+		if _, err := s.repo.GetParticipant(ctx, repository.NewParticipantFilter().
+			ByID(*taskReq.ParticipantID)); err != nil {
+			return nil, ierr.ErrTaskParticipantUserIDNotFound
+		} else {
+			participantID.Scan(*taskReq.ParticipantID)
 		}
 	} else {
-		participantID.Scan(&oldTask.ParticipantID)
+		participantID.Scan(oldTask.ParticipantID)
 	}
 
 	newTask, err := mergeTaskFields(oldTask, taskReq, *participantID)
@@ -140,9 +132,6 @@ func mergeTaskFields(oldTask *model.Task, taskReq *api.UpdateTaskReq, newPartici
 	} else {
 		newTask.Status = oldTask.Status
 	}
-	if !newParticipantID.Valid {
-		newTask.ParticipantID = oldTask.ParticipantID
-	}
 
 	if taskReq.Name == nil {
 		newTask.Name = oldTask.Name
@@ -156,19 +145,11 @@ func mergeTaskFields(oldTask *model.Task, taskReq *api.UpdateTaskReq, newPartici
 	}
 
 	if taskReq.SuggestedEstimate == nil {
-		newTask.SuggestedEstimate = oldTask.SuggestedEstimate
+		newTask.Estimate = oldTask.Estimate
 	} else if *taskReq.SuggestedEstimate > 0 {
-		newTask.SuggestedEstimate.Scan(*taskReq.SuggestedEstimate)
+		newTask.Estimate.Scan(*taskReq.SuggestedEstimate)
 	} else {
 		return nil, ierr.ErrTaskSuggestedEstimateIsInvalid
-	}
-
-	if taskReq.RealEstimate == nil {
-		newTask.RealEstimate = oldTask.RealEstimate
-	} else if *taskReq.RealEstimate > 0 {
-		newTask.RealEstimate.Scan(*taskReq.RealEstimate)
-	} else {
-		return nil, ierr.ErrTaskRealEstimateIsInvalid
 	}
 
 	return newTask, nil

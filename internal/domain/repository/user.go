@@ -243,12 +243,15 @@ func (r *Repository) GetUserProfile(ctx context.Context, id uuid.UUID) (*model.P
 			return nil, fmt.Errorf("error while scanning sql row: %w", err)
 		}
 		projects := make([]model.ShortProject, 0)
+		fmt.Println(len(projectsIDs))
+		fmt.Println(projectsIDs)
 		for i := range projectsIDs {
 			if projectsIDs[i] != nil {
 				activeTo, err := time.Parse("2006-01-02", string(projectsActiveTos[i]))
 				if err != nil {
 					return nil, fmt.Errorf("error while parsing time: %w", err)
 				}
+				fmt.Println(i)
 				shortProject := model.ShortProject{
 					ID:       int(binary.BigEndian.Uint64(projectsIDs[i])),
 					Name:     string(projectsNames[i]),

@@ -48,15 +48,15 @@ func (s *service) GetParticipants(ctx context.Context, projectID int) ([]model.P
 	return s.repo.GetParticipants(ctx, repository.NewParticipantFilter().ByProjectID(projectID))
 }
 
-func (s *service) DeleteParticipant(ctx context.Context, userID uuid.UUID, projectID int) error {
-	if projectID <= 0 {
-		return ierr.ErrInvalidProjectID
-	}
-	if userID == uuid.Nil {
-		return ierr.ErrInvalidUserID
-	}
+func (s *service) DeleteParticipant(ctx context.Context, participantID int) error {
+	// if projectID <= 0 {
+	// 	return ierr.ErrInvalidProjectID
+	// }
+	// if userID == uuid.Nil {
+	// 	return ierr.ErrInvalidUserID
+	// }
 	participant, err := s.repo.GetParticipant(ctx, repository.NewParticipantFilter().
-		ByUserID(userID).ByProjectID(projectID))
+		ByID(participantID))
 	if err != nil {
 		return err
 	}

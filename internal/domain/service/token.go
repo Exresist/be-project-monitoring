@@ -60,17 +60,16 @@ func (s *service) VerifySelf(ctx context.Context, token string, id uuid.UUID) er
 	}
 	return nil
 }
-func (s *service) VerifyParticipant(ctx context.Context, userID uuid.UUID, projectID int) error {
-	_, err := s.repo.GetParticipant(ctx, repository.NewParticipantFilter().
-		ByUserID(userID).ByProjectID(projectID))
-	if err != nil {
-		return ierr.ErrUserIsNotOnProject
-	}
-	return nil
-}
-func (s *service) VerifyParticipantRole(ctx context.Context, userID uuid.UUID, projectID int, toAllow ...model.ParticipantRole) error {
+func (s *service) VerifyParticipant(ctx context.Context, userID uuid.UUID, projectID int) (*model.Participant, error) {
 	participant, err := s.repo.GetParticipant(ctx, repository.NewParticipantFilter().
 		ByUserID(userID).ByProjectID(projectID))
+	if err != nil {
+		return nil, ierr.ErrUserIsNotOnProject
+	}
+	return participant, nil
+}
+func (s *service) VerifyParticipantRole(ctx context.Context, userID uuid.UUID, projectID int, toAllow ...model.ParticipantRole) error {
+	participant, err := s.VerifyParticipant(ctx, userID, projectID)
 	if err != nil {
 		return err
 	}

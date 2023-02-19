@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"be-project-monitoring/internal/domain"
 	"be-project-monitoring/internal/domain/model"
 
 	"github.com/gin-gonic/gin"
@@ -107,6 +108,21 @@ func (s *Server) getUserProfile(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return
 	}
+	userProfile, err := s.svc.GetUserProfile(c.Request.Context(), userID)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, struct {
+		User         model.ShortUser `json:"user"`
+		UserProjects []projectResp   `json:"user_projects"`
+	}{
+		User:         userProfile.ShortUser,
+		UserProjects: makeShortProjectResponses(userProfile.UserProjects),
+	})
+}
+func (s *Server) getUserProfileFromToken(c *gin.Context) {
+	userID := c.MustGet(string(domain.UserIDCtx)).(uuid.UUID)
 	userProfile, err := s.svc.GetUserProfile(c.Request.Context(), userID)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})

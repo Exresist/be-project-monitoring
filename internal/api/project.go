@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -33,19 +34,19 @@ type (
 	projectResp struct {
 		ID          int       `json:"id"`
 		Name        string    `json:"name"`
-		Description string    `json:"description,omitempty"`
+		Description string    `json:"description"`
 		PhotoURL    string    `json:"photo_url,omitempty"`
 		ReportURL   string    `json:"report_url,omitempty"`
 		ReportName  string    `json:"report_name,omitempty"`
 		RepoURL     string    `json:"repo_url,omitempty"`
 		ActiveTo    time.Time `json:"active_to,omitempty"`
 	}
+
 	GetProjectsReq struct {
 		Name   string `json:"name"`
 		Offset int    `json:"offset"`
 		Limit  int    `json:"limit"`
 	}
-
 	getProjectResp struct {
 		Projects []projectResp
 		Count    int
@@ -61,11 +62,24 @@ type (
 		RepoURL     *string   `json:"repo_url"`
 		ActiveTo    time.Time `json:"active_to"`
 	}
-	AddParticipantReq struct {
-		Role      string    `json:"role"`
-		UserID    uuid.UUID `json:"user_id"`
-		ProjectID int       `json:"project_id"`
+
+	projectInfoResp struct {
+		ID           int                 `json:"id"`
+		Name         string              `json:"name"`
+		Description  string              `json:"description,omitempty"`
+		PhotoURL     string              `json:"photo_url,omitempty"`
+		ReportURL    string              `json:"report_url,omitempty"`
+		ReportName   string              `json:"report_name,omitempty"`
+		RepoURL      string              `json:"repo_url,omitempty"`
+		ActiveTo     time.Time           `json:"active_to,omitempty"`
+		Participants []model.Participant `json:"Participants"`
+		Tasks        []taskResp          `json:"Tasks"`
 	}
+)
+
+var (
+	updatedProject   *UpdateProjectReq
+	deletedProjectID *int
 )
 
 func (s *Server) createProject(c *gin.Context) {
@@ -118,21 +132,31 @@ func (s *Server) getProjects(c *gin.Context) {
 		Count:    count,
 	})
 }
-
-func (s *Server) updateProject(c *gin.Context) {
-	newProj := &UpdateProjectReq{}
-	if err := json.NewDecoder(c.Request.Body).Decode(newProj); err != nil {
+func (s *Server) parseBodyToUpdatedProject(c *gin.Context) {
+	fmt.Println("111111")
+	updatedProject = &UpdateProjectReq{}
+	if err := json.NewDecoder(c.Request.Body).Decode(updatedProject); err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return
 	}
-	project, err := s.svc.UpdateProject(c.Request.Context(), newProj)
+	c.Set(string(domain.ProjectIDCtx), updatedProject.ID)
+}
+func (s *Server) updateProject(c *gin.Context) {
+	project, err := s.svc.UpdateProject(c.Request.Context(), updatedProject)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, makeProjectResponse(*project))
 }
-
+func (s *Server) parseBodyToDeletedProject(c *gin.Context) {
+	fmt.Println("111111")
+	if err := json.NewDecoder(c.Request.Body).Decode(deletedProjectID); err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
+		return
+	}
+	c.Set(string(domain.ProjectIDCtx), deletedProjectID)
+}
 func (s *Server) deleteProject(c *gin.Context) {
 	userID, err := strconv.Atoi(c.Param("project_id"))
 	if err != nil {
@@ -148,35 +172,6 @@ func (s *Server) deleteProject(c *gin.Context) {
 	c.JSON(http.StatusOK, nil)
 }
 
-func (s *Server) addParticipant(c *gin.Context) {
-	req := &AddParticipantReq{}
-	if err := json.NewDecoder(c.Request.Body).Decode(req); err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
-		return
-	}
-
-	_, err := s.svc.AddParticipant(c.Request.Context(), req)
-	if err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
-		return
-	}
-	participants, err := s.svc.GetParticipants(c.Request.Context(), req.ProjectID)
-	if err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
-		return
-	}
-	c.JSON(http.StatusCreated, gin.H{"participants": participants})
-}
-
-func (s *Server) deleteParticipant(c *gin.Context) {
-	userID, _ := uuid.Parse(c.Param("user_id"))
-	projectID, _ := strconv.Atoi(c.Param("project_id"))
-	if err := s.svc.DeleteParticipant(c.Request.Context(), userID, projectID); err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
-		return
-	}
-	c.JSON(http.StatusOK, nil)
-}
 func (s *Server) getProjectInfo(c *gin.Context) {
 	projectID, err := strconv.Atoi(c.Param("project_id"))
 	if err != nil {
@@ -190,16 +185,20 @@ func (s *Server) getProjectInfo(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, struct {
-		Project *projectResp
-		Users   []model.ShortUser
-		Tasks   []taskResp
-	}{
-		Project: makeProjectResponse(projectInfo.Project),
-		Users:   projectInfo.Users,
-		Tasks:   makeShortTasksResponses(projectInfo.Tasks),
+	c.JSON(http.StatusOK, projectInfoResp{
+		ID:           projectInfo.Project.ID,
+		Name:         projectInfo.Name,
+		Description:  projectInfo.Description.String,
+		PhotoURL:     projectInfo.PhotoURL.String,
+		ReportURL:    projectInfo.ReportURL.String,
+		ReportName:   projectInfo.ReportName.String,
+		RepoURL:      projectInfo.RepoURL.String,
+		ActiveTo:     projectInfo.ActiveTo,
+		Participants: projectInfo.Participants,
+		Tasks:        makeShortTasksResponses(projectInfo.Tasks),
 	})
 }
+
 func makeProjectResponse(project model.Project) *projectResp {
 	return &projectResp{
 		ID:          project.ID,

@@ -8,7 +8,6 @@ const (
 	Student        UserRole = "student"
 	Admin          UserRole = "admin"
 	ProjectManager UserRole = "project_manager"
-	A
 )
 
 type (

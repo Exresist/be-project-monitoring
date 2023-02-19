@@ -10,10 +10,10 @@ type (
 	ParticipantRole string
 
 	Participant struct {
-		ShortUser
-		Role      ParticipantRole `json:"role"`
 		ID        int             `json:"id"`
-		ProjectID int             `json:"project_id"`
+		Role      ParticipantRole `json:"role"`
+		ProjectID int             `json:"project_id,omitempty"`
+		ShortUser `json:"User"`
 	}
 )
 

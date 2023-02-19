@@ -46,7 +46,7 @@ type (
 		GetUserIDFromToken(ctx context.Context, token string) (uuid.UUID, error)
 		VerifyToken(ctx context.Context, token string, toAllow ...model.UserRole) error
 		VerifySelf(ctx context.Context, token string, id uuid.UUID) error
-		VerifyParticipant(ctx context.Context, userID uuid.UUID, projectID int) error
+		VerifyParticipant(ctx context.Context, userID uuid.UUID, projectID int) (*model.Participant, error)
 		VerifyParticipantRole(ctx context.Context, userID uuid.UUID, projectID int, toAllow ...model.ParticipantRole) error
 	}
 
@@ -62,7 +62,7 @@ type (
 		AddParticipant(ctx context.Context, participant *AddParticipantReq) (*model.Participant, error)
 		GetParticipantByID(ctx context.Context, id int) (*model.Participant, error)
 		GetParticipants(ctx context.Context, projectID int) ([]model.Participant, error)
-		DeleteParticipant(ctx context.Context, userID uuid.UUID, projectID int) error
+		DeleteParticipant(ctx context.Context, participantID int) error
 	}
 
 	taskService interface {
@@ -98,9 +98,10 @@ func New(opts ...OptionFunc) *Server {
 
 	// /api/user
 	usersRtr := apiRtr.Group("/user")
-	usersRtr.GET("/", s.getPartialUsers)
+	usersRtr.GET("/search", s.getPartialUsers)
+	usersRtr.GET("/", s.authMiddleware(model.Admin, model.ProjectManager, model.Student), s.getUserProfileFromToken)
 	usersRtr.GET("/:id", s.getUserProfile)
-	usersRtr.POST("/:id", s.selfUpdateMiddleware(), s.updateUser)
+	usersRtr.PATCH("/:id", s.selfUpdateMiddleware(), s.updateUser)
 	//usersRtr.DELETE("/:id", s.deleteUser)
 
 	// /api/pm
@@ -109,18 +110,20 @@ func New(opts ...OptionFunc) *Server {
 
 	// /api/project
 	projectRtr := apiRtr.Group("/project", s.authMiddleware(model.Admin, model.ProjectManager, model.Student))
-	//projectRtr.GET("/projects", s.getProjects) ПОИСК ПРОЕКТОВ
-	//projectRtr.POST("/", s.verifyParticipantMiddleware(), s.verifyParticipantRoleMiddleware(model.RoleOwner), s.updateProject)
-	projectRtr.POST("/", s.updateProject)
+	//projectRtr.GET("/projects", s.getProjects) //ПОИСК ПРОЕКТОВ
+	projectRtr.PATCH("/", s.parseBodyToUpdatedProject,
+		s.verifyParticipantRoleMiddleware(model.RoleOwner), s.updateProject)
+	//projectRtr.POST("/", s.updateProject)
 	projectRtr.GET("/:project_id", s.getProjectInfo)
-	projectRtr.DELETE("/:project_id", s.verifyParticipantRoleMiddleware(model.RoleOwner), s.deleteProject)
-	projectRtr.POST("/:project_id/", s.verifyParticipantRoleMiddleware(model.RoleOwner, model.RoleTeamlead), s.addParticipant)
-	projectRtr.DELETE("/:project_id/:user_id", s.verifyParticipantRoleMiddleware(model.RoleOwner, model.RoleTeamlead), s.deleteParticipant)
+	projectRtr.DELETE("/remove", s.parseBodyToDeletedProject,
+		s.verifyParticipantRoleMiddleware(model.RoleOwner), s.deleteProject)
+	projectRtr.POST("/add-participant", s.verifyParticipantRoleMiddleware(model.RoleOwner, model.RoleTeamlead), s.addParticipant)
+	projectRtr.DELETE("/remove-participant", s.verifyParticipantRoleMiddleware(model.RoleOwner, model.RoleTeamlead), s.deleteParticipant)
 
 	// /api/project/task
 	taskRtr := projectRtr.Group("/:project_id/task", s.verifyParticipantMiddleware())
 	taskRtr.POST("/", s.createTask)
-	taskRtr.PUT("/", s.updateTask)
+	taskRtr.PATCH("/", s.updateTask)
 	taskRtr.GET("/:task_id", s.getTaskInfo)
 	taskRtr.DELETE("/:task_id", s.deleteTask)
 

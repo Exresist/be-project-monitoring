@@ -6,29 +6,28 @@ import (
 )
 
 const (
-	TODO       TaskStatus = "TODO"
-	InProgress TaskStatus = "In progress"
-	InReview   TaskStatus = "In review"
-	Testing    TaskStatus = "Testing"
-	Done       TaskStatus = "Done"
+	TODO       TaskStatus = "BACKLOG"
+	InProgress TaskStatus = "IN_PROGRESS"
+	InReview   TaskStatus = "REVIEW"
+	//Testing    TaskStatus = "Testing"
+	Done TaskStatus = "DONE"
 )
 
 type (
 	TaskStatus string
 	Task       struct {
 		ShortTask
-		SuggestedEstimate sql.NullInt64 `json:"suggested_estimate"`
-		RealEstimate      sql.NullInt64 `json:"real_estimate"`
-		CreatorID         sql.NullInt64 `json:"creator_id"`
-		CreatedAt         time.Time     `json:"created_at"`
-		UpdatedAt         time.Time     `json:"updated_at"`
-		ProjectID         int           `json:"project_id"`
+		Estimate  sql.NullString `json:"estimatedTime"`
+		CreatorID sql.NullInt64  `json:"creatorId"`
+		CreatedAt time.Time      `json:"createdAt"`
+		UpdatedAt time.Time      `json:"updatedAt"`
+		ProjectID int            `json:"projectId"`
 	}
 	ShortTask struct {
 		ID            int            `json:"id"`
-		Name          string         `json:"name"`
+		Name          string         `json:"title"`
 		Description   sql.NullString `json:"description"`
-		ParticipantID sql.NullInt64  `json:"participant_id"`
+		ParticipantID sql.NullInt64  `json:"asignee"`
 		Status        TaskStatus     `json:"status"`
 	}
 	TaskInfo struct {
@@ -39,9 +38,9 @@ type (
 )
 
 var TaskStatuses = map[string]struct{}{
-	"TODO":        {},
-	"In progress": {},
-	"In review":   {},
-	"Testing":     {},
-	"Done":        {},
+	"BACKLOG":     {},
+	"IN_PROGRESS": {},
+	"REVIEW":      {},
+	//"Testing":     {},
+	"DONE": {},
 }
