@@ -1,6 +1,7 @@
 package api
 
 import (
+	"be-project-monitoring/internal/domain/model"
 	"encoding/json"
 	"net/http"
 
@@ -11,8 +12,14 @@ import (
 type (
 	AddParticipantReq struct {
 		Role      string    `json:"role"`
-		UserID    uuid.UUID `json:"user_id"`
-		ProjectID int       `json:"project_id"`
+		UserID    uuid.UUID `json:"userId"`
+		ProjectID int       `json:"projectId"`
+	}
+	partcipantResp struct {
+		ID        int             `json:"id"`
+		Role      string          `json:"role"`
+		ProjectID int             `json:"projectId"`
+		User      model.ShortUser `json:"user"`
 	}
 )
 var (

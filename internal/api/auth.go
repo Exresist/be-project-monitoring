@@ -14,10 +14,10 @@ type (
 	CreateUserReq struct {
 		Email          string `json:"email"`
 		Username       string `json:"username"`
-		FirstName      string `json:"first_name"`
-		LastName       string `json:"last_name"`
+		FirstName      string `json:"firstName"`
+		LastName       string `json:"lastName"`
 		Group          string `json:"group"`
-		GithubUsername string `json:"github_username"`
+		GithubUsername string `json:"ghUsername"`
 		Password       string `json:"password"`
 		Role           string `json:"role"`
 	}

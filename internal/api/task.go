@@ -13,13 +13,13 @@ import (
 
 type (
 	CreateTaskReq struct {
-		Name              string  `json:"name"`
+		Name              string  `json:"title"`
 		Description       string  `json:"description"`
-		SuggestedEstimate *string `json:"suggested_estimate"`
-		CreatorID         int     `json:"creator_id"`
-		ParticipantID     *int    `json:"paticipant_id"`
+		SuggestedEstimate *string `json:"estimatedTime"`
+		CreatorID         int     `json:"creatorId"`
+		ParticipantID     *int    `json:"asignee"`
 		Status            string  `json:"status"`
-		ProjectID         int     `json:"project_id"`
+		ProjectID         int     `json:"projectId"`
 	}
 	taskResp struct {
 		ID                int       `json:"id"`
@@ -27,11 +27,11 @@ type (
 		Description       string    `json:"description"`
 		SuggestedEstimate string    `json:"estimate"`
 		ParticipantID     int       `json:"asignee"`
-		CreatorID         int       `json:"creator_id"`
+		CreatorID         int       `json:"creatorId"`
 		Status            string    `json:"status"`
 		CreatedAt         time.Time `json:"createdAt"`
 		UpdatedAt         time.Time `json:"updatedAt"`
-		ProjectID         int       `json:"project_id"`
+		ProjectID         int       `json:"projectId"`
 	}
 	GetTasksReq struct {
 		ProjectID     int
@@ -54,7 +54,7 @@ type (
 func (s *Server) getTasks(c *gin.Context) {
 	taskReq := &GetTasksReq{}
 
-	projectID, err := strconv.Atoi(c.Query("project_id"))
+	projectID, err := strconv.Atoi(c.Query("projectId"))
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, ierr.ErrInvalidProjectID)
 		return
@@ -64,7 +64,7 @@ func (s *Server) getTasks(c *gin.Context) {
 	if name := c.Query("name"); name != "" {
 		taskReq.Name = &name
 	}
-	*taskReq.ParticipantID, _ = strconv.Atoi(c.Query("participant_id"))
+	*taskReq.ParticipantID, _ = strconv.Atoi(c.Query("asignee"))
 	taskReq.Offset, _ = strconv.Atoi(c.Query("offset"))
 	taskReq.Limit, _ = strconv.Atoi(c.Query("limit"))
 

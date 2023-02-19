@@ -6,8 +6,8 @@ import (
 	ierr "be-project-monitoring/internal/errors"
 	"context"
 	"database/sql"
-	"encoding/binary"
 	"fmt"
+	"strconv"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/google/uuid"
@@ -178,7 +178,7 @@ func (r *Repository) GetProjectInfo(ctx context.Context, id int) (*model.Project
 		}
 
 		participants := make([]model.Participant, 0)
-		for i := range participantIDs{
+		for i := range participantIDs {
 			userID, err := uuid.Parse(usersIDs[i])
 			if err != nil {
 				return nil, fmt.Errorf("error while parsing user id: %w", err)
@@ -193,9 +193,9 @@ func (r *Repository) GetProjectInfo(ctx context.Context, id int) (*model.Project
 					FirstName:      usersFirstNames[i],
 					LastName:       usersLastNames[i],
 					Group:          usersGroups[i],
-					GithubUsername: usersGithubUsernames[i],},
+					GithubUsername: usersGithubUsernames[i]},
 				Role: model.ParticipantRole(participantRoles[i]),
-				ID: int(participantIDs[i]),
+				ID:   int(participantIDs[i]),
 			})
 		}
 		projectInfo.Participants = participants
@@ -203,14 +203,21 @@ func (r *Repository) GetProjectInfo(ctx context.Context, id int) (*model.Project
 		tasks := make([]model.ShortTask, 0)
 		for i := range tasksIDs {
 			if tasksIDs[i] != nil {
+				taskID, err := strconv.Atoi(string(tasksIDs[i]))
+				if err != nil {
+					return nil, err
+				}
 				shortTask := model.ShortTask{
-					ID:     int(binary.BigEndian.Uint64(tasksIDs[i])),
+					ID:     taskID,
 					Name:   string(tasksNames[i]),
 					Status: model.TaskStatus(tasksStatuses[i]),
 				}
 				shortTask.Description.Scan(tasksDescriptions[i])
-				err := shortTask.ParticipantID.Scan(binary.BigEndian.Uint64(participantsIDs[i])) //be careful
-				fmt.Println(err, " !!!!!!!!!!!!!!!!!!")
+				participantID, err := strconv.Atoi(string(participantsIDs[i]))
+				if err != nil {
+					return nil, err
+				}
+				shortTask.ParticipantID.Scan(participantID)
 				tasks = append(tasks, shortTask)
 			}
 		}

@@ -6,8 +6,8 @@ import (
 	ierr "be-project-monitoring/internal/errors"
 	"context"
 	"database/sql"
-	"encoding/binary"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/AvraamMavridis/randomcolor"
@@ -232,28 +232,34 @@ func (r *Repository) GetUserProfile(ctx context.Context, id uuid.UUID) (*model.P
 		projectsDescriptions := make(pq.ByteaArray, 0)
 		projectsPhotoURLs := make(pq.ByteaArray, 0)
 		projectsActiveTos := make(pq.ByteaArray, 0)
-
-		if err := rows.Scan(&profile.ShortUser.ID, &profile.Role,
+		params := []any{&profile.ShortUser.ID, &profile.Role,
 			&profile.ColorCode, &profile.Email,
 			&profile.Username, &profile.FirstName,
 			&profile.LastName, &profile.Group,
 			&profile.GithubUsername, &projectsIDs,
 			&projectsNames, &projectsDescriptions,
-			&projectsPhotoURLs, &projectsActiveTos); err != nil {
+			&projectsPhotoURLs, &projectsActiveTos}
+
+		if err := rows.Scan(params...); err != nil {
 			return nil, fmt.Errorf("error while scanning sql row: %w", err)
 		}
+		// for _, v := range params {
+		// 	fmt.Printf("%v, %T \n\n", v, v)
+		// }
 		projects := make([]model.ShortProject, 0)
-		fmt.Println(len(projectsIDs))
-		fmt.Println(projectsIDs)
 		for i := range projectsIDs {
 			if projectsIDs[i] != nil {
 				activeTo, err := time.Parse("2006-01-02", string(projectsActiveTos[i]))
 				if err != nil {
 					return nil, fmt.Errorf("error while parsing time: %w", err)
 				}
-				fmt.Println(i)
+				projectID, err :=  strconv.Atoi(string(projectsIDs[i]))
+				if err != nil {
+					return nil, err
+				}
+				
 				shortProject := model.ShortProject{
-					ID:       int(binary.BigEndian.Uint64(projectsIDs[i])),
+					ID:       projectID,
 					Name:     string(projectsNames[i]),
 					ActiveTo: activeTo,
 				}

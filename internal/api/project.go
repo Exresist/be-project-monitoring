@@ -18,28 +18,23 @@ type (
 	CreateProjectReq struct {
 		Name        string    `json:"name"`
 		Description string    `json:"description"`
-		ActiveTo    time.Time `json:"active_to"`
-		PhotoURL    string    `json:"photo_url"`
+		ActiveTo    time.Time `json:"dueDate"`
+		PhotoURL    string    `json:"avatar"`
 	}
 	CreateProjectResp struct {
 		Project     *projectResp
 		Participant partcipantResp
 	}
-	partcipantResp struct {
-		ID        int             `json:"id"`
-		Role      string          `json:"participant_role"`
-		ProjectID int             `json:"project_id"`
-		User      model.ShortUser `json:"user"`
-	}
+	
 	projectResp struct {
 		ID          int       `json:"id"`
 		Name        string    `json:"name"`
 		Description string    `json:"description"`
-		PhotoURL    string    `json:"photo_url,omitempty"`
-		ReportURL   string    `json:"report_url,omitempty"`
-		ReportName  string    `json:"report_name,omitempty"`
-		RepoURL     string    `json:"repo_url,omitempty"`
-		ActiveTo    time.Time `json:"active_to,omitempty"`
+		PhotoURL    string    `json:"avatar"`
+		ReportURL   string    `json:"reportUrl"`
+		ReportName  string    `json:"reportName"`
+		RepoURL     string    `json:"repo"`
+		ActiveTo    time.Time `json:"dueDate"`
 	}
 
 	GetProjectsReq struct {
@@ -56,24 +51,24 @@ type (
 		ID          int       `json:"id"`
 		Name        *string   `json:"name"`
 		Description *string   `json:"description"`
-		PhotoURL    *string   `json:"photo_url"`
-		ReportURL   *string   `json:"report_url"`
-		ReportName  *string   `json:"report_name"`
-		RepoURL     *string   `json:"repo_url"`
-		ActiveTo    time.Time `json:"active_to"`
+		PhotoURL    *string   `json:"avatar"`
+		ReportURL   *string   `json:"reportUrl"`
+		ReportName  *string   `json:"reportName"`
+		RepoURL     *string   `json:"repo"`
+		ActiveTo    time.Time `json:"dueDate"`
 	}
 
 	projectInfoResp struct {
 		ID           int                 `json:"id"`
 		Name         string              `json:"name"`
-		Description  string              `json:"description,omitempty"`
-		PhotoURL     string              `json:"photo_url,omitempty"`
-		ReportURL    string              `json:"report_url,omitempty"`
-		ReportName   string              `json:"report_name,omitempty"`
-		RepoURL      string              `json:"repo_url,omitempty"`
-		ActiveTo     time.Time           `json:"active_to,omitempty"`
-		Participants []model.Participant `json:"Participants"`
-		Tasks        []taskResp          `json:"Tasks"`
+		Description  string              `json:"description"`
+		PhotoURL     string              `json:"photo_url"`
+		ReportURL    string              `json:"reportUrl"`
+		ReportName   string              `json:"reportName"`
+		RepoURL      string              `json:"repoUrl"`
+		ActiveTo     time.Time           `json:"dueDate"`
+		Participants []model.Participant `json:"participants"`
+		Tasks        []taskResp          `json:"tasks"`
 	}
 )
 
@@ -158,7 +153,7 @@ func (s *Server) parseBodyToDeletedProject(c *gin.Context) {
 	c.Set(string(domain.ProjectIDCtx), deletedProjectID)
 }
 func (s *Server) deleteProject(c *gin.Context) {
-	userID, err := strconv.Atoi(c.Param("project_id"))
+	userID, err := strconv.Atoi(c.Param("projectId"))
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return
@@ -173,7 +168,7 @@ func (s *Server) deleteProject(c *gin.Context) {
 }
 
 func (s *Server) getProjectInfo(c *gin.Context) {
-	projectID, err := strconv.Atoi(c.Param("project_id"))
+	projectID, err := strconv.Atoi(c.Param("projectId"))
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, err)
 		return

@@ -17,8 +17,8 @@ type (
 		ID          uuid.UUID `json:"id"`
 		Email       string    `json:"email"`
 		Username    string    `json:"username"`
-		IsOnProject bool      `json:"is_on_project"` //описать значения для парс.бул
-		ProjectID   int       `json:"project_id"`
+		IsOnProject bool      `json:"isOnProject"` //описать значения для парс.бул
+		ProjectID   int       `json:"projectId"`
 		Offset      int       `json:"offset"`
 		Limit       int       `json:"limit"`
 	}
@@ -35,10 +35,10 @@ type (
 		ID             uuid.UUID `json:"id"`
 		Role           *string   `json:"role"`
 		Username       *string   `json:"username"`
-		FirstName      *string   `json:"first_name"`
-		LastName       *string   `json:"last_name"`
+		FirstName      *string   `json:"firstName"`
+		LastName       *string   `json:"lastName"`
 		Group          *string   `json:"group"`
-		GithubUsername *string   `json:"github_username"`
+		GithubUsername *string   `json:"ghUsername"`
 		Password       *string   `json:"password"`
 	}
 )
@@ -61,8 +61,8 @@ func (s *Server) getPartialUsers(c *gin.Context) {
 	userReq := &GetUserReq{}
 	userReq.Email = c.Query("email")
 	userReq.Username = c.Query("username")
-	userReq.IsOnProject, _ = strconv.ParseBool(c.Query("is_on_project")) //мб сразу true выставлять здесь в паршиалЮзерс?
-	userReq.ProjectID, _ = strconv.Atoi(c.Query("project_id"))
+	userReq.IsOnProject, _ = strconv.ParseBool(c.Query("isOnProject")) //мб сразу true выставлять здесь в паршиалЮзерс?
+	userReq.ProjectID, _ = strconv.Atoi(c.Query("projectId"))
 	userReq.Offset, _ = strconv.Atoi(c.Query("offset"))
 	userReq.Limit, _ = strconv.Atoi(c.Query("limit"))
 	users, count, err := s.svc.GetPartialUsers(c.Request.Context(), userReq)
@@ -115,7 +115,7 @@ func (s *Server) getUserProfile(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, struct {
 		User         model.ShortUser `json:"user"`
-		UserProjects []projectResp   `json:"user_projects"`
+		UserProjects []projectResp   `json:"userProjects"`
 	}{
 		User:         userProfile.ShortUser,
 		UserProjects: makeShortProjectResponses(userProfile.UserProjects),
@@ -130,7 +130,7 @@ func (s *Server) getUserProfileFromToken(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, struct {
 		User         model.ShortUser `json:"user"`
-		UserProjects []projectResp   `json:"user_projects"`
+		UserProjects []projectResp   `json:"userProjects"`
 	}{
 		User:         userProfile.ShortUser,
 		UserProjects: makeShortProjectResponses(userProfile.UserProjects),
