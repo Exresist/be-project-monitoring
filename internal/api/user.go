@@ -62,10 +62,7 @@ var (
 
 func (s *Server) getFullUsers(c *gin.Context) {
 	userReq := &GetUserReq{}
-	userReq.Email = c.Query("email")
-	userReq.Username = c.Query("username")
-	userReq.Offset, _ = strconv.Atoi(c.Query("offset"))
-	userReq.Limit, _ = strconv.Atoi(c.Query("limit"))
+	userReq.Username = c.Param("searchParam")
 
 	users, count, err := s.svc.GetFullUsers(c.Request.Context(), userReq)
 	if err != nil {

@@ -137,7 +137,7 @@ func New(opts ...OptionFunc) *Server {
 	// /api/admin
 	adminRtr := apiRtr.Group("/admin", s.authMiddleware(model.Admin))
 	// /api/admin/users
-	adminRtr.GET("/users", s.getFullUsers)
+	adminRtr.GET("/users/search/:searchParam", s.getFullUsers)
 	adminRtr.POST("/users", s.parseBodyToUpdatedUser, s.updateUser)
 	// /api/admin/projects
 	adminRtr.GET("/projects", s.getProjects)
