@@ -10,7 +10,7 @@ type (
 		ShortProject
 		ReportURL  sql.NullString `json:"reportUrl"`
 		ReportName sql.NullString `json:"reportName"`
-		RepoURL    sql.NullString `json:"repoUrl"`
+		RepoURL    sql.NullString `json:"repo"`
 	}
 	ShortProject struct {
 		ID          int            `json:"id"`

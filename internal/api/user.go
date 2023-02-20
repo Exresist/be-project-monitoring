@@ -133,7 +133,7 @@ func (s *Server) getUserProfile(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, struct {
 		User         model.ShortUser `json:"user"`
-		UserProjects []projectResp   `json:"userProjects"`
+		UserProjects []projectResp
 	}{
 		User:         userProfile.ShortUser,
 		UserProjects: makeShortProjectResponses(userProfile.UserProjects),
@@ -159,4 +159,27 @@ func (s *Server) getUserProfileFromToken(c *gin.Context) {
 		Role:           string(userProfile.ShortUser.Role),
 		Projects:       makeShortProjectResponses(userProfile.UserProjects),
 	})
+}
+
+func (s *Server) getUserProjects(c *gin.Context) {
+	userID := c.MustGet(string(domain.UserIDCtx)).(uuid.UUID)
+
+	userProfile, err := s.svc.GetUserProfile(c.Request.Context(), userID)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
+		return
+	}
+	projectResponses := make([]projectWithParticipantsResp, 0)
+	for _, v := range userProfile.UserProjects {
+		participants, err := s.svc.GetParticipants(c.Request.Context(), v.ID)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
+			return
+		}
+		projectResponses = append(projectResponses, projectWithParticipantsResp{
+			participants: makeParticipantResponses(participants),
+			projectResp:  *makeShortProjectResponse(v),
+		})
+	}
+	c.JSON(http.StatusOK, projectResponses)
 }

@@ -35,7 +35,17 @@ type (
 		RepoURL     string    `json:"repo"`
 		ActiveTo    time.Time `json:"dueDate"`
 	}
-
+	shortProjectResp struct {
+		ID          int       `json:"id"`
+		Name        string    `json:"name"`
+		Description string    `json:"description"`
+		PhotoURL    string    `json:"avatar"`
+		ActiveTo    time.Time `json:"dueDate"`
+	}
+	projectWithParticipantsResp struct {
+		projectResp
+		participants []partcipantResp `json:"participants"`
+	}
 	GetProjectsReq struct {
 		Name   string
 		Offset int
@@ -61,10 +71,10 @@ type (
 		ID           int                 `json:"id"`
 		Name         string              `json:"name"`
 		Description  string              `json:"description"`
-		PhotoURL     string              `json:"photo_url"`
+		PhotoURL     string              `json:"avatar"`
 		ReportURL    string              `json:"reportUrl"`
 		ReportName   string              `json:"reportName"`
-		RepoURL      string              `json:"repoUrl"`
+		RepoURL      string              `json:"repo"`
 		ActiveTo     time.Time           `json:"dueDate"`
 		Participants []model.Participant `json:"participants"`
 		Tasks        []taskResp          `json:"tasks"`
@@ -210,6 +220,15 @@ func makeProjectResponses(projects []model.Project) []projectResp {
 		projectResponses = append(projectResponses, *makeProjectResponse(project))
 	}
 	return projectResponses
+}
+func makeShortProjectResponse(project model.ShortProject) *projectResp {
+	return &projectResp{
+		ID:          project.ID,
+		Name:        project.Name,
+		Description: project.Description.String,
+		ActiveTo:    project.ActiveTo,
+	}
+
 }
 func makeShortProjectResponses(projects []model.ShortProject) []projectResp {
 	projectResponses := make([]projectResp, 0, len(projects))
