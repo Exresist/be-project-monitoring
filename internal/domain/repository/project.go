@@ -213,11 +213,13 @@ func (r *Repository) GetProjectInfo(ctx context.Context, id int) (*model.Project
 					Status: model.TaskStatus(tasksStatuses[i]),
 				}
 				shortTask.Description.Scan(tasksDescriptions[i])
-				participantID, err := strconv.Atoi(string(participantsIDs[i]))
-				if err != nil {
-					return nil, err
+				if participantsIDs[i] != nil {
+					participantID, err := strconv.Atoi(string(participantsIDs[i]))
+					if err != nil {
+						return nil, err
+					}
+					shortTask.ParticipantID.Scan(participantID)
 				}
-				shortTask.ParticipantID.Scan(participantID)
 				tasks = append(tasks, shortTask)
 			}
 		}

@@ -2,7 +2,6 @@ package api
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -25,7 +24,7 @@ type (
 		Project     *projectResp
 		Participant partcipantResp
 	}
-	
+
 	projectResp struct {
 		ID          int       `json:"id"`
 		Name        string    `json:"name"`
@@ -38,9 +37,9 @@ type (
 	}
 
 	GetProjectsReq struct {
-		Name   string `json:"name"`
-		Offset int    `json:"offset"`
-		Limit  int    `json:"limit"`
+		Name   string
+		Offset int
+		Limit  int
 	}
 	getProjectResp struct {
 		Projects []projectResp
@@ -127,8 +126,8 @@ func (s *Server) getProjects(c *gin.Context) {
 		Count:    count,
 	})
 }
+
 func (s *Server) parseBodyToUpdatedProject(c *gin.Context) {
-	fmt.Println("111111")
 	updatedProject = &UpdateProjectReq{}
 	if err := json.NewDecoder(c.Request.Body).Decode(updatedProject); err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
@@ -145,7 +144,6 @@ func (s *Server) updateProject(c *gin.Context) {
 	c.JSON(http.StatusOK, makeProjectResponse(*project))
 }
 func (s *Server) parseBodyToDeletedProject(c *gin.Context) {
-	fmt.Println("111111")
 	if err := json.NewDecoder(c.Request.Body).Decode(deletedProjectID); err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return

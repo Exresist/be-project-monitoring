@@ -43,13 +43,13 @@ func (s *Server) selfUpdateMiddleware() func(c *gin.Context) {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{errField: err.Error()})
 			return
 		}
-		userID, err := uuid.Parse(c.Param("id"))
+		userIDFromToken, err := s.svc.GetUserIDFromToken(c, token)
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 			return
 		}
 		ctx := c.Request.Context()
-		if err := s.svc.VerifySelf(ctx, token, userID); err != nil {
+		if err := s.svc.VerifySelf(ctx, userIDFromToken, updatedUser.ID); err != nil {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{errField: err.Error()})
 			return
 		}

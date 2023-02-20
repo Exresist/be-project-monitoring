@@ -44,6 +44,7 @@ type (
 	GetUserResp struct {
 		ID             uuid.UUID     `json:"id"`
 		Role           string        `json:"role"`
+		Email          string        `json:"email"`
 		Username       string        `json:"username"`
 		FirstName      string        `json:"firstName"`
 		LastName       string        `json:"lastName"`
@@ -52,6 +53,10 @@ type (
 		GithubUsername string        `json:"ghUsername"`
 		Projects       []projectResp `json:"projects"`
 	}
+)
+
+var (
+	updatedUser *UpdateUserReq
 )
 
 func (s *Server) getFullUsers(c *gin.Context) {
@@ -83,15 +88,17 @@ func (s *Server) getPartialUsers(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, getShortUserResp{Users: users, Count: count})
 }
-
-func (s *Server) updateUser(c *gin.Context) {
-	userReq := &UpdateUserReq{}
-	if err := json.NewDecoder(c.Request.Body).Decode(userReq); err != nil {
+func (s *Server) parseBodyToUpdatedUser(c *gin.Context) {
+	updatedUser = &UpdateUserReq{}
+	if err := json.NewDecoder(c.Request.Body).Decode(updatedUser); err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return
 	}
+	c.Set(string(domain.UserIDCtx), updatedUser.ID)
+}
+func (s *Server) updateUser(c *gin.Context) {
 
-	user, err := s.svc.UpdateUser(c.Request.Context(), userReq)
+	user, err := s.svc.UpdateUser(c.Request.Context(), updatedUser)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return
@@ -142,6 +149,7 @@ func (s *Server) getUserProfileFromToken(c *gin.Context) {
 
 	c.JSON(http.StatusOK, GetUserResp{
 		ID:             userProfile.ShortUser.ID,
+		Email:          userProfile.Email,
 		Username:       userProfile.ShortUser.Username,
 		FirstName:      userProfile.ShortUser.FirstName,
 		LastName:       userProfile.ShortUser.LastName,
