@@ -21,11 +21,11 @@ type (
 		PhotoURL    string    `json:"avatar"`
 	}
 	CreateProjectResp struct {
-		Project     *projectResp
+		Project     *ProjectResp
 		Participant partcipantResp
 	}
 
-	projectResp struct {
+	ProjectResp struct {
 		ID          int       `json:"id"`
 		Name        string    `json:"name"`
 		Description string    `json:"description"`
@@ -43,8 +43,8 @@ type (
 		ActiveTo    time.Time `json:"dueDate"`
 	}
 	projectWithParticipantsResp struct {
-		projectResp
-		participants []partcipantResp `json:"participants"`
+		ProjectResp
+		Participants []shortPartcipantResp `json:"participants"`
 	}
 	GetProjectsReq struct {
 		Name   string
@@ -52,7 +52,7 @@ type (
 		Limit  int
 	}
 	getProjectResp struct {
-		Projects []projectResp
+		Projects []ProjectResp
 		Count    int
 	}
 
@@ -202,8 +202,8 @@ func (s *Server) getProjectInfo(c *gin.Context) {
 	})
 }
 
-func makeProjectResponse(project model.Project) *projectResp {
-	return &projectResp{
+func makeProjectResponse(project model.Project) *ProjectResp {
+	return &ProjectResp{
 		ID:          project.ID,
 		Name:        project.Name,
 		Description: project.Description.String,
@@ -214,15 +214,15 @@ func makeProjectResponse(project model.Project) *projectResp {
 		ActiveTo:    project.ActiveTo,
 	}
 }
-func makeProjectResponses(projects []model.Project) []projectResp {
-	projectResponses := make([]projectResp, 0, len(projects))
+func makeProjectResponses(projects []model.Project) []ProjectResp {
+	projectResponses := make([]ProjectResp, 0, len(projects))
 	for _, project := range projects {
 		projectResponses = append(projectResponses, *makeProjectResponse(project))
 	}
 	return projectResponses
 }
-func makeShortProjectResponse(project model.ShortProject) *projectResp {
-	return &projectResp{
+func makeShortProjectResponse(project model.ShortProject) *ProjectResp {
+	return &ProjectResp{
 		ID:          project.ID,
 		Name:        project.Name,
 		Description: project.Description.String,
@@ -230,8 +230,8 @@ func makeShortProjectResponse(project model.ShortProject) *projectResp {
 	}
 
 }
-func makeShortProjectResponses(projects []model.ShortProject) []projectResp {
-	projectResponses := make([]projectResp, 0, len(projects))
+func makeShortProjectResponses(projects []model.ShortProject) []ProjectResp {
+	projectResponses := make([]ProjectResp, 0, len(projects))
 	for _, project := range projects {
 		projectResponses = append(projectResponses,
 			*makeProjectResponse(model.Project{

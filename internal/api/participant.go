@@ -21,6 +21,10 @@ type (
 		ProjectID int             `json:"projectId,omitempty"`
 		User      model.ShortUser `json:"user,omitempty"`
 	}
+	shortPartcipantResp struct {
+		ID   int    `json:"id"`
+		Role string `json:"role"`
+	}
 )
 
 var (
@@ -57,18 +61,16 @@ func (s *Server) deleteParticipant(c *gin.Context) {
 	c.JSON(http.StatusOK, nil)
 }
 
-func makeParticipantResponse(participant model.Participant) *partcipantResp {
-	return &partcipantResp{
-		ID: participant.ID,
-		Role: string(participant.Role),
-		ProjectID: participant.ProjectID,
-		User: participant.ShortUser,
+func makeShortParticipantResponse(participant model.Participant) *shortPartcipantResp {
+	return &shortPartcipantResp{
+		ID:        participant.ID,
+		Role:      string(participant.Role),
 	}
 }
-func makeParticipantResponses(participants []model.Participant) []partcipantResp {
-	participantResponses := make([]partcipantResp, 0, len(participants))
+func makeShortParticipantResponses(participants []model.Participant) []shortPartcipantResp {
+	participantResponses := make([]shortPartcipantResp, 0, len(participants))
 	for _, participant := range participants {
-		participantResponses = append(participantResponses, *makeParticipantResponse(participant))
+		participantResponses = append(participantResponses, *makeShortParticipantResponse(participant))
 	}
 	return participantResponses
 }
