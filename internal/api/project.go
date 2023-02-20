@@ -151,6 +151,7 @@ func (s *Server) updateProject(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return
 	}
+
 	c.JSON(http.StatusOK, makeProjectResponse(*project))
 }
 func (s *Server) parseBodyToDeletedProject(c *gin.Context) {
@@ -226,6 +227,7 @@ func makeShortProjectResponse(project model.ShortProject) *ProjectResp {
 		ID:          project.ID,
 		Name:        project.Name,
 		Description: project.Description.String,
+		PhotoURL:    project.PhotoURL.String,
 		ActiveTo:    project.ActiveTo,
 	}
 
