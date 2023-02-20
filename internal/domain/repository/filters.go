@@ -12,6 +12,7 @@ type UserFilter struct {
 	username       string
 	githubUsername string
 	email          string
+	isProject      bool
 	isLike         bool
 	projectID      int
 	isOnProject    bool
@@ -52,11 +53,13 @@ func (f *UserFilter) ByEmailLike(email string) *UserFilter {
 func (f *UserFilter) ByAtProject(projectID int) *UserFilter {
 	f.projectID = projectID
 	f.isOnProject = true
+	f.isProject = true
 	return f
 }
 func (f *UserFilter) ByNotAtProject(projectID int) *UserFilter {
 	f.projectID = projectID
 	f.isOnProject = false
+	f.isProject = true
 	return f
 }
 func (f *UserFilter) WithPaginator(limit, offset uint64) *UserFilter {
@@ -115,7 +118,11 @@ func conditionsFromUserFilter(filter *UserFilter) sq.Sqlizer {
 	if filter.email != "" {
 		like["u.email"] = "%" + filter.email + "%"
 	}
-	return sq.And{like, sq.Eq{"p.project_id": filter.projectID}}
+	if filter.isProject {
+		return sq.And{like, sq.Eq{"p.project_id": filter.projectID}}
+	}
+
+	return like
 	// if !filter.isOnProject && filter.projectID > 0 {
 	// 	return sq.And{like, sq.NotEq{"p.project_id": filter.projectID}} //проверить будет ли добавляться AND, если не будет like
 	// }
