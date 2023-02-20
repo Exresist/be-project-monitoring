@@ -44,6 +44,10 @@ type (
 	}
 	projectWithParticipantsResp struct {
 		ProjectResp
+		Participants []partcipantResp `json:"participants"`
+	}
+	projectWithShortParticipantsResp struct {
+		ProjectResp
 		Participants []shortPartcipantResp `json:"participants"`
 	}
 	GetProjectsReq struct {
@@ -151,8 +155,15 @@ func (s *Server) updateProject(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return
 	}
-
-	c.JSON(http.StatusOK, makeProjectResponse(*project))
+	participants, err := s.svc.GetParticipants(c.Request.Context(), project.ID)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, projectWithParticipantsResp{
+		ProjectResp:  *makeProjectResponse(*project),
+		Participants: makeParticipantResponses(participants),
+	})
 }
 func (s *Server) parseBodyToDeletedProject(c *gin.Context) {
 	if err := json.NewDecoder(c.Request.Body).Decode(deletedProjectID); err != nil {

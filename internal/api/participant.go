@@ -60,11 +60,24 @@ func (s *Server) deleteParticipant(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, nil)
 }
-
+func makeParticipantResponse(participant model.Participant) *partcipantResp {
+	return &partcipantResp{
+		ID:   participant.ID,
+		Role: string(participant.Role),
+		User: participant.ShortUser,
+	}
+}
+func makeParticipantResponses(participants []model.Participant) []partcipantResp {
+	participantResponses := make([]partcipantResp, 0, len(participants))
+	for _, participant := range participants {
+		participantResponses = append(participantResponses, *makeParticipantResponse(participant))
+	}
+	return participantResponses
+}
 func makeShortParticipantResponse(participant model.Participant) *shortPartcipantResp {
 	return &shortPartcipantResp{
-		ID:        participant.ID,
-		Role:      string(participant.Role),
+		ID:   participant.ID,
+		Role: string(participant.Role),
 	}
 }
 func makeShortParticipantResponses(participants []model.Participant) []shortPartcipantResp {

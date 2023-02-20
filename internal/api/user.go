@@ -98,7 +98,6 @@ func (s *Server) parseBodyToUpdatedUser(c *gin.Context) {
 	c.Set(string(domain.UserIDCtx), updatedUser.ID)
 }
 func (s *Server) updateUser(c *gin.Context) {
-
 	user, err := s.svc.UpdateUser(c.Request.Context(), updatedUser)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
@@ -170,7 +169,7 @@ func (s *Server) getUserProjects(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return
 	}
-	projectResponses := make([]projectWithParticipantsResp, 0)
+	projectResponses := make([]projectWithShortParticipantsResp, 0)
 	for _, v := range userProfile.UserProjects {
 		participants, err := s.svc.GetParticipants(c.Request.Context(), v.ID)
 		fmt.Println("11111", participants)
@@ -179,7 +178,7 @@ func (s *Server) getUserProjects(c *gin.Context) {
 			return
 		}
 		fmt.Println("2222222", makeShortParticipantResponses(participants), *makeShortProjectResponse(v))
-		projectResponses = append(projectResponses, projectWithParticipantsResp{
+		projectResponses = append(projectResponses, projectWithShortParticipantsResp{
 			Participants: makeShortParticipantResponses(participants),
 			ProjectResp:  *makeShortProjectResponse(v),
 		})
