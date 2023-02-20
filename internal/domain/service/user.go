@@ -84,10 +84,10 @@ func (s *service) AuthUser(ctx context.Context, username, password string) (*mod
 	return user, token, nil
 }
 
-func (s *service) GetFullUsers(ctx context.Context, userReq *api.GetUserReq) ([]model.User, int, error) {
+func (s *service) GetFullUsers(ctx context.Context, searchParam string) ([]model.User, int, error) {
 	filter := repository.NewUserFilter().
-		WithPaginator(uint64(userReq.Limit), uint64(userReq.Offset)).
-		ByUsernameLike(userReq.Username)
+		// WithPaginator(uint64(userReq.Limit), uint64(userReq.Offset)).
+		ByLike(searchParam)
 
 	count, err := s.repo.GetFullCountByFilter(ctx, filter)
 	if err != nil {

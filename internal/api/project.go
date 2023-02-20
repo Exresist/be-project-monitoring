@@ -21,8 +21,8 @@ type (
 		PhotoURL    string    `json:"avatar"`
 	}
 	CreateProjectResp struct {
-		Project     *ProjectResp
-		Participant partcipantResp
+		ProjectResp
+		ParticipantResp `json:"participants"`
 	}
 
 	ProjectResp struct {
@@ -44,10 +44,10 @@ type (
 	}
 	projectWithParticipantsResp struct {
 		ProjectResp
-		Participants []partcipantResp `json:"participants"`
+		Participants []ParticipantResp `json:"participants"`
 	}
 	projectWithShortParticipantsResp struct {
-		ProjectResp
+		shortProjectResp
 		Participants []shortPartcipantResp `json:"participants"`
 	}
 	GetProjectsReq struct {
@@ -55,9 +55,9 @@ type (
 		Offset int
 		Limit  int
 	}
-	getProjectResp struct {
-		Projects []ProjectResp
-		Count    int
+	getProjectsResp struct {
+		Projects []projectWithParticipantsResp `json:"projects"`
+		Count    int `json:"count"`
 	}
 
 	UpdateProjectReq struct {
@@ -112,8 +112,8 @@ func (s *Server) createProject(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusCreated, CreateProjectResp{
-		Project: makeProjectResponse(*project),
-		Participant: partcipantResp{
+		ProjectResp: makeProjectResponse(*project),
+		ParticipantResp: ParticipantResp{
 			ID:        participant.ID,
 			Role:      string(participant.Role),
 			ProjectID: participant.ProjectID,
@@ -135,8 +135,20 @@ func (s *Server) getProjects(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, getProjectResp{
-		Projects: makeProjectResponses(projects),
+	projectsResp := make([]projectWithParticipantsResp, 0)
+	for _, v := range projects {
+		participants, err := s.svc.GetParticipants(c.Request.Context(), v.ID)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
+			return
+		}
+		projectsResp = append(projectsResp, projectWithParticipantsResp{
+			ProjectResp:  makeProjectResponse(v),
+			Participants: makeParticipantResponses(participants),
+		})
+	}
+	c.JSON(http.StatusOK, getProjectsResp{
+		Projects: projectsResp,
 		Count:    count,
 	})
 }
@@ -161,7 +173,7 @@ func (s *Server) updateProject(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, projectWithParticipantsResp{
-		ProjectResp:  *makeProjectResponse(*project),
+		ProjectResp:  makeProjectResponse(*project),
 		Participants: makeParticipantResponses(participants),
 	})
 }
@@ -214,8 +226,8 @@ func (s *Server) getProjectInfo(c *gin.Context) {
 	})
 }
 
-func makeProjectResponse(project model.Project) *ProjectResp {
-	return &ProjectResp{
+func makeProjectResponse(project model.Project) ProjectResp {
+	return ProjectResp{
 		ID:          project.ID,
 		Name:        project.Name,
 		Description: project.Description.String,
@@ -229,12 +241,12 @@ func makeProjectResponse(project model.Project) *ProjectResp {
 func makeProjectResponses(projects []model.Project) []ProjectResp {
 	projectResponses := make([]ProjectResp, 0, len(projects))
 	for _, project := range projects {
-		projectResponses = append(projectResponses, *makeProjectResponse(project))
+		projectResponses = append(projectResponses, makeProjectResponse(project))
 	}
 	return projectResponses
 }
-func makeShortProjectResponse(project model.ShortProject) *ProjectResp {
-	return &ProjectResp{
+func makeShortProjectResponse(project model.ShortProject) *shortProjectResp {
+	return &shortProjectResp{
 		ID:          project.ID,
 		Name:        project.Name,
 		Description: project.Description.String,
@@ -243,13 +255,11 @@ func makeShortProjectResponse(project model.ShortProject) *ProjectResp {
 	}
 
 }
-func makeShortProjectResponses(projects []model.ShortProject) []ProjectResp {
-	projectResponses := make([]ProjectResp, 0, len(projects))
+func makeShortProjectResponses(projects []model.ShortProject) []shortProjectResp {
+	projectResponses := make([]shortProjectResp, 0, len(projects))
 	for _, project := range projects {
 		projectResponses = append(projectResponses,
-			*makeProjectResponse(model.Project{
-				ShortProject: project,
-			}))
+			*makeShortProjectResponse(project))
 	}
 	return projectResponses
 }

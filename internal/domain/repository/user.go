@@ -30,17 +30,28 @@ func (r *Repository) GetUser(ctx context.Context, filter *UserFilter) (*model.Us
 }
 func (r *Repository) GetFullUsers(ctx context.Context, filter *UserFilter) ([]model.User, error) {
 	filter.Limit = db.NormalizeLimit(filter.Limit)
-	rows, err := r.sq.Select(
+	// rows, err := r.sq.Select(
+	// 	"u.id", "u.role",
+	// 	"u.color_code", "u.email",
+	// 	"u.username", "u.first_name",
+	// 	"u.last_name", "u.\"group\"",
+	// 	"u.github_username", "u.hashed_password").
+	// 	From("users u").
+	// 	Where(conditionsFromUserFilter(filter)).
+	// 	Limit(filter.Limit).
+	// 	Offset(filter.Offset).
+	// 	QueryContext(ctx)
+
+	query := r.sq.Select(
 		"u.id", "u.role",
 		"u.color_code", "u.email",
 		"u.username", "u.first_name",
 		"u.last_name", "u.\"group\"",
 		"u.github_username", "u.hashed_password").
 		From("users u").
-		Where(conditionsFromUserFilter(filter)).
-		Limit(filter.Limit).
-		Offset(filter.Offset).
-		QueryContext(ctx)
+		Where(conditionsFromUserFilter(filter))
+	fmt.Println(query.ToSql())
+	rows, err := query.QueryContext(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("error while performing sql request: %w", err)
 	}
@@ -253,11 +264,11 @@ func (r *Repository) GetUserProfile(ctx context.Context, id uuid.UUID) (*model.P
 				if err != nil {
 					return nil, fmt.Errorf("error while parsing time: %w", err)
 				}
-				projectID, err :=  strconv.Atoi(string(projectsIDs[i]))
+				projectID, err := strconv.Atoi(string(projectsIDs[i]))
 				if err != nil {
 					return nil, err
 				}
-				
+
 				shortProject := model.ShortProject{
 					ID:       projectID,
 					Name:     string(projectsNames[i]),

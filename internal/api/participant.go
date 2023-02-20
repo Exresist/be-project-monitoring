@@ -15,7 +15,7 @@ type (
 		UserID    uuid.UUID `json:"userId"`
 		ProjectID int       `json:"projectId"`
 	}
-	partcipantResp struct {
+	ParticipantResp struct {
 		ID        int             `json:"id"`
 		Role      string          `json:"role"`
 		ProjectID int             `json:"projectId,omitempty"`
@@ -60,15 +60,15 @@ func (s *Server) deleteParticipant(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, nil)
 }
-func makeParticipantResponse(participant model.Participant) *partcipantResp {
-	return &partcipantResp{
+func makeParticipantResponse(participant model.Participant) *ParticipantResp {
+	return &ParticipantResp{
 		ID:   participant.ID,
 		Role: string(participant.Role),
 		User: participant.ShortUser,
 	}
 }
-func makeParticipantResponses(participants []model.Participant) []partcipantResp {
-	participantResponses := make([]partcipantResp, 0, len(participants))
+func makeParticipantResponses(participants []model.Participant) []ParticipantResp {
+	participantResponses := make([]ParticipantResp, 0, len(participants))
 	for _, participant := range participants {
 		participantResponses = append(participantResponses, *makeParticipantResponse(participant))
 	}

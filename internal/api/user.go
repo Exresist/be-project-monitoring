@@ -2,12 +2,10 @@ package api
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strconv"
 
 	"be-project-monitoring/internal/domain"
-	"be-project-monitoring/internal/domain/model"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -24,14 +22,14 @@ type (
 		Limit       int       `json:"limit"`
 	}
 
-	getUserResp struct {
-		Users []model.User `json:"users"`
-		Count int          `json:"count"`
-	}
-	getShortUserResp struct {
-		Users []model.ShortUser `json:"users"`
-		Count int               `json:"count"`
-	}
+	// getUserResp struct {
+	// 	Users []model.User
+	// 	Count int          `json:"count"`
+	// }
+	// getShortUserResp struct {
+	// 	Users []model.ShortUser
+	// 	Count int               `json:"count"`
+	// }
 	UpdateUserReq struct {
 		ID             uuid.UUID `json:"id"`
 		Role           *string   `json:"role"`
@@ -43,16 +41,16 @@ type (
 		Password       *string   `json:"password"`
 	}
 	GetUserResp struct {
-		ID             uuid.UUID     `json:"id"`
-		Role           string        `json:"role"`
-		Email          string        `json:"email"`
-		Username       string        `json:"username"`
-		FirstName      string        `json:"firstName"`
-		LastName       string        `json:"lastName"`
-		ColorCode      string        `json:"avatarColor"`
-		Group          string        `json:"group"`
-		GithubUsername string        `json:"ghUsername"`
-		Projects       []ProjectResp `json:"projects"`
+		ID             uuid.UUID          `json:"id"`
+		Role           string             `json:"role"`
+		Email          string             `json:"email"`
+		Username       string             `json:"username"`
+		FirstName      string             `json:"firstName"`
+		LastName       string             `json:"lastName"`
+		ColorCode      string             `json:"avatarColor"`
+		Group          string             `json:"group"`
+		GithubUsername string             `json:"ghUsername"`
+		Projects       []shortProjectResp `json:"projects"`
 	}
 )
 
@@ -61,15 +59,15 @@ var (
 )
 
 func (s *Server) getFullUsers(c *gin.Context) {
-	userReq := &GetUserReq{}
-	userReq.Username = c.Param("searchParam")
+	//userReq := &GetUserReq{}
+	searchParam := c.Param("searchParam")
 
-	users, count, err := s.svc.GetFullUsers(c.Request.Context(), userReq)
+	users, _, err := s.svc.GetFullUsers(c.Request.Context(), searchParam)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, getUserResp{Users: users, Count: count})
+	c.JSON(http.StatusOK, users)
 }
 func (s *Server) getPartialUsers(c *gin.Context) {
 	userReq := &GetUserReq{}
@@ -79,12 +77,12 @@ func (s *Server) getPartialUsers(c *gin.Context) {
 	userReq.ProjectID, _ = strconv.Atoi(c.Query("projectId"))
 	userReq.Offset, _ = strconv.Atoi(c.Query("offset"))
 	userReq.Limit, _ = strconv.Atoi(c.Query("limit"))
-	users, count, err := s.svc.GetPartialUsers(c.Request.Context(), userReq)
+	users, _, err := s.svc.GetPartialUsers(c.Request.Context(), userReq)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, getShortUserResp{Users: users, Count: count})
+	c.JSON(http.StatusOK, users)
 }
 func (s *Server) parseBodyToUpdatedUser(c *gin.Context) {
 	updatedUser = &UpdateUserReq{}
@@ -128,12 +126,17 @@ func (s *Server) getUserProfile(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, struct {
-		User         model.ShortUser `json:"user"`
-		UserProjects []ProjectResp
-	}{
-		User:         userProfile.ShortUser,
-		UserProjects: makeShortProjectResponses(userProfile.UserProjects),
+	c.JSON(http.StatusOK, GetUserResp{
+		ID:             userProfile.ShortUser.ID,
+		Email:          userProfile.Email,
+		Username:       userProfile.ShortUser.Username,
+		FirstName:      userProfile.ShortUser.FirstName,
+		LastName:       userProfile.ShortUser.LastName,
+		Group:          userProfile.ShortUser.Group,
+		GithubUsername: userProfile.ShortUser.GithubUsername,
+		ColorCode:      userProfile.ShortUser.ColorCode,
+		Role:           string(userProfile.ShortUser.Role),
+		Projects:       makeShortProjectResponses(userProfile.UserProjects),
 	})
 }
 func (s *Server) getUserProfileFromToken(c *gin.Context) {
@@ -169,17 +172,14 @@ func (s *Server) getUserProjects(c *gin.Context) {
 	projectResponses := make([]projectWithShortParticipantsResp, 0)
 	for _, v := range userProfile.UserProjects {
 		participants, err := s.svc.GetParticipants(c.Request.Context(), v.ID)
-		fmt.Println("11111", participants)
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 			return
 		}
-		fmt.Println("2222222", makeShortParticipantResponses(participants), *makeShortProjectResponse(v))
 		projectResponses = append(projectResponses, projectWithShortParticipantsResp{
-			Participants: makeShortParticipantResponses(participants),
-			ProjectResp:  *makeShortProjectResponse(v),
+			Participants:     makeShortParticipantResponses(participants),
+			shortProjectResp: *makeShortProjectResponse(v),
 		})
 	}
-	fmt.Println(projectResponses)
 	c.JSON(http.StatusOK, projectResponses)
 }

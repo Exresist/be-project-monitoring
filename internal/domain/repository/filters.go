@@ -8,14 +8,15 @@ import (
 )
 
 type UserFilter struct {
-	id             uuid.UUID
-	username       string
-	githubUsername string
-	email          string
-	isProject      bool
-	isLike         bool
-	projectID      int
-	isOnProject    bool
+	id              uuid.UUID
+	username        string
+	githubUsername  string
+	email           string
+	isProjectSearch bool
+	isLike          bool
+	likeText        string
+	projectID       int
+	isOnProject     bool
 	*db.Paginator
 }
 
@@ -40,6 +41,11 @@ func (f *UserFilter) ByGithubUsername(githubUsername string) *UserFilter {
 	f.githubUsername = githubUsername
 	return f
 }
+func (f *UserFilter) ByLike(text string) *UserFilter {
+	f.likeText = text
+	f.isLike = true
+	return f
+}
 func (f *UserFilter) ByUsernameLike(username string) *UserFilter {
 	f.username = username
 	f.isLike = true
@@ -53,13 +59,13 @@ func (f *UserFilter) ByEmailLike(email string) *UserFilter {
 func (f *UserFilter) ByAtProject(projectID int) *UserFilter {
 	f.projectID = projectID
 	f.isOnProject = true
-	f.isProject = true
+	f.isProjectSearch = true
 	return f
 }
 func (f *UserFilter) ByNotAtProject(projectID int) *UserFilter {
 	f.projectID = projectID
 	f.isOnProject = false
-	f.isProject = true
+	f.isProjectSearch = true
 	return f
 }
 func (f *UserFilter) WithPaginator(limit, offset uint64) *UserFilter {
@@ -110,25 +116,36 @@ func conditionsFromUserFilter(filter *UserFilter) sq.Sqlizer {
 		}
 		return nil
 	}
+	or := make(sq.Or, 0)
+	if filter.likeText != "" {
+		or = sq.Or{sq.Like{"u.username": "%" + filter.likeText + "%"},
+			sq.Like{"u.email": "%" + filter.likeText + "%"},
+			sq.Like{"u.first_name": "%" + filter.likeText + "%"},
+			sq.Like{"u.last_name": "%" + filter.likeText + "%"},
+			sq.Like{"u.github_username": "%" + filter.likeText + "%"}}
+	}
+	if len(or) != 0 {
+		if filter.isProjectSearch {
+			return sq.And{or, sq.Eq{"p.project_id": filter.projectID}}
+		}
+		return or
+	}
+	if filter.isProjectSearch {
+		return sq.Eq{"p.project_id": filter.projectID}
+	}
+	return nil
 
-	like := make(sq.Like)
-	if filter.username != "" {
-		like["u.username"] = "%" + filter.username + "%"
-	}
-	if filter.email != "" {
-		like["u.email"] = "%" + filter.email + "%"
-	}
-	if filter.isProject {
-		return sq.And{like, sq.Eq{"p.project_id": filter.projectID}}
-	}
+	// like := make(sq.Like)
+	// if filter.username != "" {
+	// 	like["u.username"] = "%" + filter.username + "%"
+	// }
+	// if filter.email != "" {
+	// 	like["u.email"] = "%" + filter.email + "%"
+	// }
+	// if filter.isProjectSearch {
+	// 	return sq.And{like, sq.Eq{"p.project_id": filter.projectID}}
+	// }
 
-	return like
-	// if !filter.isOnProject && filter.projectID > 0 {
-	// 	return sq.And{like, sq.NotEq{"p.project_id": filter.projectID}} //проверить будет ли добавляться AND, если не будет like
-	// }
-	// if filter.projectID > 0 {
-	// 	return sq.And{like, sq.Eq{"p.project_id": filter.projectID}}//проверить будет ли добавляться AND, если не будет like
-	// }
 	// return like
 }
 
