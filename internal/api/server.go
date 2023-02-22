@@ -132,7 +132,7 @@ func New(opts ...OptionFunc) *Server {
 	taskRtr.POST("/", s.createTask)
 	taskRtr.PATCH("/", s.updateTask)
 	taskRtr.GET("/:taskId", s.getTaskInfo)
-	taskRtr.DELETE("/:taskId", s.deleteTask)
+	taskRtr.DELETE("/", s.deleteTask)
 
 	// /api/admin
 	adminRtr := apiRtr.Group("/admin", s.authMiddleware(model.Admin))

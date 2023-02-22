@@ -55,15 +55,15 @@ func (s *service) DeleteParticipant(ctx context.Context, participantID int) erro
 	// if userID == uuid.Nil {
 	// 	return ierr.ErrInvalidUserID
 	// }
-	participant, err := s.repo.GetParticipant(ctx, repository.NewParticipantFilter().
-		ByID(participantID))
-	if err != nil {
+	// participant, err := s.repo.GetParticipant(ctx, repository.NewParticipantFilter().
+	// 	ByID(participantID))
+	// if err != nil {
+	// 	return err
+	// }
+	if err := s.repo.DeleteParticipantsFromTask(ctx, participantID); err != nil {
 		return err
 	}
-	if err := s.repo.DeleteParticipantsFromTask(ctx, participant.ID); err != nil {
-		return err
-	}
-	return s.repo.DeleteParticipant(ctx, participant.ID)
+	return s.repo.DeleteParticipant(ctx, participantID)
 }
 
 func (s *service) VerifyParticipant(ctx context.Context, userID uuid.UUID, projectID int) (*model.Participant, error) {

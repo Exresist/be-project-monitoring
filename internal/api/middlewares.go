@@ -1,8 +1,8 @@
 package api
 
 import (
-	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"be-project-monitoring/internal/domain"
@@ -57,10 +57,10 @@ func (s *Server) selfUpdateMiddleware() func(c *gin.Context) {
 }
 func (s *Server) verifyParticipantMiddleware() func(c *gin.Context) {
 	return func(c *gin.Context) {
-		fmt.Println("22222")
 		ctx := c.Request.Context()
 		userID := c.MustGet(string(domain.UserIDCtx)).(uuid.UUID)
-		projectID := c.MustGet(string(domain.ProjectIDCtx)).(int)
+		//projectID := c.MustGet(string(domain.ProjectIDCtx)).(int)
+		projectID, _ := strconv.Atoi(c.Param("projectId"))
 		if _, err := s.svc.VerifyParticipant(ctx, userID, projectID); err != nil {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{errField: err.Error()})
 			return
@@ -69,7 +69,6 @@ func (s *Server) verifyParticipantMiddleware() func(c *gin.Context) {
 }
 func (s *Server) verifyParticipantRoleMiddleware(toAllow ...model.ParticipantRole) func(c *gin.Context) {
 	return func(c *gin.Context) {
-		fmt.Println("333333")
 		ctx := c.Request.Context()
 		userID := c.MustGet(string(domain.UserIDCtx)).(uuid.UUID)
 		//userID = uuid.MustParse(c.GetString(string(domain.UserIDCtx)))

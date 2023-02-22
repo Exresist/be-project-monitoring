@@ -22,6 +22,6 @@ type (
 	ProjectInfo struct {
 		Project
 		Participants []Participant 
-		Tasks        []ShortTask
+		Tasks        []Task
 	}
 )

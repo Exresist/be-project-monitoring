@@ -7,6 +7,7 @@ import (
 	ierr "be-project-monitoring/internal/errors"
 	"context"
 	"database/sql"
+	"fmt"
 	"strings"
 	"time"
 )
@@ -31,17 +32,18 @@ func (s *service) CreateTask(ctx context.Context, taskReq *api.CreateTaskReq) (*
 	participantID := &sql.NullInt64{}
 
 	if _, err := s.repo.GetParticipant(ctx, repository.NewParticipantFilter().
-		ByID(taskReq.CreatorID)); err != nil {
+		ByID(taskReq.CreatorID).ByProjectID(taskReq.ProjectID)); err != nil {
 		return nil, ierr.ErrTaskCreatorUserIDNotFound
 	} else {
 		creatorID.Scan(taskReq.CreatorID)
 	}
 
 	if taskReq.ParticipantID != nil {
-		if _, err := s.repo.GetParticipant(ctx, repository.NewParticipantFilter().
-			ByID(*taskReq.ParticipantID)); err != nil {
-			return nil, ierr.ErrTaskParticipantUserIDNotFound
+		if participant, err := s.repo.GetParticipant(ctx, repository.NewParticipantFilter().
+			ByID(*taskReq.ParticipantID).ByProjectID(taskReq.ProjectID)); err != nil {
+			return nil, ierr.ErrTaskParticipantIDNotFound
 		} else {
+			fmt.Println(participant)
 			participantID.Scan(*taskReq.ParticipantID)
 		}
 	}
@@ -61,6 +63,8 @@ func (s *service) CreateTask(ctx context.Context, taskReq *api.CreateTaskReq) (*
 			Name:          taskReq.Name,
 			ParticipantID: *participantID,
 			Status:        model.TaskStatus(taskReq.Status),
+			CreatedAt:     time.Now(),
+			UpdatedAt:     time.Now(),
 		},
 		CreatorID: *creatorID,
 		ProjectID: taskReq.ProjectID,
@@ -68,8 +72,8 @@ func (s *service) CreateTask(ctx context.Context, taskReq *api.CreateTaskReq) (*
 	if strings.TrimSpace(taskReq.Description) != "" {
 		task.Description.Scan(taskReq.Description)
 	}
-	if taskReq.SuggestedEstimate != nil {
-		task.Estimate.Scan(*taskReq.SuggestedEstimate)
+	if strings.TrimSpace(taskReq.SuggestedEstimate) != "" {
+		task.Estimate.Scan(taskReq.SuggestedEstimate)
 	}
 
 	return task, s.repo.InsertTask(ctx, task)
@@ -86,14 +90,16 @@ func (s *service) UpdateTask(ctx context.Context, taskReq *api.UpdateTaskReq) (*
 
 	participantID := &sql.NullInt64{}
 	if taskReq.ParticipantID != nil {
-		if _, err := s.repo.GetParticipant(ctx, repository.NewParticipantFilter().
-			ByID(*taskReq.ParticipantID)); err != nil {
-			return nil, ierr.ErrTaskParticipantUserIDNotFound
-		} else {
-			participantID.Scan(*taskReq.ParticipantID)
+		if *taskReq.ParticipantID != 0 {
+			if _, err := s.repo.GetParticipant(ctx, repository.NewParticipantFilter().
+				ByID(*taskReq.ParticipantID).ByProjectID(taskReq.ProjectID)); err != nil {
+				return nil, ierr.ErrTaskParticipantIDNotFound
+			} else {
+				participantID.Scan(*taskReq.ParticipantID)
+			}
 		}
-	} else {
-		participantID.Scan(oldTask.ParticipantID)
+	} else if oldTask.ParticipantID.Valid {
+		participantID.Scan(oldTask.ParticipantID.Int64)
 	}
 
 	newTask, err := mergeTaskFields(oldTask, taskReq, *participantID)
@@ -104,9 +110,9 @@ func (s *service) UpdateTask(ctx context.Context, taskReq *api.UpdateTaskReq) (*
 }
 
 func (s *service) DeleteTask(ctx context.Context, id int) error {
-	if _, err := s.repo.GetTask(ctx, repository.NewTaskFilter().ByID(id)); err != nil {
-		return err
-	}
+	// if _, err := s.repo.GetTask(ctx, repository.NewTaskFilter().ByID(id)); err != nil {
+	// 	return err
+	// }
 	return s.repo.DeleteTask(ctx, id)
 }
 
@@ -122,21 +128,27 @@ func mergeTaskFields(oldTask *model.Task, taskReq *api.UpdateTaskReq, newPartici
 		ShortTask: model.ShortTask{
 			ID:            taskReq.ID,
 			ParticipantID: newParticipantID,
+			CreatedAt:     oldTask.CreatedAt,
+			UpdatedAt:     time.Now(),
 		},
-		UpdatedAt: time.Now(),
 		CreatorID: oldTask.CreatorID,
 		ProjectID: oldTask.ProjectID,
 	}
-	if _, ok := model.TaskStatuses[*taskReq.Status]; ok {
-		newTask.Status = model.TaskStatus(*taskReq.Status)
+
+	if taskReq.Status != nil {
+		if _, ok := model.TaskStatuses[*taskReq.Status]; ok {
+			newTask.Status = model.TaskStatus(*taskReq.Status)
+		}
 	} else {
 		newTask.Status = oldTask.Status
 	}
 
 	if taskReq.Name == nil {
 		newTask.Name = oldTask.Name
-	} else {
+	} else if strings.TrimSpace(*taskReq.Name) != "" {
 		newTask.Name = *taskReq.Name
+	} else {
+		return nil, ierr.ErrTaskNameIsInvalid
 	}
 	if taskReq.Description == nil {
 		newTask.Description = oldTask.Description
@@ -146,10 +158,8 @@ func mergeTaskFields(oldTask *model.Task, taskReq *api.UpdateTaskReq, newPartici
 
 	if taskReq.SuggestedEstimate == nil {
 		newTask.Estimate = oldTask.Estimate
-	} else if *taskReq.SuggestedEstimate > 0 {
-		newTask.Estimate.Scan(*taskReq.SuggestedEstimate)
 	} else {
-		return nil, ierr.ErrTaskSuggestedEstimateIsInvalid
+		newTask.Estimate.Scan(*taskReq.SuggestedEstimate)
 	}
 
 	return newTask, nil

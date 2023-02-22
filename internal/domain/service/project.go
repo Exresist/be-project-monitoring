@@ -15,8 +15,8 @@ import (
 func (s *service) GetProjects(ctx context.Context, projectReq *api.GetProjectsReq) ([]model.Project, int, error) {
 
 	filter := repository.NewProjectFilter().
-		WithPaginator(uint64(projectReq.Limit), uint64(projectReq.Offset)).
-		ByProjectName(strings.TrimSpace(projectReq.Name))
+		// WithPaginator(uint64(projectReq.Limit), uint64(projectReq.Offset)).
+		ByProjectNameLike(projectReq.SearchText)
 
 	count, err := s.repo.GetProjectCountByFilter(ctx, filter)
 	if err != nil {
@@ -77,24 +77,32 @@ func (s *service) UpdateProject(ctx context.Context, projectReq *api.UpdateProje
 }
 
 func (s *service) DeleteProject(ctx context.Context, id int) error {
-	if _, err := s.repo.GetProject(ctx, repository.NewProjectFilter().ByID(id)); err != nil {
-		return err
-	}
+	// if _, err := s.repo.GetProject(ctx, repository.NewProjectFilter().ByID(id)); err != nil {
+	// 	return err
+	// }
 	return s.repo.DeleteProject(ctx, id)
 }
 
 func (s *service) GetProjectInfo(ctx context.Context, id int) (*model.ProjectInfo, error) {
-	// if _, err := s.repo.GetProject(ctx, repository.NewProjectFilter().ByID(id)); err != nil {
-	// 	return nil, err
-	// }
-	// if _, err := s.repo.GetTask(ctx, repository.NewTaskFilter().ByProjectID(id)); err != nil {
-	// 	if err != ierr.ErrTaskNotFound {
-	// 		return nil, err
-	// 	}
-	// 	return s.repo.GetProjectInfo(ctx, id, false)
-	// }
-	// return s.repo.GetProjectInfo(ctx, id, true)
-	return s.repo.GetProjectInfo(ctx, id)
+	project, err := s.repo.GetProject(ctx, repository.NewProjectFilter().ByID(id))
+	if  err != nil {
+		return nil, err
+	}
+	participants, err := s.repo.GetParticipants(ctx, repository.NewParticipantFilter().ByProjectID(id))
+	if  err != nil {
+		return nil, err
+	}
+	tasks, err := s.repo.GetTasks(ctx, repository.NewTaskFilter().ByProjectID(id))
+	if err != nil {
+		return nil, err	
+	}
+	projectInfo := &model.ProjectInfo{
+		Project: *project,
+		Participants: participants,
+		Tasks: tasks,
+	}
+	return projectInfo, nil
+	//return s.repo.GetProjectInfo(ctx, id)
 }
 
 func mergeProjectFields(oldProject *model.Project, projectReq *api.UpdateProjectReq) (*model.Project, error) {

@@ -13,13 +13,11 @@ import (
 
 type (
 	GetUserReq struct {
-		ID          uuid.UUID `json:"id"`
-		Email       string    `json:"email"`
-		Username    string    `json:"username"`
-		IsOnProject bool      `json:"isOnProject"` //описать значения для парс.бул
-		ProjectID   int       `json:"projectId"`
-		Offset      int       `json:"offset"`
-		Limit       int       `json:"limit"`
+		SearchText string
+		ProjectID  int `json:"projectId"`
+		//IsOnProject bool      `json:"isOnProject"` //описать значения для парс.бул
+		// Offset      int       `json:"offset"`
+		// Limit       int       `json:"limit"`
 	}
 
 	// getUserResp struct {
@@ -50,7 +48,7 @@ type (
 		ColorCode      string             `json:"avatarColor"`
 		Group          string             `json:"group"`
 		GithubUsername string             `json:"ghUsername"`
-		Projects       []shortProjectResp `json:"projects"`
+		Projects       []ShortProjectResp `json:"projects"`
 	}
 )
 
@@ -71,12 +69,12 @@ func (s *Server) getFullUsers(c *gin.Context) {
 }
 func (s *Server) getPartialUsers(c *gin.Context) {
 	userReq := &GetUserReq{}
-	userReq.Email = c.Query("email")
-	userReq.Username = c.Query("username")
-	userReq.IsOnProject, _ = strconv.ParseBool(c.Query("isOnProject")) //мб сразу true выставлять здесь в паршиалЮзерс?
+	userReq.SearchText = c.Query("searchParam")
 	userReq.ProjectID, _ = strconv.Atoi(c.Query("projectId"))
-	userReq.Offset, _ = strconv.Atoi(c.Query("offset"))
-	userReq.Limit, _ = strconv.Atoi(c.Query("limit"))
+	// userReq.Username = c.Query("username")
+	// userReq.IsOnProject, _ = strconv.ParseBool(c.Query("isOnProject")) //мб сразу true выставлять здесь в паршиалЮзерс?
+	// userReq.Offset, _ = strconv.Atoi(c.Query("offset"))
+	// userReq.Limit, _ = strconv.Atoi(c.Query("limit"))
 	users, _, err := s.svc.GetPartialUsers(c.Request.Context(), userReq)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
@@ -178,7 +176,7 @@ func (s *Server) getUserProjects(c *gin.Context) {
 		}
 		projectResponses = append(projectResponses, projectWithShortParticipantsResp{
 			Participants:     makeShortParticipantResponses(participants),
-			shortProjectResp: *makeShortProjectResponse(v),
+			ShortProjectResp: makeShortProjectResponse(v),
 		})
 	}
 	c.JSON(http.StatusOK, projectResponses)

@@ -46,16 +46,18 @@ func (f *UserFilter) ByLike(text string) *UserFilter {
 	f.isLike = true
 	return f
 }
-func (f *UserFilter) ByUsernameLike(username string) *UserFilter {
-	f.username = username
-	f.isLike = true
-	return f
-}
-func (f *UserFilter) ByEmailLike(email string) *UserFilter {
-	f.email = email
-	f.isLike = true
-	return f
-}
+
+//	func (f *UserFilter) ByUsernameLike(username string) *UserFilter {
+//		f.username = username
+//		f.isLike = true
+//		return f
+//	}
+//
+//	func (f *UserFilter) ByEmailLike(email string) *UserFilter {
+//		f.email = email
+//		f.isLike = true
+//		return f
+//	}
 func (f *UserFilter) ByAtProject(projectID int) *UserFilter {
 	f.projectID = projectID
 	f.isOnProject = true
@@ -124,16 +126,7 @@ func conditionsFromUserFilter(filter *UserFilter) sq.Sqlizer {
 			sq.Like{"u.last_name": "%" + filter.likeText + "%"},
 			sq.Like{"u.github_username": "%" + filter.likeText + "%"}}
 	}
-	if len(or) != 0 {
-		if filter.isProjectSearch {
-			return sq.And{or, sq.Eq{"p.project_id": filter.projectID}}
-		}
-		return or
-	}
-	if filter.isProjectSearch {
-		return sq.Eq{"p.project_id": filter.projectID}
-	}
-	return nil
+	return or
 
 	// like := make(sq.Like)
 	// if filter.username != "" {
@@ -148,10 +141,14 @@ func conditionsFromUserFilter(filter *UserFilter) sq.Sqlizer {
 
 	// return like
 }
+func conditionsFromUserFilterForProject(filter *UserFilter) sq.Sqlizer {
+	return sq.Eq{"p.project_id": filter.projectID}
+}
 
 type ProjectFilter struct {
-	ID   int
-	Name string
+	ID     int
+	Name   string
+	isLike bool
 	*db.Paginator
 }
 
@@ -168,6 +165,11 @@ func (f *ProjectFilter) ByProjectName(name string) *ProjectFilter {
 	f.Name = name
 	return f
 }
+func (f *ProjectFilter) ByProjectNameLike(name string) *ProjectFilter {
+	f.Name = name
+	f.isLike = true
+	return f
+}
 
 func (f *ProjectFilter) WithPaginator(limit, offset uint64) *ProjectFilter {
 	f.Paginator = db.NewPaginator(limit, offset)
@@ -179,10 +181,13 @@ func conditionsFromProjectFilter(filter *ProjectFilter) sq.Sqlizer {
 		return sq.Eq{"p.id": filter.ID}
 	}
 
-	if filter.Name != "" {
-		return sq.Eq{"p.name": filter.Name}
+	if !filter.isLike {
+		if filter.Name != "" {
+			return sq.Eq{"p.name": filter.Name}
+		}
+		return nil
 	}
-	return nil
+	return sq.Like{"p.name": "%" + filter.Name + "%"}
 }
 
 type TaskFilter struct {
@@ -275,7 +280,11 @@ func (f *ParticipantFilter) WithPaginator(limit, offset uint64) *ParticipantFilt
 	return f
 }
 func conditionsFromParticipantFilter(filter *ParticipantFilter) sq.Sqlizer {
-	if filter.ID > 0 {
+	if filter.ID > 0 && filter.ProjectID > 0 {
+		return sq.Eq{"p.id": filter.ID,
+			"p.project_id": filter.ProjectID}
+	}
+	if filter.ID > 0{
 		return sq.Eq{"p.id": filter.ID}
 	}
 

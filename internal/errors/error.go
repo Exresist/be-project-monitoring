@@ -31,7 +31,7 @@ var (
 	ErrTaskNotFound                     = errors.New("task not found")
 	ErrParticipantNotFound              = errors.New("participant not found")
 	ErrParticipantsNotFound             = errors.New("participants not found")
-	ErrTaskParticipantUserIDNotFound    = errors.New("task participant id not found")
+	ErrTaskParticipantIDNotFound        = errors.New("task participant id not found")
 	ErrInvalidStatus                    = errors.New("invalid status")
 	ErrInvalidProjectID                 = errors.New("invalid project id")
 	ErrTaskSuggestedEstimateIsInvalid   = errors.New("task suggested estimate is not valid")

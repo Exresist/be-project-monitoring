@@ -26,16 +26,12 @@ type (
 	}
 
 	ProjectResp struct {
-		ID          int       `json:"id"`
-		Name        string    `json:"name"`
-		Description string    `json:"description"`
-		PhotoURL    string    `json:"avatar"`
-		ReportURL   string    `json:"reportUrl"`
-		ReportName  string    `json:"reportName"`
-		RepoURL     string    `json:"repo"`
-		ActiveTo    time.Time `json:"dueDate"`
+		ShortProjectResp
+		ReportURL  string `json:"reportUrl"`
+		ReportName string `json:"reportName"`
+		RepoURL    string `json:"repo"`
 	}
-	shortProjectResp struct {
+	ShortProjectResp struct {
 		ID          int       `json:"id"`
 		Name        string    `json:"name"`
 		Description string    `json:"description"`
@@ -47,17 +43,18 @@ type (
 		Participants []ParticipantResp `json:"participants"`
 	}
 	projectWithShortParticipantsResp struct {
-		shortProjectResp
+		ShortProjectResp
 		Participants []shortPartcipantResp `json:"participants"`
 	}
 	GetProjectsReq struct {
-		Name   string
-		Offset int
-		Limit  int
+		SearchText string
+		// Offset int
+		// Limit  int
 	}
 	getProjectsResp struct {
-		Projects []projectWithParticipantsResp `json:"projects"`
-		Count    int `json:"count"`
+		Projects []projectWithParticipantsResp
+		//Projects []projectWithParticipantsResp `json:"projects"`
+		//Count    int                           `json:"count"`
 	}
 
 	UpdateProjectReq struct {
@@ -72,16 +69,9 @@ type (
 	}
 
 	projectInfoResp struct {
-		ID           int                 `json:"id"`
-		Name         string              `json:"name"`
-		Description  string              `json:"description"`
-		PhotoURL     string              `json:"avatar"`
-		ReportURL    string              `json:"reportUrl"`
-		ReportName   string              `json:"reportName"`
-		RepoURL      string              `json:"repo"`
-		ActiveTo     time.Time           `json:"dueDate"`
+		ProjectResp
 		Participants []model.Participant `json:"participants"`
-		Tasks        []taskResp          `json:"tasks"`
+		Tasks        []ShortTaskResp     `json:"tasks"`
 	}
 )
 
@@ -124,12 +114,11 @@ func (s *Server) createProject(c *gin.Context) {
 
 func (s *Server) getProjects(c *gin.Context) {
 	projReq := &GetProjectsReq{}
+	projReq.SearchText = c.Query("searchParam")
+	// projReq.Offset, _ = strconv.Atoi(c.Query("offset"))
+	// projReq.Limit, _ = strconv.Atoi(c.Query("limit"))
 
-	projReq.Name = c.Query("name")
-	projReq.Offset, _ = strconv.Atoi(c.Query("offset"))
-	projReq.Limit, _ = strconv.Atoi(c.Query("limit"))
-
-	projects, count, err := s.svc.GetProjects(c.Request.Context(), projReq)
+	projects, _, err := s.svc.GetProjects(c.Request.Context(), projReq)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return
@@ -147,10 +136,11 @@ func (s *Server) getProjects(c *gin.Context) {
 			Participants: makeParticipantResponses(participants),
 		})
 	}
-	c.JSON(http.StatusOK, getProjectsResp{
-		Projects: projectsResp,
-		Count:    count,
-	})
+	// c.JSON(http.StatusOK, getProjectsResp{
+	// 	Projects: projectsResp,
+	// 	Count:    count,
+	// })
+	c.JSON(http.StatusOK, projectsResp)
 }
 
 func (s *Server) parseBodyToUpdatedProject(c *gin.Context) {
@@ -185,13 +175,13 @@ func (s *Server) parseBodyToDeletedProject(c *gin.Context) {
 	c.Set(string(domain.ProjectIDCtx), deletedProjectID)
 }
 func (s *Server) deleteProject(c *gin.Context) {
-	userID, err := strconv.Atoi(c.Param("projectId"))
-	if err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
-		return
-	}
+	// projectID, err := strconv.Atoi(c.Param("projectId"))
+	// if err != nil {
+	// 	c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
+	// 	return
+	// }
 
-	if err := s.svc.DeleteProject(c.Request.Context(), userID); err != nil {
+	if err := s.svc.DeleteProject(c.Request.Context(), *deletedProjectID); err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return
 	}
@@ -212,30 +202,40 @@ func (s *Server) getProjectInfo(c *gin.Context) {
 		return
 	}
 
+	shortTasksResponse := make([]ShortTaskResp, 0)
+	for _, v := range projectInfo.Tasks {
+		shortTasksResponse = append(shortTasksResponse, makeShortTaskResponse(v.ShortTask))
+	}
 	c.JSON(http.StatusOK, projectInfoResp{
-		ID:           projectInfo.Project.ID,
-		Name:         projectInfo.Name,
-		Description:  projectInfo.Description.String,
-		PhotoURL:     projectInfo.PhotoURL.String,
-		ReportURL:    projectInfo.ReportURL.String,
-		ReportName:   projectInfo.ReportName.String,
-		RepoURL:      projectInfo.RepoURL.String,
-		ActiveTo:     projectInfo.ActiveTo,
+		ProjectResp: ProjectResp{
+			ShortProjectResp: ShortProjectResp{
+				ID:          projectInfo.Project.ID,
+				Name:        projectInfo.Name,
+				Description: projectInfo.Description.String,
+				PhotoURL:    projectInfo.PhotoURL.String,
+				ActiveTo:    projectInfo.ActiveTo,
+			},
+			ReportURL:  projectInfo.ReportURL.String,
+			ReportName: projectInfo.ReportName.String,
+			RepoURL:    projectInfo.RepoURL.String,
+		},
 		Participants: projectInfo.Participants,
-		Tasks:        makeShortTasksResponses(projectInfo.Tasks),
+		Tasks:        shortTasksResponse,
 	})
 }
 
 func makeProjectResponse(project model.Project) ProjectResp {
 	return ProjectResp{
-		ID:          project.ID,
-		Name:        project.Name,
-		Description: project.Description.String,
-		PhotoURL:    project.PhotoURL.String,
-		ReportURL:   project.ReportURL.String,
-		ReportName:  project.ReportName.String,
-		RepoURL:     project.RepoURL.String,
-		ActiveTo:    project.ActiveTo,
+		ShortProjectResp: ShortProjectResp{
+			ID:          project.ID,
+			Name:        project.Name,
+			Description: project.Description.String,
+			PhotoURL:    project.PhotoURL.String,
+			ActiveTo:    project.ActiveTo,
+		},
+		ReportURL:  project.ReportURL.String,
+		ReportName: project.ReportName.String,
+		RepoURL:    project.RepoURL.String,
 	}
 }
 func makeProjectResponses(projects []model.Project) []ProjectResp {
@@ -245,8 +245,8 @@ func makeProjectResponses(projects []model.Project) []ProjectResp {
 	}
 	return projectResponses
 }
-func makeShortProjectResponse(project model.ShortProject) *shortProjectResp {
-	return &shortProjectResp{
+func makeShortProjectResponse(project model.ShortProject) ShortProjectResp {
+	return ShortProjectResp{
 		ID:          project.ID,
 		Name:        project.Name,
 		Description: project.Description.String,
@@ -255,11 +255,11 @@ func makeShortProjectResponse(project model.ShortProject) *shortProjectResp {
 	}
 
 }
-func makeShortProjectResponses(projects []model.ShortProject) []shortProjectResp {
-	projectResponses := make([]shortProjectResp, 0, len(projects))
+func makeShortProjectResponses(projects []model.ShortProject) []ShortProjectResp {
+	projectResponses := make([]ShortProjectResp, 0, len(projects))
 	for _, project := range projects {
 		projectResponses = append(projectResponses,
-			*makeShortProjectResponse(project))
+			makeShortProjectResponse(project))
 	}
 	return projectResponses
 }

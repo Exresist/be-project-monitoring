@@ -8,6 +8,7 @@ import (
 	"database/sql"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/AvraamMavridis/randomcolor"
@@ -115,7 +116,15 @@ func (r *Repository) GetPartialUsers(ctx context.Context, filter *UserFilter) ([
 		u.username, u.first_name, u.last_name, u."group", u.github_username
 		FROM users u WHERE u.id NOT IN (` + query + `)`
 	}
-	query = query + " LIMIT " + fmt.Sprint(filter.Limit) + " OFFSET " + fmt.Sprint(filter.Offset)
+	if filter.likeText != "" {
+		searchCondition, searchArgs, err := conditionsFromUserFilter(filter).ToSql()
+		if err != nil {
+			return nil, fmt.Errorf("error while adding conditions to sql row: %w", err)
+		}
+		searchCondition = strings.ReplaceAll(searchCondition, "?", "'"+searchArgs[0].(string)+"'")
+		query = query + " AND " + searchCondition
+	}
+	//query = query + " LIMIT " + fmt.Sprint(filter.Limit) + " OFFSET " + fmt.Sprint(filter.Offset)
 	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("error while performing sql request: %w", err)
@@ -163,7 +172,15 @@ func (r *Repository) GetPartialCountByFilter(ctx context.Context, filter *UserFi
 			return 0, fmt.Errorf("error while generating sql query: %w", err)
 		}
 		query = `SELECT COUNT(1) FROM users u WHERE u.id NOT IN (` + query + `)`
+	}
 
+	if filter.likeText != "" {
+		searchCondition, searchArgs, err := conditionsFromUserFilter(filter).ToSql()
+		if err != nil {
+			return 0, fmt.Errorf("error while adding conditions to sql row: %w", err)
+		}
+		searchCondition = strings.ReplaceAll(searchCondition, "?", "'"+searchArgs[0].(string)+"'")
+		query = query + " AND " + searchCondition
 	}
 	if err := r.db.QueryRowContext(ctx, query, args...).Scan(&count); err != nil {
 		return 0, fmt.Errorf("error while scanning sql row: %w", err)
@@ -174,7 +191,7 @@ func getSQLStringForPartialUser(filter *UserFilter, fields ...string) (string, [
 	return sq.Select(fields...).
 		From("users u").
 		Join("participants p on u.id = p.user_id").
-		Where(conditionsFromUserFilter(filter)).
+		Where(conditionsFromUserFilterForProject(filter)).
 		PlaceholderFormat(sq.Dollar).ToSql()
 }
 

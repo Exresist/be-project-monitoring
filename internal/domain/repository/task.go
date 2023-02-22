@@ -79,11 +79,13 @@ func (r *Repository) InsertTask(ctx context.Context, task *model.Task) error {
 		Columns("name",
 			"description", "suggested_estimate",
 			"participant_id", "creator_id",
-			"status", "project_id").
+			"status", "created_at",
+			"updated_at", "project_id").
 		Values(task.Name,
 			task.Description, task.Estimate,
 			task.ParticipantID, task.CreatorID,
-			task.Status, task.ProjectID).
+			task.Status, task.CreatedAt,
+			task.UpdatedAt, task.ProjectID).
 		Suffix("RETURNING \"id\"").
 		QueryRowContext(ctx)
 	if err := row.Scan(&task.ID); err != nil {
