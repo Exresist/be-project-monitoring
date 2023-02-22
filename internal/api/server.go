@@ -123,7 +123,7 @@ func New(opts ...OptionFunc) *Server {
 	projectRtr.GET("/:projectId", s.getProjectInfo)
 	projectRtr.DELETE("/remove", s.parseBodyToDeletedProject,
 		s.verifyParticipantRoleMiddleware(model.RoleOwner), s.deleteProject)
-	projectRtr.POST("/add-participant",
+	projectRtr.POST("/add-participant", s.parseBodyToAddedParticipant,
 		s.verifyParticipantRoleMiddleware(model.RoleOwner, model.RoleTeamlead), s.addParticipant)
 	projectRtr.DELETE("/remove-participant", s.verifyParticipantRoleMiddleware(model.RoleOwner, model.RoleTeamlead), s.deleteParticipant)
 

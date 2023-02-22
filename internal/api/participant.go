@@ -1,6 +1,7 @@
 package api
 
 import (
+	"be-project-monitoring/internal/domain"
 	"be-project-monitoring/internal/domain/model"
 	"encoding/json"
 	"net/http"
@@ -29,21 +30,24 @@ type (
 
 var (
 	deletedParticipantID int
+	addParticipantReq    *AddParticipantReq
 )
 
-func (s *Server) addParticipant(c *gin.Context) {
-	req := &AddParticipantReq{}
-	if err := json.NewDecoder(c.Request.Body).Decode(req); err != nil {
+func (s *Server) parseBodyToAddedParticipant(c *gin.Context) {
+	addParticipantReq = &AddParticipantReq{}
+	if err := json.NewDecoder(c.Request.Body).Decode(addParticipantReq); err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return
 	}
-
-	_, err := s.svc.AddParticipant(c.Request.Context(), req)
+	c.Set(string(domain.ProjectIDCtx), addParticipantReq.ProjectID)
+}
+func (s *Server) addParticipant(c *gin.Context) {
+	_, err := s.svc.AddParticipant(c.Request.Context(), addParticipantReq)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return
 	}
-	participants, err := s.svc.GetParticipants(c.Request.Context(), req.ProjectID)
+	participants, err := s.svc.GetParticipants(c.Request.Context(), addParticipantReq.ProjectID)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return

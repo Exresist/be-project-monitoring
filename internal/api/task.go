@@ -22,14 +22,15 @@ type (
 		ProjectID         int    `json:"projectId"`
 	}
 	ShortTaskResp struct {
-		ID            int       `json:"id"`
-		Name          string    `json:"title"`
-		Status        string    `json:"status"`
-		Description   string    `json:"description"`
-		Estimate      string    `json:"estimatedTime"`
-		CreatedAt     time.Time `json:"createdAt"`
-		UpdatedAt     time.Time `json:"updatedAt"`
-		ParticipantID int       `json:"asignee"`
+		ID                int         `json:"id"`
+		Name              string      `json:"title"`
+		Status            string      `json:"status"`
+		Description       string      `json:"description"`
+		Estimate          string      `json:"estimatedTime"`
+		CreatedAt         time.Time   `json:"createdAt"`
+		UpdatedAt         time.Time   `json:"updatedAt"`
+		ParticipantID     int         `json:"asignee,omitempty"`
+		ParticipantIDNull interface{} `json:"asignee,omitempty"`
 	}
 	TaskResp struct {
 		ShortTaskResp
@@ -173,32 +174,42 @@ func (s *Server) getTaskInfo(c *gin.Context) {
 }
 
 func makeTaskResponse(task model.Task) TaskResp {
-	return TaskResp{
+	taskResp := TaskResp{
 		ShortTaskResp: ShortTaskResp{
-			ID:            task.ID,
-			Name:          task.Name,
-			Description:   task.Description.String,
-			Estimate:      task.Estimate.String,
-			ParticipantID: int(task.ParticipantID.Int64),
-			Status:        string(task.Status),
-			CreatedAt:     task.CreatedAt,
-			UpdatedAt:     task.UpdatedAt,
+			ID:          task.ID,
+			Name:        task.Name,
+			Description: task.Description.String,
+			Estimate:    task.Estimate.String,
+			Status:      string(task.Status),
+			CreatedAt:   task.CreatedAt,
+			UpdatedAt:   task.UpdatedAt,
 		},
 		CreatorID: int(task.CreatorID.Int64),
 		//ProjectID:     task.ProjectID,
 	}
+	if task.ParticipantID.Valid {
+		taskResp.ParticipantID = int(task.ParticipantID.Int64)
+	} else {
+		taskResp.ParticipantIDNull = nil
+	}
+	return taskResp
 }
 func makeShortTaskResponse(task model.ShortTask) ShortTaskResp {
-	return ShortTaskResp{
-		ID:            task.ID,
-		Name:          task.Name,
-		Description:   task.Description.String,
-		Estimate:      task.Estimate.String,
-		ParticipantID: int(task.ParticipantID.Int64),
-		Status:        string(task.Status),
-		CreatedAt:     task.CreatedAt,
-		UpdatedAt:     task.UpdatedAt,
+	shortTaskResp := ShortTaskResp{
+		ID:          task.ID,
+		Name:        task.Name,
+		Description: task.Description.String,
+		Estimate:    task.Estimate.String,
+		Status:      string(task.Status),
+		CreatedAt:   task.CreatedAt,
+		UpdatedAt:   task.UpdatedAt,
 	}
+	if task.ParticipantID.Valid {
+		shortTaskResp.ParticipantID = int(task.ParticipantID.Int64)
+	} else {
+		shortTaskResp.ParticipantIDNull = nil
+	}
+	return shortTaskResp
 }
 func makeTasksResponses(tasks []model.Task) []TaskResp {
 	taskResponses := make([]TaskResp, 0, len(tasks))
