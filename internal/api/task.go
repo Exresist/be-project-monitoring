@@ -30,10 +30,11 @@ type (
 		CreatedAt     time.Time `json:"createdAt"`
 		UpdatedAt     time.Time `json:"updatedAt"`
 		ParticipantID int       `json:"asignee,omitempty"`
+		CreatorID     int       `json:"creatorId,omitempty"`
 	}
 	TaskResp struct {
 		ShortTaskResp
-		CreatorID int `json:"creatorId,omitempty"`
+		//CreatorID int `json:"creatorId,omitempty"`
 		//ProjectID int       `json:"projectId"`
 	}
 	taskInfoResp struct {
@@ -180,11 +181,11 @@ func makeTaskResponse(task model.Task) TaskResp {
 			Description:   task.Description.String,
 			Estimate:      task.Estimate.String,
 			ParticipantID: int(task.ParticipantID.Int64),
+			CreatorID:     int(task.CreatorID.Int64),
 			Status:        string(task.Status),
 			CreatedAt:     task.CreatedAt,
 			UpdatedAt:     task.UpdatedAt,
 		},
-		CreatorID: int(task.CreatorID.Int64),
 		//ProjectID:     task.ProjectID,
 	}
 }
@@ -195,6 +196,7 @@ func makeShortTaskResponse(task model.ShortTask) ShortTaskResp {
 		Description:   task.Description.String,
 		Estimate:      task.Estimate.String,
 		ParticipantID: int(task.ParticipantID.Int64),
+		CreatorID:     int(task.CreatorID.Int64),
 		Status:        string(task.Status),
 		CreatedAt:     task.CreatedAt,
 		UpdatedAt:     task.UpdatedAt,

@@ -17,14 +17,14 @@ type (
 	TaskStatus string
 	Task       struct {
 		ShortTask
-		CreatorID sql.NullInt64 `json:"creatorId"`
-		ProjectID int           `json:"projectId"`
+		ProjectID int `json:"projectId"`
 	}
 	ShortTask struct {
 		ID            int            `json:"id"`
 		Name          string         `json:"title"`
 		Description   sql.NullString `json:"description"`
 		ParticipantID sql.NullInt64  `json:"asignee"`
+		CreatorID     sql.NullInt64  `json:"creatorId"`
 		Status        TaskStatus     `json:"status"`
 		Estimate      sql.NullString `json:"estimatedTime"`
 		CreatedAt     time.Time      `json:"createdAt"`

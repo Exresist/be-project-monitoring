@@ -61,11 +61,11 @@ func (s *service) CreateTask(ctx context.Context, taskReq *api.CreateTaskReq) (*
 		ShortTask: model.ShortTask{
 			Name:          taskReq.Name,
 			ParticipantID: *participantID,
+			CreatorID: *creatorID,
 			Status:        model.TaskStatus(taskReq.Status),
 			CreatedAt:     time.Now(),
 			UpdatedAt:     time.Now(),
 		},
-		CreatorID: *creatorID,
 		ProjectID: taskReq.ProjectID,
 	}
 	if strings.TrimSpace(taskReq.Description) != "" {
@@ -127,10 +127,10 @@ func mergeTaskFields(oldTask *model.Task, taskReq *api.UpdateTaskReq, newPartici
 		ShortTask: model.ShortTask{
 			ID:            taskReq.ID,
 			ParticipantID: newParticipantID,
+			CreatorID: oldTask.CreatorID,
 			CreatedAt:     oldTask.CreatedAt,
 			UpdatedAt:     time.Now(),
-		},
-		CreatorID: oldTask.CreatorID,
+		},		
 		ProjectID: oldTask.ProjectID,
 	}
 
