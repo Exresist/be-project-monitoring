@@ -126,9 +126,9 @@ func New(opts ...OptionFunc) *Server {
 		s.verifyParticipantRoleMiddleware(model.RoleOwner), s.deleteProject)
 	projectRtr.POST("/add-participant", s.parseBodyToAddedParticipant,
 		s.verifyParticipantRoleMiddleware(model.RoleOwner, model.RoleTeamlead), s.addParticipant)
-	projectRtr.PATCH("/update-participant", s.parseBodyToParticipant,
+	projectRtr.PATCH("/update-participant", s.parseBodyToParticipantResp,
 		s.verifyParticipantRoleMiddleware(model.RoleOwner), s.updateParticipant)
-	projectRtr.DELETE("/remove-participant", s.parseBodyToParticipant,
+	projectRtr.DELETE("/remove-participant", s.parseBodyToParticipantResp,
 		s.verifyParticipantRoleMiddleware(model.RoleOwner, model.RoleTeamlead), s.deleteParticipant)
 
 	// /api/project/task

@@ -56,14 +56,14 @@ func (s *Server) addParticipant(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return
 	}
-	participants, err := s.svc.GetParticipants(c.Request.Context(), addedParticipant.ProjectID)
-	if err != nil {
+	if _, err := s.svc.GetParticipants(c.Request.Context(), addedParticipant.ProjectID); err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return
 	}
-	c.JSON(http.StatusCreated, participants)
+	s.sendProjectInfoResponse(c, addedParticipant.ProjectID)
+	//c.JSON(http.StatusCreated, participants)
 }
-func (s *Server) parseBodyToParticipant(c *gin.Context) {
+func (s *Server) parseBodyToParticipantResp(c *gin.Context) {
 	parsedParticipant = &ParticipantResp{}
 	if err := json.NewDecoder(c.Request.Body).Decode(parsedParticipant); err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
@@ -81,12 +81,12 @@ func (s *Server) parseBodyToParticipant(c *gin.Context) {
 func (s *Server) updateParticipant(c *gin.Context) {
 	// userID, _ := uuid.Parse(c.Param("user_id"))
 	// projectID, _ := strconv.Atoi(c.Param("project_id"))
-	participant, err := s.svc.UpdateParticipantRole(c.Request.Context(), parsedParticipant)
-	if err != nil {
+	if _, err := s.svc.UpdateParticipantRole(c.Request.Context(), parsedParticipant); err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, participant)
+	s.sendProjectInfoResponse(c, parsedParticipant.ProjectID)
+	//c.JSON(http.StatusOK, participant)
 }
 
 //	func (s *Server) parseBodyToDeletedParticipant(c *gin.Context) {
@@ -109,6 +109,7 @@ func (s *Server) deleteParticipant(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return
 	}
+	s.sendProjectInfoResponse(c, parsedParticipant.ProjectID)
 	c.JSON(http.StatusOK, nil)
 }
 func makeParticipantResponse(participant model.Participant) *ParticipantResp {

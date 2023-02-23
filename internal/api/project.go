@@ -96,11 +96,12 @@ func (s *Server) createProject(c *gin.Context) {
 		Role:      string(model.RoleOwner),
 		UserID:    c.MustGet(string(domain.UserIDCtx)).(uuid.UUID), //uuid.MustParse(c.MustGet(string(domain.UserIDCtx))), //как лучше?
 		ProjectID: project.ID,
-	})
+	});
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return
 	}
+
 	c.JSON(http.StatusCreated, CreateProjectResp{
 		ProjectResp: makeProjectResponse(*project),
 		ParticipantResp: ParticipantResp{
@@ -109,7 +110,6 @@ func (s *Server) createProject(c *gin.Context) {
 			ProjectID: participant.ProjectID,
 			User:      participant.ShortUser,
 		}})
-
 }
 
 func (s *Server) getProjects(c *gin.Context) {
@@ -195,7 +195,9 @@ func (s *Server) getProjectInfo(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusBadRequest, err)
 		return
 	}
-
+	s.sendProjectInfoResponse(c, projectID)
+}
+func (s *Server) sendProjectInfoResponse(c *gin.Context, projectID int){
 	projectInfo, err := s.svc.GetProjectInfo(c.Request.Context(), projectID)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
@@ -223,7 +225,6 @@ func (s *Server) getProjectInfo(c *gin.Context) {
 		Tasks:        shortTasksResponse,
 	})
 }
-
 func makeProjectResponse(project model.Project) ProjectResp {
 	return ProjectResp{
 		ShortProjectResp: ShortProjectResp{
