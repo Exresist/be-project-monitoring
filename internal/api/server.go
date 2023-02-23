@@ -58,10 +58,11 @@ type (
 	}
 
 	participantService interface {
-		AddParticipant(ctx context.Context, participant *AddParticipantReq) (*model.Participant, error)
+		AddParticipant(ctx context.Context, isOwnerCreation bool, participant *AddedParticipant) (*model.Participant, error)
+		UpdateParticipantRole(ctx context.Context, participant *ParticipantResp) (*model.Participant, error)
+		DeleteParticipant(ctx context.Context, participantID int) error
 		GetParticipantByID(ctx context.Context, id int) (*model.Participant, error)
 		GetParticipants(ctx context.Context, projectID int) ([]model.Participant, error)
-		DeleteParticipant(ctx context.Context, participantID int) error
 		VerifyParticipant(ctx context.Context, userID uuid.UUID, projectID int) (*model.Participant, error)
 		VerifyParticipantRole(ctx context.Context, userID uuid.UUID, projectID int, toAllow ...model.ParticipantRole) error
 		VerifyParticipantByID(ctx context.Context, participantID int) (*model.Participant, error)
@@ -125,7 +126,10 @@ func New(opts ...OptionFunc) *Server {
 		s.verifyParticipantRoleMiddleware(model.RoleOwner), s.deleteProject)
 	projectRtr.POST("/add-participant", s.parseBodyToAddedParticipant,
 		s.verifyParticipantRoleMiddleware(model.RoleOwner, model.RoleTeamlead), s.addParticipant)
-	projectRtr.DELETE("/remove-participant", s.verifyParticipantRoleMiddleware(model.RoleOwner, model.RoleTeamlead), s.deleteParticipant)
+	projectRtr.PATCH("/update-participant", s.parseBodyToParticipant,
+		s.verifyParticipantRoleMiddleware(model.RoleOwner), s.updateParticipant)
+	projectRtr.DELETE("/remove-participant", s.parseBodyToParticipant,
+		s.verifyParticipantRoleMiddleware(model.RoleOwner, model.RoleTeamlead), s.deleteParticipant)
 
 	// /api/project/task
 	taskRtr := projectRtr.Group("/:projectId/task", s.verifyParticipantMiddleware())

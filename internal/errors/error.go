@@ -46,6 +46,7 @@ var (
 	ErrEmptyUsernameOrPassword          = errors.New("username or password is empty")
 	ErrUserIsNotOnProject               = errors.New("user is not on project")
 	ErrInvalidActiveTo                  = errors.New("invalid active_to date")
+	ErrTeamLeadAlreadyExists            = errors.New("team lead already exists")
 )
 
 // package ierr

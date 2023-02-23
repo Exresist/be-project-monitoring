@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	sq "github.com/Masterminds/squirrel"
+	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
@@ -147,24 +148,50 @@ func (r *Repository) GetTaskInfo(ctx context.Context, id int) (*model.TaskInfo, 
 
 	if rows.Next() {
 		taskInfo := model.TaskInfo{}
+		nullStrings := [18]sql.NullString{}
+		//make([]sql.NullString, 19)
 		if err := rows.Scan(&taskInfo.ID, &taskInfo.Name, &taskInfo.Description,
 			&taskInfo.Estimate,
 			&taskInfo.ParticipantID, &taskInfo.CreatorID,
 			&taskInfo.Status, &taskInfo.CreatedAt,
 			&taskInfo.UpdatedAt, &taskInfo.ProjectID,
-			&taskInfo.Creator.ID, &taskInfo.Creator.Role,
-			&taskInfo.Creator.ColorCode, &taskInfo.Creator.Email,
-			&taskInfo.Creator.Username, &taskInfo.Creator.FirstName,
-			&taskInfo.Creator.LastName, &taskInfo.Creator.Group,
-			&taskInfo.Creator.GithubUsername,
-			&taskInfo.Participant.ID, &taskInfo.Participant.Role,
-			&taskInfo.Participant.ColorCode, &taskInfo.Participant.Email,
-			&taskInfo.Participant.Username, &taskInfo.Participant.FirstName,
-			&taskInfo.Participant.LastName, &taskInfo.Participant.Group,
-			&taskInfo.Participant.GithubUsername,
+			&nullStrings[0], &nullStrings[1], &nullStrings[2],
+			&nullStrings[3], &nullStrings[4], &nullStrings[5],
+			&nullStrings[6], &nullStrings[7], &nullStrings[8],
+			&nullStrings[9], &nullStrings[10], &nullStrings[11],
+			&nullStrings[12], &nullStrings[13], &nullStrings[14],
+			&nullStrings[15], &nullStrings[16], &nullStrings[17],
 		); err != nil {
 			return nil, fmt.Errorf("error while performing sql request: %w", err)
 		}
+		fmt.Println(nullStrings)
+		if nullStrings[0].Valid {
+			taskInfo.Creator = model.ShortUser{
+				ID:             uuid.MustParse(nullStrings[0].String),
+				Role:           model.UserRole(nullStrings[1].String),
+				ColorCode:      nullStrings[2].String,
+				Email:          nullStrings[3].String,
+				Username:       nullStrings[4].String,
+				FirstName:      nullStrings[5].String,
+				LastName:       nullStrings[6].String,
+				Group:          nullStrings[7].String,
+				GithubUsername: nullStrings[8].String,
+			}
+		}
+		if nullStrings[9].Valid {
+			taskInfo.Creator = model.ShortUser{
+				ID:             uuid.MustParse(nullStrings[9].String),
+				Role:           model.UserRole(nullStrings[10].String),
+				ColorCode:      nullStrings[11].String,
+				Email:          nullStrings[12].String,
+				Username:       nullStrings[13].String,
+				FirstName:      nullStrings[14].String,
+				LastName:       nullStrings[15].String,
+				Group:          nullStrings[16].String,
+				GithubUsername: nullStrings[17].String,
+			}
+		}
+
 		return &taskInfo, nil
 	}
 	return nil, ierr.ErrTaskNotFound
@@ -173,14 +200,14 @@ func (r *Repository) GetTaskInfo(ctx context.Context, id int) (*model.TaskInfo, 
 func (r *Repository) DeleteParticipantsFromTask(ctx context.Context, participantID int) error {
 	if _, err := r.sq.Update("tasks").
 		SetMap(map[string]interface{}{
-			"creator_id": "NULL",
+			"creator_id": nil,
 		}).Where(sq.Eq{"creator_id": participantID}).
 		ExecContext(ctx); err != nil {
 		return err
 	}
 	_, err := r.sq.Update("tasks").
 		SetMap(map[string]interface{}{
-			"participant_id": "NULL",
+			"participant_id": nil,
 		}).Where(sq.Eq{"participant_id": participantID}).
 		ExecContext(ctx)
 	return err

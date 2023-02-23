@@ -126,6 +126,9 @@ func conditionsFromUserFilter(filter *UserFilter) sq.Sqlizer {
 			sq.Like{"u.last_name": "%" + filter.likeText + "%"},
 			sq.Like{"u.github_username": "%" + filter.likeText + "%"}}
 	}
+	if len(or) == 0 {
+		return nil
+	}
 	return or
 
 	// like := make(sq.Like)
@@ -257,6 +260,7 @@ type ParticipantFilter struct {
 	ID        int
 	UserID    uuid.UUID
 	ProjectID int
+	Role      string
 	*db.Paginator
 }
 
@@ -275,6 +279,10 @@ func (f *ParticipantFilter) ByProjectID(id int) *ParticipantFilter {
 	f.ProjectID = id
 	return f
 }
+func (f *ParticipantFilter) ByRole(role string) *ParticipantFilter {
+	f.Role = role
+	return f
+}
 func (f *ParticipantFilter) WithPaginator(limit, offset uint64) *ParticipantFilter {
 	f.Paginator = db.NewPaginator(limit, offset)
 	return f
@@ -284,7 +292,7 @@ func conditionsFromParticipantFilter(filter *ParticipantFilter) sq.Sqlizer {
 		return sq.Eq{"p.id": filter.ID,
 			"p.project_id": filter.ProjectID}
 	}
-	if filter.ID > 0{
+	if filter.ID > 0 {
 		return sq.Eq{"p.id": filter.ID}
 	}
 
@@ -294,6 +302,9 @@ func conditionsFromParticipantFilter(filter *ParticipantFilter) sq.Sqlizer {
 	}
 	if filter.ProjectID > 0 {
 		eq["p.project_id"] = filter.ProjectID
+	}
+	if filter.Role != "" {
+		eq["p.role"] = filter.Role
 	}
 	return eq
 }

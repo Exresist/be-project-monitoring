@@ -131,7 +131,7 @@ func (r *Repository) GetProjectInfo(ctx context.Context, id int) (*model.Project
 				  GROUP BY p.id, p.name, p.description, p.photo_url, p.report_url,
 			 	  p.report_name, p.repo_url, p.active_to
 				  `
-	fmt.Println(query)
+	//fmt.Println(query)
 	rows, err := r.db.QueryContext(ctx, query, id)
 	if err != nil {
 		return nil, fmt.Errorf("error while performing sql request: %w", err)
@@ -175,9 +175,9 @@ func (r *Repository) GetProjectInfo(ctx context.Context, id int) (*model.Project
 		if err := rows.Scan(params...); err != nil {
 			return nil, fmt.Errorf("error while scanning sql row: %w", err)
 		}
-		for _, v := range params {
-			fmt.Printf("%v, %T \n\n", v, v)
-		}
+		// for _, v := range params {
+		// 	fmt.Printf("%v, %T \n\n", v, v)
+		// }
 
 		participants := make([]model.Participant, 0)
 		for i := range participantIDs {

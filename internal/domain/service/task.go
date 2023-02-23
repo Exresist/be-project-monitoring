@@ -7,7 +7,6 @@ import (
 	ierr "be-project-monitoring/internal/errors"
 	"context"
 	"database/sql"
-	"fmt"
 	"strings"
 	"time"
 )
@@ -39,11 +38,11 @@ func (s *service) CreateTask(ctx context.Context, taskReq *api.CreateTaskReq) (*
 	}
 
 	if taskReq.ParticipantID != nil {
-		if participant, err := s.repo.GetParticipant(ctx, repository.NewParticipantFilter().
+		if _, err := s.repo.GetParticipant(ctx, repository.NewParticipantFilter().
 			ByID(*taskReq.ParticipantID).ByProjectID(taskReq.ProjectID)); err != nil {
 			return nil, ierr.ErrTaskParticipantIDNotFound
 		} else {
-			fmt.Println(participant)
+			//fmt.Println(participant)
 			participantID.Scan(*taskReq.ParticipantID)
 		}
 	}

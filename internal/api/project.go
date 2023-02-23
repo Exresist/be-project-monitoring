@@ -92,7 +92,7 @@ func (s *Server) createProject(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return
 	}
-	participant, err := s.svc.AddParticipant(c.Request.Context(), &AddParticipantReq{
+	participant, err := s.svc.AddParticipant(c.Request.Context(), true, &AddedParticipant{
 		Role:      string(model.RoleOwner),
 		UserID:    c.MustGet(string(domain.UserIDCtx)).(uuid.UUID), //uuid.MustParse(c.MustGet(string(domain.UserIDCtx))), //как лучше?
 		ProjectID: project.ID,

@@ -59,7 +59,6 @@ var (
 func (s *Server) getFullUsers(c *gin.Context) {
 	//userReq := &GetUserReq{}
 	searchParam := c.Param("searchParam")
-
 	users, _, err := s.svc.GetFullUsers(c.Request.Context(), searchParam)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})

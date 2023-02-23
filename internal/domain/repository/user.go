@@ -43,16 +43,24 @@ func (r *Repository) GetFullUsers(ctx context.Context, filter *UserFilter) ([]mo
 	// 	Offset(filter.Offset).
 	// 	QueryContext(ctx)
 
-	query := r.sq.Select(
+	// query := r.sq.Select(
+	// 	"u.id", "u.role",
+	// 	"u.color_code", "u.email",
+	// 	"u.username", "u.first_name",
+	// 	"u.last_name", "u.\"group\"",
+	// 	"u.github_username", "u.hashed_password").
+	// 	From("users u").
+	// 	Where(conditionsFromUserFilter(filter))
+	// fmt.Println(query.ToSql())
+	rows, err := r.sq.Select(
 		"u.id", "u.role",
 		"u.color_code", "u.email",
 		"u.username", "u.first_name",
 		"u.last_name", "u.\"group\"",
 		"u.github_username", "u.hashed_password").
 		From("users u").
-		Where(conditionsFromUserFilter(filter))
-	fmt.Println(query.ToSql())
-	rows, err := query.QueryContext(ctx)
+		Where(conditionsFromUserFilter(filter)).
+		QueryContext(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("error while performing sql request: %w", err)
 	}
@@ -81,7 +89,6 @@ func (r *Repository) GetFullUsers(ctx context.Context, filter *UserFilter) ([]mo
 }
 func (r *Repository) GetFullCountByFilter(ctx context.Context, filter *UserFilter) (int, error) {
 	var count int
-
 	if err := r.sq.Select("COUNT(1)").
 		From("users u").
 		Where(conditionsFromUserFilter(filter)).

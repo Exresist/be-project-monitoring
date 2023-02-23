@@ -10,23 +10,38 @@ import (
 	"github.com/google/uuid"
 )
 
-func (s *service) AddParticipant(ctx context.Context, participantReq *api.AddParticipantReq) (*model.Participant, error) {
+func (s *service) AddParticipant(ctx context.Context, isOwnerCreation bool, participantReq *api.AddedParticipant) (*model.Participant, error) {
 	if participantReq.ProjectID <= 0 {
 		return nil, ierr.ErrInvalidProjectID
 	}
 	if participantReq.UserID == uuid.Nil {
 		return nil, ierr.ErrInvalidUserID
 	}
-	if _, ok := model.ParticipantRoles[model.ParticipantRole(participantReq.Role)]; !ok {
+	if _, ok := model.ParticipantRoles[model.ParticipantRole(participantReq.Role)]; !ok ||
+		!isOwnerCreation && participantReq.Role == string(model.RoleOwner) {
 		return nil, ierr.ErrInvalidParticipantRole
 	}
-	found, err := s.repo.GetParticipant(ctx, repository.NewParticipantFilter().
-		ByUserID(participantReq.UserID).ByProjectID(participantReq.ProjectID))
-	if err != nil && err != ierr.ErrParticipantNotFound {
+
+	isUser := false
+	isTeamLead := false
+	if participants, err := s.repo.GetParticipants(ctx, repository.NewParticipantFilter().
+		ByProjectID(participantReq.ProjectID)); err != nil {
 		return nil, err
+	} else if len(participants) != 0 {
+		for _, v := range participants {
+			if v.ShortUser.ID == participantReq.UserID {
+				isUser = true
+			}
+			if v.Role == model.RoleTeamlead {
+				isTeamLead = true
+			}
+		}
 	}
-	if found != nil {
+	if isUser {
 		return nil, ierr.ErrParticipantAlreadyExists
+	}
+	if participantReq.Role == string(model.RoleTeamlead) && isTeamLead {
+		return nil, ierr.ErrTeamLeadAlreadyExists
 	}
 
 	participant := &model.Participant{
@@ -40,6 +55,43 @@ func (s *service) AddParticipant(ctx context.Context, participantReq *api.AddPar
 		return nil, err
 	}
 	return s.GetParticipantByID(ctx, participant.ID)
+}
+func (s *service) UpdateParticipantRole(ctx context.Context, participant *api.ParticipantResp) (*model.Participant, error) {
+	if _, ok := model.ParticipantRoles[model.ParticipantRole(participant.Role)]; !ok ||
+		participant.Role == string(model.RoleOwner) {
+		return nil, ierr.ErrInvalidParticipantRole
+	}
+
+	isParticipant := false
+	isTeamLead := false
+	if participatns, err := s.repo.GetParticipants(ctx, repository.NewParticipantFilter().
+		ByProjectID(participant.ProjectID)); err != nil {
+		return nil, err
+	} else if len(participatns) == 0 {
+		return nil, ierr.ErrParticipantsNotFound
+	} else {
+		for _, v := range participatns {
+			if v.ID == participant.ID {
+				isParticipant = true
+			}
+			if v.Role == model.RoleTeamlead {
+				isTeamLead = true
+			}
+		}
+	}
+	if !isParticipant {
+		return nil, ierr.ErrParticipantNotFound
+	}
+	if participant.Role == string(model.RoleTeamlead) && isTeamLead {
+		return nil, ierr.ErrTeamLeadAlreadyExists
+	}
+
+	return &model.Participant{
+		ID:        participant.ID,
+		Role:      model.ParticipantRole(participant.Role),
+		ProjectID: participant.ProjectID,
+		ShortUser: participant.User,
+	}, s.repo.UpdateParticipantRole(ctx, participant.ID, participant.Role)
 }
 func (s *service) GetParticipantByID(ctx context.Context, id int) (*model.Participant, error) {
 	return s.repo.GetParticipant(ctx, repository.NewParticipantFilter().ByID(id))
