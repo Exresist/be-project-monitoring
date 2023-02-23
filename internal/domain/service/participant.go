@@ -23,7 +23,7 @@ func (s *service) AddParticipant(ctx context.Context, isOwnerCreation bool, part
 	}
 
 	isUser := false
-	isTeamLead := false
+	teamLeadID := 0
 	if participants, err := s.repo.GetParticipants(ctx, repository.NewParticipantFilter().
 		ByProjectID(participantReq.ProjectID)); err != nil {
 		return nil, err
@@ -33,15 +33,17 @@ func (s *service) AddParticipant(ctx context.Context, isOwnerCreation bool, part
 				isUser = true
 			}
 			if v.Role == model.RoleTeamlead {
-				isTeamLead = true
+				teamLeadID = v.ID
 			}
 		}
 	}
 	if isUser {
 		return nil, ierr.ErrParticipantAlreadyExists
 	}
-	if participantReq.Role == string(model.RoleTeamlead) && isTeamLead {
-		return nil, ierr.ErrTeamLeadAlreadyExists
+	if participantReq.Role == string(model.RoleTeamlead) && teamLeadID != 0 {
+		if err := s.repo.UpdateParticipantRole(ctx, teamLeadID, string(model.RoleParticipant)); err != nil {
+			return nil, err
+		}
 	}
 
 	participant := &model.Participant{
@@ -63,7 +65,7 @@ func (s *service) UpdateParticipantRole(ctx context.Context, participant *api.Pa
 	}
 
 	isParticipant := false
-	isTeamLead := false
+	teamLeadID := 0
 	if participatns, err := s.repo.GetParticipants(ctx, repository.NewParticipantFilter().
 		ByProjectID(participant.ProjectID)); err != nil {
 		return nil, err
@@ -75,15 +77,17 @@ func (s *service) UpdateParticipantRole(ctx context.Context, participant *api.Pa
 				isParticipant = true
 			}
 			if v.Role == model.RoleTeamlead {
-				isTeamLead = true
+				teamLeadID = v.ID
 			}
 		}
 	}
 	if !isParticipant {
 		return nil, ierr.ErrParticipantNotFound
 	}
-	if participant.Role == string(model.RoleTeamlead) && isTeamLead {
-		return nil, ierr.ErrTeamLeadAlreadyExists
+	if participant.Role == string(model.RoleTeamlead) && teamLeadID != 0 {
+		if err := s.repo.UpdateParticipantRole(ctx, teamLeadID, string(model.RoleParticipant)); err != nil {
+			return nil, err
+		}
 	}
 
 	return &model.Participant{
