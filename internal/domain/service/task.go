@@ -7,8 +7,11 @@ import (
 	ierr "be-project-monitoring/internal/errors"
 	"context"
 	"database/sql"
+	"fmt"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 func (s *service) GetTasks(ctx context.Context, taskReq *api.GetTasksReq) ([]model.Task, int, error) {
@@ -26,16 +29,23 @@ func (s *service) GetTasks(ctx context.Context, taskReq *api.GetTasksReq) ([]mod
 	return tasks, count, nil
 }
 
-func (s *service) CreateTask(ctx context.Context, taskReq *api.CreateTaskReq) (*model.Task, error) {
+func (s *service) CreateTask(ctx context.Context, creatorUserID uuid.UUID, taskReq *api.CreateTaskReq) (*model.Task, error) {
 	creatorID := &sql.NullInt64{}
 	participantID := &sql.NullInt64{}
 
-	if _, err := s.repo.GetParticipant(ctx, repository.NewParticipantFilter().
-		ByID(taskReq.CreatorID).ByProjectID(taskReq.ProjectID)); err != nil {
-		return nil, ierr.ErrTaskCreatorUserIDNotFound
-	} else {
-		creatorID.Scan(taskReq.CreatorID)
+	creator, err := s.repo.GetParticipant(ctx, repository.NewParticipantFilter().
+		ByUserID(creatorUserID).ByProjectID(taskReq.ProjectID))
+	if err != nil {
+		return nil, err
 	}
+	creatorID.Scan(creator.ID)
+	fmt.Println(creatorID)
+	// if _, err := s.repo.GetParticipant(ctx, repository.NewParticipantFilter().
+	// 	ByID(creator.ID).ByProjectID(taskReq.ProjectID)); err != nil {
+	// 	return nil, ierr.ErrTaskCreatorUserIDNotFound
+	// } else {
+	// 	creatorID.Scan(taskReq.CreatorID)
+	// }
 
 	if taskReq.ParticipantID != nil {
 		if _, err := s.repo.GetParticipant(ctx, repository.NewParticipantFilter().
@@ -61,7 +71,7 @@ func (s *service) CreateTask(ctx context.Context, taskReq *api.CreateTaskReq) (*
 		ShortTask: model.ShortTask{
 			Name:          taskReq.Name,
 			ParticipantID: *participantID,
-			CreatorID: *creatorID,
+			CreatorID:     *creatorID,
 			Status:        model.TaskStatus(taskReq.Status),
 			CreatedAt:     time.Now(),
 			UpdatedAt:     time.Now(),
@@ -127,10 +137,10 @@ func mergeTaskFields(oldTask *model.Task, taskReq *api.UpdateTaskReq, newPartici
 		ShortTask: model.ShortTask{
 			ID:            taskReq.ID,
 			ParticipantID: newParticipantID,
-			CreatorID: oldTask.CreatorID,
+			CreatorID:     oldTask.CreatorID,
 			CreatedAt:     oldTask.CreatedAt,
 			UpdatedAt:     time.Now(),
-		},		
+		},
 		ProjectID: oldTask.ProjectID,
 	}
 

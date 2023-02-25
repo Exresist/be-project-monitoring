@@ -70,7 +70,7 @@ type (
 	}
 
 	taskService interface {
-		CreateTask(ctx context.Context, task *CreateTaskReq) (*model.Task, error)
+		CreateTask(ctx context.Context, creatorUserID uuid.UUID, task *CreateTaskReq) (*model.Task, error)
 		UpdateTask(ctx context.Context, taskReq *UpdateTaskReq) (*model.Task, error)
 		DeleteTask(ctx context.Context, id int) error
 		GetTasks(ctx context.Context, taskReq *GetTasksReq) ([]model.Task, int, error)

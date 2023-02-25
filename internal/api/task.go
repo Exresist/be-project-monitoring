@@ -1,6 +1,7 @@
 package api
 
 import (
+	"be-project-monitoring/internal/domain"
 	"be-project-monitoring/internal/domain/model"
 	ierr "be-project-monitoring/internal/errors"
 	"encoding/json"
@@ -9,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 type (
@@ -16,10 +18,10 @@ type (
 		Name              string `json:"title"`
 		Description       string `json:"description"`
 		SuggestedEstimate string `json:"estimatedTime"`
-		CreatorID         int    `json:"creatorId"`
-		ParticipantID     *int   `json:"asignee"`
-		Status            string `json:"status"`
-		ProjectID         int    `json:"projectId"`
+		// CreatorID         int    `json:"creatorId"`
+		ParticipantID *int   `json:"asignee"`
+		Status        string `json:"status"`
+		ProjectID     int    `json:"projectId"`
 	}
 	ShortTaskResp struct {
 		ID            int       `json:"id"`
@@ -109,7 +111,7 @@ func (s *Server) createTask(c *gin.Context) {
 	}
 	taskReq.ProjectID = projectID
 
-	task, err := s.svc.CreateTask(c, taskReq)
+	task, err := s.svc.CreateTask(c, c.MustGet(string(domain.UserIDCtx)).(uuid.UUID), taskReq)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return
