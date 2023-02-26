@@ -1,7 +1,8 @@
 package domain
 
 const (
-	UserIDCtx CtxKey = "user_id"
+	UserIDCtx    CtxKey = "user_id"
+	ProjectIDCtx CtxKey = "project_id"
 )
 
 type (

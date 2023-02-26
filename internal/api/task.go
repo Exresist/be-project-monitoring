@@ -15,26 +15,34 @@ import (
 
 type (
 	CreateTaskReq struct {
-		Name              string    `json:"name"`
-		Description       string    `json:"description"`
-		SuggestedEstimate *int      `json:"suggested_estimate"`
-		CreatorUserID     uuid.UUID `json:"creator_user_id"`
-		ParticipantUserID uuid.UUID `json:"paticipant_user_id"`
-		Status            string    `json:"status"`
-		ProjectID         int       `json:"project_id"`
+		Name              string `json:"title"`
+		Description       string `json:"description"`
+		SuggestedEstimate string `json:"estimatedTime"`
+		// CreatorID         int    `json:"creatorId"`
+		ParticipantID *int   `json:"asignee"`
+		Status        string `json:"status"`
+		ProjectID     int    `json:"projectId"`
 	}
-	taskResp struct {
-		ID                int       `json:"id"`
-		Name              string    `json:"name"`
-		Description       string    `json:"description,omitempty"`
-		SuggestedEstimate int       `json:"suggested_estimate,omitempty"`
-		RealEstimate      int       `json:"real_estimate,omitempty"`
-		ParticipantID     int       `json:"participant_id,omitempty"`
-		CreatorID         int       `json:"creator_id,omitempty"`
-		Status            string    `json:"status"`
-		CreatedAt         time.Time `json:"created_at"`
-		UpdatedAt         time.Time `json:"updated_at"`
-		ProjectID         int       `json:"project_id"`
+	ShortTaskResp struct {
+		ID            int       `json:"id"`
+		Name          string    `json:"title"`
+		Status        string    `json:"status"`
+		Description   string    `json:"description"`
+		Estimate      string    `json:"estimatedTime"`
+		CreatedAt     time.Time `json:"createdAt"`
+		UpdatedAt     time.Time `json:"updatedAt"`
+		ParticipantID int       `json:"asignee,omitempty"`
+		CreatorID     int       `json:"creatorId,omitempty"`
+	}
+	TaskResp struct {
+		ShortTaskResp
+		//CreatorID int `json:"creatorId,omitempty"`
+		//ProjectID int       `json:"projectId"`
+	}
+	taskInfoResp struct {
+		TaskResp
+		// Creator     model.ShortUser `json:"creator"`
+		// Participant model.ShortUser `json:"asignee"`
 	}
 	GetTasksReq struct {
 		ProjectID     int
@@ -44,21 +52,21 @@ type (
 		Limit         int
 	}
 	UpdateTaskReq struct {
-		ID                int       `json:"id"`
-		Name              *string   `json:"name"`
-		Description       *string   `json:"description"`
-		SuggestedEstimate *int      `json:"suggested_estimate"`
-		RealEstimate      *int      `json:"real_estimate"`
-		Status            *string   `json:"status"`
-		ParticipantUserID uuid.UUID `json:"participant_user_id"`
-		ChangeParticipant *bool     `json:"change_participant"`
+		ID                int     `json:"id"`
+		Name              *string `json:"title"`
+		Description       *string `json:"description"`
+		SuggestedEstimate *string `json:"estimatedTime"`
+		Status            *string `json:"status"`
+		ParticipantID     *int    `json:"asignee"`
+		ProjectID         int     `json:"projectId"`
+		//ChangeParticipant *bool   `json:"change_participant"`
 	}
 )
 
 func (s *Server) getTasks(c *gin.Context) {
 	taskReq := &GetTasksReq{}
 
-	projectID, err := strconv.Atoi(c.Query("project_id"))
+	projectID, err := strconv.Atoi(c.Query("projectId"))
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, ierr.ErrInvalidProjectID)
 		return
@@ -68,7 +76,7 @@ func (s *Server) getTasks(c *gin.Context) {
 	if name := c.Query("name"); name != "" {
 		taskReq.Name = &name
 	}
-	*taskReq.ParticipantID, _ = strconv.Atoi(c.Query("participant_id"))
+	*taskReq.ParticipantID, _ = strconv.Atoi(c.Query("asignee"))
 	taskReq.Offset, _ = strconv.Atoi(c.Query("offset"))
 	taskReq.Limit, _ = strconv.Atoi(c.Query("limit"))
 
@@ -79,7 +87,7 @@ func (s *Server) getTasks(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, struct {
-		Tasks []taskResp `json:"tasks"`
+		Tasks []TaskResp `json:"tasks"`
 		Count int        `json:"count"`
 	}{
 		Tasks: makeTasksResponses(tasks),
@@ -88,17 +96,24 @@ func (s *Server) getTasks(c *gin.Context) {
 
 }
 func (s *Server) createTask(c *gin.Context) {
-	taskReq := &CreateTaskReq{
-		CreatorUserID: c.MustGet(string(domain.UserIDCtx)).(uuid.UUID), //ОБЯЗАТЕЛЬНО ПРОВЕРИТЬ!
-	}
+	// taskReq := &CreateTaskReq{
+	// 	CreatorID: c.MustGet(string(domain.UserIDCtx)).(uuid.UUID), //ОБЯЗАТЕЛЬНО ПРОВЕРИТЬ!
+	// }
+	taskReq := &CreateTaskReq{}
 	if err := json.NewDecoder(c.Request.Body).Decode(taskReq); err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, err)
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return
 	}
-
-	task, err := s.svc.CreateTask(c, taskReq)
+	projectID, err := strconv.Atoi(c.Param("projectId"))
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, err)
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
+		return
+	}
+	taskReq.ProjectID = projectID
+
+	task, err := s.svc.CreateTask(c, c.MustGet(string(domain.UserIDCtx)).(uuid.UUID), taskReq)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return
 	}
 	c.JSON(http.StatusCreated, makeTaskResponse(*task))
@@ -106,35 +121,44 @@ func (s *Server) createTask(c *gin.Context) {
 func (s *Server) updateTask(c *gin.Context) {
 	taskReq := &UpdateTaskReq{}
 	if err := json.NewDecoder(c.Request.Body).Decode(taskReq); err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, err)
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return
 	}
+	projectID, err := strconv.Atoi(c.Param("projectId"))
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
+		return
+	}
+	taskReq.ProjectID = projectID
 
 	task, err := s.svc.UpdateTask(c, taskReq)
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, err)
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return
 	}
 
 	c.JSON(http.StatusOK, makeTaskResponse(*task))
 }
 func (s *Server) deleteTask(c *gin.Context) {
-	taskID, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
+	deletedTask := &struct {
+		ID int `json:"id"`
+	}{}
+	//taskID, err := strconv.Atoi(c.Param("id"))
+	if err := json.NewDecoder(c.Request.Body).Decode(deletedTask); err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return
 	}
-	if err := s.svc.DeleteTask(c, taskID); err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, err)
+	if err := s.svc.DeleteTask(c, deletedTask.ID); err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, nil)
 }
 
 func (s *Server) getTaskInfo(c *gin.Context) {
-	taskID, err := strconv.Atoi(c.Param("id"))
+	taskID, err := strconv.Atoi(c.Param("taskId"))
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, err)
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return
 	}
 
@@ -144,46 +168,55 @@ func (s *Server) getTaskInfo(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, struct {
-		Task        *taskResp
-		Creator     model.ShortUser
-		Participant model.ShortUser
-	}{
-		Task:        makeTaskResponse(taskInfo.Task),
-		Creator:     taskInfo.Creator,
-		Participant: taskInfo.Participant,
+	c.JSON(http.StatusOK, taskInfoResp{
+		TaskResp: makeTaskResponse(taskInfo.Task),
+		// Creator:     taskInfo.Creator,
+		// Participant: taskInfo.Participant,
 	})
 }
 
-func makeTaskResponse(task model.Task) *taskResp {
-	return &taskResp{
-		ID:                task.ID,
-		Name:              task.Name,
-		Description:       task.Description.String,
-		SuggestedEstimate: int(task.SuggestedEstimate.Int64),
-		RealEstimate:      int(task.RealEstimate.Int64),
-		ParticipantID:     int(task.ParticipantID.Int64),
-		CreatorID:         int(task.CreatorID.Int64),
-		Status:            string(task.Status),
-		CreatedAt:         task.CreatedAt,
-		UpdatedAt:         task.UpdatedAt,
-		ProjectID:         task.ProjectID,
+func makeTaskResponse(task model.Task) TaskResp {
+	return TaskResp{
+		ShortTaskResp: ShortTaskResp{
+			ID:            task.ID,
+			Name:          task.Name,
+			Description:   task.Description.String,
+			Estimate:      task.Estimate.String,
+			ParticipantID: int(task.ParticipantID.Int64),
+			CreatorID:     int(task.CreatorID.Int64),
+			Status:        string(task.Status),
+			CreatedAt:     task.CreatedAt,
+			UpdatedAt:     task.UpdatedAt,
+		},
+		//ProjectID:     task.ProjectID,
 	}
 }
-func makeTasksResponses(tasks []model.Task) []taskResp {
-	taskResponses := make([]taskResp, 0, len(tasks))
+func makeShortTaskResponse(task model.ShortTask) ShortTaskResp {
+	return ShortTaskResp{
+		ID:            task.ID,
+		Name:          task.Name,
+		Description:   task.Description.String,
+		Estimate:      task.Estimate.String,
+		ParticipantID: int(task.ParticipantID.Int64),
+		CreatorID:     int(task.CreatorID.Int64),
+		Status:        string(task.Status),
+		CreatedAt:     task.CreatedAt,
+		UpdatedAt:     task.UpdatedAt,
+	}
+}
+func makeTasksResponses(tasks []model.Task) []TaskResp {
+	taskResponses := make([]TaskResp, 0, len(tasks))
 	for _, task := range tasks {
-		taskResponses = append(taskResponses, *makeTaskResponse(task))
+		taskResponses = append(taskResponses, makeTaskResponse(task))
+		// Creator:     taskInfo.Creator,
+		// Participant: taskInfo.Participant,)
 	}
 	return taskResponses
 }
-func makeShortTasksResponses(tasks []model.ShortTask) []taskResp {
-	taskResponses := make([]taskResp, 0, len(tasks))
+func makeShortTasksResponses(tasks []model.ShortTask) []ShortTaskResp {
+	taskResponses := make([]ShortTaskResp, 0, len(tasks))
 	for _, task := range tasks {
-		taskResponses = append(taskResponses,
-			*makeTaskResponse(model.Task{
-				ShortTask: task,
-			}))
+		taskResponses = append(taskResponses, makeShortTaskResponse(task))
 	}
 	return taskResponses
 }

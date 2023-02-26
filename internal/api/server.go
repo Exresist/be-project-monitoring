@@ -1,14 +1,12 @@
 package api
 
 import (
+	"be-project-monitoring/internal/domain/model"
 	"context"
-	_ "embed"
 	"fmt"
 	"net/http"
 	"os"
 	"time"
-
-	"be-project-monitoring/internal/domain/model"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -35,8 +33,8 @@ type (
 	}
 	userService interface {
 		CreateUser(ctx context.Context, user *CreateUserReq) (*model.User, string, error)
-		AuthUser(ctx context.Context, username, password string) (string, error)
-		GetFullUsers(ctx context.Context, userReq *GetUserReq) ([]model.User, int, error)
+		AuthUser(ctx context.Context, username, password string) (*model.User, string, error)
+		GetFullUsers(ctx context.Context, searchParam string) ([]model.User, int, error)
 		GetPartialUsers(ctx context.Context, userReq *GetUserReq) ([]model.ShortUser, int, error)
 		FindGithubUser(ctx context.Context, userReq string) bool
 		UpdateUser(ctx context.Context, userReq *UpdateUserReq) (*model.User, error)
@@ -47,9 +45,7 @@ type (
 	tokenService interface {
 		GetUserIDFromToken(ctx context.Context, token string) (uuid.UUID, error)
 		VerifyToken(ctx context.Context, token string, toAllow ...model.UserRole) error
-		VerifySelf(ctx context.Context, token string, id uuid.UUID) error
-		VerifyParticipant(ctx context.Context, userID uuid.UUID, projectID int) error
-		VerifyParticipantRole(ctx context.Context, userID uuid.UUID, projectID int, toAllow ...model.ParticipantRole) error
+		VerifySelf(ctx context.Context, userIDFromToken, userIDReq uuid.UUID) error
 	}
 
 	projectService interface {
@@ -61,14 +57,19 @@ type (
 	}
 
 	participantService interface {
-		AddParticipant(ctx context.Context, participant *AddParticipantReq) (*model.Participant, error)
+		AddParticipant(ctx context.Context, isOwnerCreation bool, participant *AddedParticipant) (*model.Participant, error)
+		UpdateParticipantRole(ctx context.Context, participant *ParticipantResp) (*model.Participant, error)
+		DeleteParticipant(ctx context.Context, participantID int) error
 		GetParticipantByID(ctx context.Context, id int) (*model.Participant, error)
 		GetParticipants(ctx context.Context, projectID int) ([]model.Participant, error)
-		DeleteParticipant(ctx context.Context, userID uuid.UUID, projectID int) error
+		VerifyParticipant(ctx context.Context, userID uuid.UUID, projectID int) (*model.Participant, error)
+		VerifyParticipantRole(ctx context.Context, userID uuid.UUID, projectID int, toAllow ...model.ParticipantRole) error
+		VerifyParticipantByID(ctx context.Context, participantID int) (*model.Participant, error)
+		VerifyParticipantRoleByID(ctx context.Context, participantID int, toAllow ...model.ParticipantRole) error
 	}
 
 	taskService interface {
-		CreateTask(ctx context.Context, task *CreateTaskReq) (*model.Task, error)
+		CreateTask(ctx context.Context, creatorUserID uuid.UUID, task *CreateTaskReq) (*model.Task, error)
 		UpdateTask(ctx context.Context, taskReq *UpdateTaskReq) (*model.Task, error)
 		DeleteTask(ctx context.Context, id int) error
 		GetTasks(ctx context.Context, taskReq *GetTasksReq) ([]model.Task, int, error)
@@ -95,22 +96,24 @@ func New(opts ...OptionFunc) *Server {
 	}
 
 	rtr := gin.Default()
-
-	rtr.Use(cors.Default())
-
+	cfg := cors.DefaultConfig()
+	cfg.AllowHeaders = append(cfg.AllowHeaders, "Authorization", "Access-Control-Allow-Origin")
+	cfg.AllowAllOrigins = true
+	cors.New(cfg)
+	rtr.Use(cors.New(cfg))
 	// /api/*
 	apiRtr := rtr.Group("/api")
 	// /api/auth
 	apiRtr.POST("/auth", s.auth)
-	apiRtr.OPTIONS("/auth", cors.Default())
 	// /api/register
 	apiRtr.POST("/register", s.register)
 
 	// /api/user
 	usersRtr := apiRtr.Group("/user")
-	usersRtr.GET("/", s.getPartialUsers)
+	usersRtr.GET("/search", s.getPartialUsers)
+	usersRtr.GET("/", s.authMiddleware(model.Admin, model.ProjectManager, model.Student), s.getUserProfileFromToken)
 	usersRtr.GET("/:id", s.getUserProfile)
-	usersRtr.POST("/:id", s.selfUpdateMiddleware(), s.updateUser)
+	usersRtr.PATCH("/", s.parseBodyToUpdatedUser, s.selfUpdateMiddleware(), s.updateUser)
 	//usersRtr.DELETE("/:id", s.deleteUser)
 
 	// /api/pm
@@ -119,26 +122,32 @@ func New(opts ...OptionFunc) *Server {
 
 	// /api/project
 	projectRtr := apiRtr.Group("/project", s.authMiddleware(model.Admin, model.ProjectManager, model.Student))
-	//projectRtr.GET("/projects", s.getProjects) ПОИСК ПРОЕКТОВ
-	//projectRtr.POST("/", s.verifyParticipantMiddleware(), s.verifyParticipantRoleMiddleware(model.RoleOwner), s.updateProject)
-	projectRtr.POST("/", s.updateProject)
-	projectRtr.GET("/:project_id", s.getProjectInfo)
-	projectRtr.DELETE("/:project_id", s.verifyParticipantRoleMiddleware(model.RoleOwner), s.deleteProject)
-	projectRtr.POST("/:project_id/", s.verifyParticipantRoleMiddleware(model.RoleOwner, model.RoleTeamlead), s.addParticipant)
-	projectRtr.DELETE("/:project_id/:user_id", s.verifyParticipantRoleMiddleware(model.RoleOwner, model.RoleTeamlead), s.deleteParticipant)
+	projectRtr.GET("/projects", s.getUserProjects)
+	projectRtr.PATCH("/", s.parseBodyToUpdatedProject,
+		s.verifyParticipantRoleMiddleware(model.RoleOwner), s.updateProject)
+	projectRtr.GET("/:projectId", s.getProjectInfo)
+	projectRtr.DELETE("/remove", s.parseBodyToDeletedProject,
+		s.verifyParticipantRoleMiddleware(model.RoleOwner), s.deleteProject)
+	projectRtr.POST("/add-participant", s.parseBodyToAddedParticipant,
+		s.verifyParticipantRoleMiddleware(model.RoleOwner, model.RoleTeamlead), s.addParticipant)
+	projectRtr.PATCH("/update-participant", s.parseBodyToParticipantResp,
+		s.verifyParticipantRoleMiddleware(model.RoleOwner), s.updateParticipant)
+	projectRtr.DELETE("/remove-participant", s.parseBodyToParticipantResp,
+		s.verifyParticipantRoleMiddleware(model.RoleOwner, model.RoleTeamlead), s.deleteParticipant)
 
 	// /api/project/task
-	taskRtr := projectRtr.Group("/:project_id/task", s.verifyParticipantMiddleware())
+	taskRtr := projectRtr.Group("/:projectId/task", s.verifyParticipantMiddleware())
 	taskRtr.POST("/", s.createTask)
-	taskRtr.PUT("/", s.updateTask)
-	taskRtr.GET("/:task_id", s.getTaskInfo)
-	taskRtr.DELETE("/:task_id", s.deleteTask)
+	taskRtr.PATCH("/", s.updateTask)
+	taskRtr.GET("/:taskId", s.getTaskInfo)
+	taskRtr.DELETE("/", s.deleteTask)
 
 	// /api/admin
 	adminRtr := apiRtr.Group("/admin", s.authMiddleware(model.Admin))
 	// /api/admin/users
-	adminRtr.GET("/users", s.getFullUsers)
-	adminRtr.POST("/users", s.updateUser)
+	adminRtr.GET("/users/search", s.getFullUsers)
+	adminRtr.GET("/users/search/:searchParam", s.getFullUsers)
+	adminRtr.POST("/users", s.parseBodyToUpdatedUser, s.updateUser)
 	// /api/admin/projects
 	adminRtr.GET("/projects", s.getProjects)
 

@@ -66,30 +66,36 @@ func (s *service) CreateUser(ctx context.Context, userReq *api.CreateUserReq) (*
 	return user, token, err
 }
 
-func (s *service) AuthUser(ctx context.Context, username, password string) (string, error) {
+func (s *service) AuthUser(ctx context.Context, username, password string) (*model.User, string, error) {
 	if username == "" || password == "" {
-		return "", ierr.ErrEmptyUsernameOrPassword
+		return nil, "", ierr.ErrEmptyUsernameOrPassword
 	}
 	user, err := s.repo.GetUser(ctx, repository.NewUserFilter().ByUsername(username))
 	if err != nil {
-		return "", err
+		return nil, "", err
 	}
 	if err = bcrypt.CompareHashAndPassword([]byte(user.HashedPassword), []byte(password)); err != nil {
-		return "", err
+		return nil, "", err
 	}
-	return model.GenerateToken(user)
+	token, err := model.GenerateToken(user)
+	if err != nil {
+		return nil, "", err
+	}
+	return user, token, nil
 }
 
-func (s *service) GetFullUsers(ctx context.Context, userReq *api.GetUserReq) ([]model.User, int, error) {
+func (s *service) GetFullUsers(ctx context.Context, searchParam string) ([]model.User, int, error) {
 	filter := repository.NewUserFilter().
-		WithPaginator(uint64(userReq.Limit), uint64(userReq.Offset)).
-		ByUsername(userReq.Username).ByEmail(userReq.Email)
+		// WithPaginator(uint64(userReq.Limit), uint64(userReq.Offset)).
+		ByLike(searchParam)
 
 	count, err := s.repo.GetFullCountByFilter(ctx, filter)
 	if err != nil {
 		return nil, 0, err
 	}
-
+	if count == 0 {
+		return nil, 0, ierr.ErrUsersNotFound
+	}
 	users, err := s.repo.GetFullUsers(ctx, filter)
 	if err != nil {
 		return nil, 0, err
@@ -102,14 +108,14 @@ func (s *service) GetPartialUsers(ctx context.Context, userReq *api.GetUserReq) 
 		return nil, 0, ierr.ErrInvalidProjectID
 	}
 	filter := repository.NewUserFilter().
-		WithPaginator(uint64(userReq.Limit), uint64(userReq.Offset)).
-		ByUsernameLike(userReq.Username).ByEmailLike(userReq.Email)
+		// WithPaginator(uint64(userReq.Limit), uint64(userReq.Offset)).
+		ByLike(userReq.SearchText).ByNotAtProject(userReq.ProjectID)
 
-	if userReq.IsOnProject {
-		filter = filter.ByAtProject(userReq.ProjectID)
-	} else {
-		filter = filter.ByNotAtProject(userReq.ProjectID)
-	}
+	// if userReq.IsOnProject {
+	// 	filter = filter.ByAtProject(userReq.ProjectID)
+	// } else {
+	// 	filter = filter.ByNotAtProject(userReq.ProjectID)
+	// }
 	count, err := s.repo.GetPartialCountByFilter(ctx, filter)
 	if err != nil {
 		return nil, 0, err
@@ -153,9 +159,9 @@ func (s *service) UpdateUser(ctx context.Context, userReq *api.UpdateUserReq) (*
 }
 
 func (s *service) DeleteUser(ctx context.Context, guid uuid.UUID) error {
-	if _, err := s.repo.GetUser(ctx, repository.NewUserFilter().ByID(guid)); err != nil {
-		return err
-	}
+	// if _, err := s.repo.GetUser(ctx, repository.NewUserFilter().ByID(guid)); err != nil {
+	// 	return err
+	// }
 	return s.repo.DeleteUser(ctx, guid)
 }
 

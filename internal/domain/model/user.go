@@ -5,28 +5,27 @@ import (
 )
 
 const (
-	Student        UserRole = "student"
-	Admin          UserRole = "admin"
-	ProjectManager UserRole = "project_manager"
-	A
+	Student        UserRole = "STUDENT"
+	Admin          UserRole = "ADMIN"
+	ProjectManager UserRole = "PROJECT_MANAGER"
 )
 
 type (
 	UserRole string
 	User     struct {
 		ShortUser
-		HashedPassword string `json:"hashed_password"`
+		HashedPassword string `json:"hashedPassword"`
 	}
 	ShortUser struct {
 		ID             uuid.UUID `json:"id"`
 		Role           UserRole  `json:"role"`
-		ColorCode      string    `json:"color_code"`
+		ColorCode      string    `json:"avatarColor"`
 		Email          string    `json:"email"`
 		Username       string    `json:"username"`
-		FirstName      string    `json:"first_name"`
-		LastName       string    `json:"last_name"`
+		FirstName      string    `json:"firstName"`
+		LastName       string    `json:"lastName"`
 		Group          string    `json:"group"`
-		GithubUsername string    `json:"github_username"`
+		GithubUsername string    `json:"ghUsername"`
 	}
 	Profile struct {
 		ShortUser

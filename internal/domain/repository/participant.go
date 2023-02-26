@@ -12,7 +12,7 @@ import (
 )
 
 func (r *Repository) AddParticipant(ctx context.Context, participant *model.Participant) error {
-	row := r.sq.Insert("participants").
+	if err := r.sq.Insert("participants").
 		Columns(
 			"role",
 			"user_id",
@@ -24,12 +24,10 @@ func (r *Repository) AddParticipant(ctx context.Context, participant *model.Part
 			participant.ProjectID,
 		).
 		Suffix("RETURNING \"id\"").
-		QueryRowContext(ctx)
-
-	if err := row.Scan(&participant.ID); err != nil {
+		QueryRowContext(ctx).
+		Scan(&participant.ID); err != nil {
 		return fmt.Errorf("error while scanning sql row: %w", err)
 	}
-
 	return nil
 }
 
@@ -93,7 +91,7 @@ func (r *Repository) GetParticipants(ctx context.Context, filter *ParticipantFil
 			r.logger.Error("error while closing sql rows", zap.Error(err))
 		}
 	}(rows)
-	
+
 	participants := make([]model.Participant, 0)
 	for rows.Next() {
 		p := model.Participant{}
@@ -111,7 +109,14 @@ func (r *Repository) GetParticipants(ctx context.Context, filter *ParticipantFil
 	}
 	return participants, nil
 }
-
+func (r *Repository) UpdateParticipantRole(ctx context.Context, participantID int, role string) error {
+	_, err := r.sq.Update("participants").
+		SetMap(map[string]interface{}{
+			"role": role,
+		}).Where(sq.Eq{"id": participantID}).
+		ExecContext(ctx)
+	return err
+}
 func (r *Repository) DeleteParticipant(ctx context.Context, id int) error {
 	_, err := r.sq.Delete("participants").
 		Where(sq.Eq{"id": id}).ExecContext(ctx)

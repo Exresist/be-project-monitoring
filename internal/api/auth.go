@@ -13,10 +13,10 @@ type (
 	CreateUserReq struct {
 		Email          string `json:"email"`
 		Username       string `json:"username"`
-		FirstName      string `json:"first_name"`
-		LastName       string `json:"last_name"`
+		FirstName      string `json:"firstName"`
+		LastName       string `json:"lastName"`
 		Group          string `json:"group"`
-		GithubUsername string `json:"github_username"`
+		GithubUsername string `json:"ghUsername"`
 		Password       string `json:"password"`
 		Role           string `json:"role"`
 	}
@@ -26,7 +26,7 @@ type (
 	}
 
 	userResp struct {
-		User  *model.User `json:"user,omitempty"`
+		User  *model.User `json:"user"`
 		Token string      `json:"token"`
 	}
 )
@@ -63,11 +63,11 @@ func (s *Server) auth(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return
 	}
-	token, err := s.svc.AuthUser(c.Request.Context(), userReq.Username, userReq.Password)
+	user, token, err := s.svc.AuthUser(c.Request.Context(), userReq.Username, userReq.Password)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{errField: err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, userResp{Token: token})
+	c.JSON(http.StatusOK, userResp{User: user, Token: token})
 }
