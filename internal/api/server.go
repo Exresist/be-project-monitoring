@@ -124,7 +124,7 @@ func New(opts ...OptionFunc) *Server {
 	projectRtr := apiRtr.Group("/project", s.authMiddleware(model.Admin, model.ProjectManager, model.Student))
 	projectRtr.GET("/projects", s.getUserProjects)
 	projectRtr.PATCH("/", s.parseBodyToUpdatedProject,
-		s.verifyParticipantRoleMiddleware(model.RoleOwner), s.updateProject)
+		s.verifyParticipantRoleMiddleware(model.RoleOwner, model.RoleTeamlead), s.updateProject)
 	projectRtr.GET("/:projectId", s.getProjectInfo)
 	projectRtr.DELETE("/remove", s.parseBodyToDeletedProject,
 		s.verifyParticipantRoleMiddleware(model.RoleOwner), s.deleteProject)

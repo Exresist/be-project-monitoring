@@ -9,6 +9,7 @@ import (
 	"be-project-monitoring/internal/domain/repository"
 	ierr "be-project-monitoring/internal/errors"
 
+	"github.com/AvraamMavridis/randomcolor"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -23,6 +24,7 @@ func (s *service) CreateUser(ctx context.Context, userReq *api.CreateUserReq) (*
 	user := &model.User{
 		ShortUser: model.ShortUser{
 			Role:           model.UserRole(userReq.Role),
+			ColorCode: 			randomcolor.GetRandomColorInHex(),
 			Email:          userReq.Email,
 			Username:       userReq.Username,
 			FirstName:      userReq.FirstName,
