@@ -2,7 +2,6 @@ package service
 
 import (
 	"be-project-monitoring/internal/domain/model"
-	"be-project-monitoring/internal/domain/repository"
 	ierr "be-project-monitoring/internal/errors"
 	"context"
 
@@ -50,35 +49,9 @@ func (s *service) GetUserIDFromToken(ctx context.Context, token string) (uuid.UU
 	return uuid.Parse(cl["id"].(string))
 }
 
-func (s *service) VerifySelf(ctx context.Context, token string, id uuid.UUID) error {
-	tokenID, err := s.GetUserIDFromToken(ctx, token)
-	if err != nil {
-		return err
-	}
+func (s *service) VerifySelf(ctx context.Context, tokenID, id uuid.UUID) error {
 	if tokenID != id {
 		return ierr.ErrAccessDeniedAnotherUser
 	}
 	return nil
-}
-func (s *service) VerifyParticipant(ctx context.Context, userID uuid.UUID, projectID int) error {
-	_, err := s.repo.GetParticipant(ctx, repository.NewParticipantFilter().
-		ByUserID(userID).ByProjectID(projectID))
-	if err != nil {
-		return ierr.ErrUserIsNotOnProject
-	}
-	return nil
-}
-func (s *service) VerifyParticipantRole(ctx context.Context, userID uuid.UUID, projectID int, toAllow ...model.ParticipantRole) error {
-	participant, err := s.repo.GetParticipant(ctx, repository.NewParticipantFilter().
-		ByUserID(userID).ByProjectID(projectID))
-	if err != nil {
-		return err
-	}
-	// Checking if role is in the list of the allowed roles
-	for _, v := range toAllow {
-		if participant.Role == v {
-			return nil
-		}
-	}
-	return ierr.ErrAccessDeniedWrongParticipantRole
 }

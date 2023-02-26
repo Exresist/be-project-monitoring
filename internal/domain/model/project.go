@@ -8,20 +8,20 @@ import (
 type (
 	Project struct {
 		ShortProject
-		ReportURL  sql.NullString `json:"report_url"`
-		ReportName sql.NullString `json:"report_name"`
-		RepoURL    sql.NullString `json:"repo_url"`
+		ReportURL  sql.NullString `json:"reportUrl"`
+		ReportName sql.NullString `json:"reportName"`
+		RepoURL    sql.NullString `json:"repo"`
 	}
 	ShortProject struct {
 		ID          int            `json:"id"`
 		Name        string         `json:"name"`
 		Description sql.NullString `json:"description"`
-		PhotoURL    sql.NullString `json:"photo_url"`
-		ActiveTo    time.Time      `json:"active_to"`
+		PhotoURL    sql.NullString `json:"avatar"`
+		ActiveTo    time.Time      `json:"dueDate"`
 	}
 	ProjectInfo struct {
 		Project
-		Users []ShortUser
-		Tasks []ShortTask
+		Participants []Participant
+		Tasks        []Task
 	}
 )

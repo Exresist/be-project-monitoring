@@ -44,9 +44,10 @@ type (
 
 	participantRepo interface {
 		AddParticipant(ctx context.Context, participant *model.Participant) error
+		UpdateParticipantRole(ctx context.Context, participantID int, role string) error
+		DeleteParticipant(ctx context.Context, id int) error
 		GetParticipant(ctx context.Context, filter *repository.ParticipantFilter) (*model.Participant, error)
 		GetParticipants(ctx context.Context, filter *repository.ParticipantFilter) ([]model.Participant, error)
-		DeleteParticipant(ctx context.Context, id int) error
 	}
 
 	taskRepo interface {

@@ -1,8 +1,6 @@
 package api
 
 import (
-	"encoding/json"
-	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -45,13 +43,13 @@ func (s *Server) selfUpdateMiddleware() func(c *gin.Context) {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{errField: err.Error()})
 			return
 		}
-		userID, err := uuid.Parse(c.Param("id"))
+		userIDFromToken, err := s.svc.GetUserIDFromToken(c, token)
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 			return
 		}
 		ctx := c.Request.Context()
-		if err := s.svc.VerifySelf(ctx, token, userID); err != nil {
+		if err := s.svc.VerifySelf(ctx, userIDFromToken, updatedUser.ID); err != nil {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{errField: err.Error()})
 			return
 		}
@@ -61,12 +59,9 @@ func (s *Server) verifyParticipantMiddleware() func(c *gin.Context) {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
 		userID := c.MustGet(string(domain.UserIDCtx)).(uuid.UUID)
-		projectID, err := strconv.Atoi(c.Param("project_id"))
-		if err != nil {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{errField: err.Error()})
-			return
-		}
-		if err := s.svc.VerifyParticipant(ctx, userID, projectID); err != nil {
+		//projectID := c.MustGet(string(domain.ProjectIDCtx)).(int)
+		projectID, _ := strconv.Atoi(c.Param("projectId"))
+		if _, err := s.svc.VerifyParticipant(ctx, userID, projectID); err != nil {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{errField: err.Error()})
 			return
 		}
@@ -77,43 +72,8 @@ func (s *Server) verifyParticipantRoleMiddleware(toAllow ...model.ParticipantRol
 		ctx := c.Request.Context()
 		userID := c.MustGet(string(domain.UserIDCtx)).(uuid.UUID)
 		//userID = uuid.MustParse(c.GetString(string(domain.UserIDCtx)))
-		str := &struct{
-			ProjectID string `json:"project_id"`
-		}{}
-		if err := json.NewDecoder(c.Request.Body).Decode(str); err != nil{
-			fmt.Println("11111")
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{errField: err.Error()})
-			return
-		}
-		projectID, err := strconv.Atoi(c.Param("project_id"))
-		if err != nil {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{errField: err.Error()})
-			return
-		}
-		if err := s.svc.VerifyParticipantRole(ctx, userID, projectID, toAllow...); err != nil {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{errField: err.Error()})
-			return
-		}
-	}
-}
-func (s *Server) setProjectIDIntoCtxMiddleware(toAllow ...model.ParticipantRole) func(c *gin.Context) {
-	return func(c *gin.Context) {
-		ctx := c.Request.Context()
-		userID := c.MustGet(string(domain.UserIDCtx)).(uuid.UUID)
-		//userID = uuid.MustParse(c.GetString(string(domain.UserIDCtx)))
-		// str := &struct{
-		// 	ProjectID string `json:"project_id"`
-		// }{}
-		// if err := json.NewDecoder(c.Request.Body).Decode(str); err != nil{
-		// 	fmt.Println("11111")
-		// 	c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{errField: err.Error()})
-		// 	return
-		// }
-		projectID, err := strconv.Atoi(c.Param("project_id"))
-		if err != nil {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{errField: err.Error()})
-			return
-		}
+		projectID := c.MustGet(string(domain.ProjectIDCtx)).(int)
+
 		if err := s.svc.VerifyParticipantRole(ctx, userID, projectID, toAllow...); err != nil {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{errField: err.Error()})
 			return
