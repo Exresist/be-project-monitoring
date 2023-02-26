@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/AvraamMavridis/randomcolor"
 	sq "github.com/Masterminds/squirrel"
 	"github.com/google/uuid"
 	"github.com/lib/pq"
@@ -210,7 +209,7 @@ func (r *Repository) InsertUser(ctx context.Context, user *model.User) error {
 			"last_name", "\"group\"",
 			"github_username", "hashed_password").
 		Values(user.ID, user.Role,
-			randomcolor.GetRandomColorInHex(), user.Email,
+			user.ColorCode, user.Email,
 			user.Username, user.FirstName,
 			user.LastName, user.Group,
 			user.GithubUsername, user.HashedPassword).
