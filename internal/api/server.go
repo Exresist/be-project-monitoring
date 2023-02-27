@@ -54,6 +54,7 @@ type (
 		DeleteProject(ctx context.Context, id int) error
 		GetProjects(ctx context.Context, projectReq *GetProjectsReq) ([]model.Project, int, error)
 		GetProjectInfo(ctx context.Context, id int) (*model.ProjectInfo, error)
+		GetProjectCommits(ctx context.Context, id int) error
 	}
 
 	participantService interface {
@@ -126,6 +127,7 @@ func New(opts ...OptionFunc) *Server {
 	projectRtr.PATCH("/", s.parseBodyToUpdatedProject,
 		s.verifyParticipantRoleMiddleware(model.RoleOwner, model.RoleTeamlead), s.updateProject)
 	projectRtr.GET("/:projectId", s.getProjectInfo)
+	projectRtr.GET("/:projectId/commits", s.getProjectCommits)
 	projectRtr.DELETE("/remove", s.parseBodyToDeletedProject,
 		s.verifyParticipantRoleMiddleware(model.RoleOwner), s.deleteProject)
 	projectRtr.POST("/add-participant", s.parseBodyToAddedParticipant,

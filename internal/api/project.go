@@ -197,6 +197,15 @@ func (s *Server) getProjectInfo(c *gin.Context) {
 	}
 	s.sendProjectInfoResponse(c, projectID)
 }
+func (s *Server) getProjectCommits(c *gin.Context) {
+	projectID, err := strconv.Atoi(c.Param("projectId"))
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, err)
+		return
+	}
+	s.svc.GetProjectCommits(c.Request.Context(), projectID)
+	c.JSON(http.StatusOK, "AMOGUS")
+}
 func (s *Server) sendProjectInfoResponse(c *gin.Context, projectID int) {
 	projectInfo, err := s.svc.GetProjectInfo(c.Request.Context(), projectID)
 	if err != nil {
