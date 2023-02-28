@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"errors"
-	"fmt"
 	"strings"
 	"time"
 
@@ -83,27 +82,70 @@ func (s *service) DeleteProject(ctx context.Context, id int) error {
 	// }
 	return s.repo.DeleteProject(ctx, id)
 }
-func (s *service) GetProjectCommits(ctx context.Context, id int) error {
+func (s *service) GetProjectCommits(ctx context.Context, id int) ([]model.CommitsInfo, error) {
 	project, err := s.repo.GetProject(ctx, repository.NewProjectFilter().ByID(id))
 	if err != nil {
-		return err
+		return nil, err
+	}
+
+	users, err := s.repo.GetPartialUsers(ctx, repository.NewUserFilter().ByAtProject(id))
+	if err != nil {
+		return nil, err
+	}
+
+	usersCommitsInfo := make(map[string]model.CommitsInfo, len(users))
+	for _, user := range users {
+		usersCommitsInfo[user.GithubUsername] = model.CommitsInfo{
+			GithubUsername: user.GithubUsername,
+			Username:       user.Username,
+		}
 	}
 
 	if !project.RepoURL.Valid {
-		return ierr.ErrRepositoryURLIsEmpty
+		return nil, ierr.ErrRepositoryURLIsEmpty
 	}
 	repoURL := strings.Split(project.RepoURL.String, "/") //https://github.com/Exresist/be-project-monitoring
 	if len(repoURL) != 5 {
-		return ierr.ErrRepositoryURLWrongFormat
+		return nil, ierr.ErrRepositoryURLWrongFormat
 	}
 	// owner := repoURL[3]
 	// repoName := repoURL[4]
 	commits, _, err := s.githubCl.Repositories.ListCommits(ctx, repoURL[3], repoURL[4], nil)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	fmt.Println(commits)
-	return nil
+
+	for _, commit := range commits {
+		ghUsername := commit.Author.GetLogin()
+		if info, ok := usersCommitsInfo[ghUsername]; ok {
+			curDate := commit.Commit.Author.GetDate()
+			//checking only first because otherwise we're updating both
+			if !info.FirstCommitDate.IsZero() {
+				if info.FirstCommitDate.After(curDate) {
+					info.FirstCommitDate = curDate
+				}
+				if info.LastCommitDate.Before(curDate) {
+					info.LastCommitDate = curDate
+				}
+			} else {
+				info.FirstCommitDate = curDate
+				info.LastCommitDate = curDate
+			}
+
+			info.FirstCommitDate = commit.Commit.Author.GetDate()
+			info.LastCommitDate = commit.Commit.Author.GetDate()
+			info.Total++
+			usersCommitsInfo[ghUsername] = info
+		}
+	}
+
+	res := make([]model.CommitsInfo, 0, len(usersCommitsInfo))
+
+	for _, commitInfo := range usersCommitsInfo {
+		res = append(res, commitInfo)
+	}
+
+	return res, nil
 }
 func (s *service) GetProjectInfo(ctx context.Context, id int) (*model.ProjectInfo, error) {
 	project, err := s.repo.GetProject(ctx, repository.NewProjectFilter().ByID(id))

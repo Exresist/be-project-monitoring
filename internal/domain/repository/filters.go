@@ -58,6 +58,7 @@ func (f *UserFilter) ByLike(text string) *UserFilter {
 //		f.isLike = true
 //		return f
 //	}
+
 func (f *UserFilter) ByAtProject(projectID int) *UserFilter {
 	f.projectID = projectID
 	f.isOnProject = true

@@ -1,13 +1,12 @@
 package api
 
 import (
+	"be-project-monitoring/internal/domain"
+	"be-project-monitoring/internal/domain/model"
 	"encoding/json"
 	"net/http"
 	"strconv"
 	"time"
-
-	"be-project-monitoring/internal/domain"
-	"be-project-monitoring/internal/domain/model"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -72,6 +71,13 @@ type (
 		ProjectResp
 		Participants []model.Participant `json:"participants"`
 		Tasks        []ShortTaskResp     `json:"tasks"`
+	}
+
+	commitsInfoResp struct {
+		GithubUsername string `json:"githubUsername"`
+		Username       string `json:"username"`
+		Total          int    `json:"total"`
+		TotalHours     int    `json:"totalHours"`
 	}
 )
 
@@ -203,8 +209,23 @@ func (s *Server) getProjectCommits(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusBadRequest, err)
 		return
 	}
-	s.svc.GetProjectCommits(c.Request.Context(), projectID)
-	c.JSON(http.StatusOK, "AMOGUS")
+	commitsInfo, err := s.svc.GetProjectCommits(c.Request.Context(), projectID)
+	if err != nil {
+		return
+	}
+	resp := make([]commitsInfoResp, 0, len(commitsInfo))
+	for _, info := range commitsInfo {
+		resp = append(resp,
+			commitsInfoResp{
+				GithubUsername: info.GithubUsername,
+				Username:       info.Username,
+				Total:          info.Total,
+				TotalHours:     int(info.LastCommitDate.Sub(info.FirstCommitDate).Hours()),
+			},
+		)
+	}
+
+	c.JSON(http.StatusOK, commitsInfo)
 }
 func (s *Server) sendProjectInfoResponse(c *gin.Context, projectID int) {
 	projectInfo, err := s.svc.GetProjectInfo(c.Request.Context(), projectID)

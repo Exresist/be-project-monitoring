@@ -54,7 +54,7 @@ type (
 		DeleteProject(ctx context.Context, id int) error
 		GetProjects(ctx context.Context, projectReq *GetProjectsReq) ([]model.Project, int, error)
 		GetProjectInfo(ctx context.Context, id int) (*model.ProjectInfo, error)
-		GetProjectCommits(ctx context.Context, id int) error
+		GetProjectCommits(ctx context.Context, id int) ([]model.CommitsInfo, error)
 	}
 
 	participantService interface {

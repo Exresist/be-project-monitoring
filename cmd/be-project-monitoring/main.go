@@ -1,16 +1,17 @@
 package main
 
 import (
-	"be-project-monitoring/internal/api"
-	"be-project-monitoring/internal/db"
-	"be-project-monitoring/internal/domain/repository"
-	"be-project-monitoring/internal/domain/service"
 	"context"
 	_ "embed"
 	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"be-project-monitoring/internal/api"
+	"be-project-monitoring/internal/db"
+	"be-project-monitoring/internal/domain/repository"
+	"be-project-monitoring/internal/domain/service"
 
 	"github.com/google/go-github/v49/github"
 	"github.com/kelseyhightower/envconfig"
