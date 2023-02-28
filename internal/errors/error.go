@@ -47,6 +47,8 @@ var (
 	ErrUserIsNotOnProject               = errors.New("user is not on project")
 	ErrInvalidActiveTo                  = errors.New("invalid active_to date")
 	ErrTeamLeadAlreadyExists            = errors.New("team lead already exists")
+	ErrRepositoryURLIsEmpty             = errors.New("repository url is empty")
+	ErrRepositoryURLWrongFormat         = errors.New("repository url has wrong format")
 )
 
 // package ierr

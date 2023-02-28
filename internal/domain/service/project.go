@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -82,7 +83,28 @@ func (s *service) DeleteProject(ctx context.Context, id int) error {
 	// }
 	return s.repo.DeleteProject(ctx, id)
 }
+func (s *service) GetProjectCommits(ctx context.Context, id int) error {
+	project, err := s.repo.GetProject(ctx, repository.NewProjectFilter().ByID(id))
+	if err != nil {
+		return err
+	}
 
+	if !project.RepoURL.Valid {
+		return ierr.ErrRepositoryURLIsEmpty
+	}
+	repoURL := strings.Split(project.RepoURL.String, "/") //https://github.com/Exresist/be-project-monitoring
+	if len(repoURL) != 5 {
+		return ierr.ErrRepositoryURLWrongFormat
+	}
+	// owner := repoURL[3]
+	// repoName := repoURL[4]
+	commits, _, err := s.githubCl.Repositories.ListCommits(ctx, repoURL[3], repoURL[4], nil)
+	if err != nil {
+		return err
+	}
+	fmt.Println(commits)
+	return nil
+}
 func (s *service) GetProjectInfo(ctx context.Context, id int) (*model.ProjectInfo, error) {
 	project, err := s.repo.GetProject(ctx, repository.NewProjectFilter().ByID(id))
 	if err != nil {
