@@ -1,15 +1,14 @@
 package service
 
 import (
-	"context"
-	"errors"
-	"strings"
-	"time"
-
 	"be-project-monitoring/internal/api"
 	"be-project-monitoring/internal/domain/model"
 	"be-project-monitoring/internal/domain/repository"
 	ierr "be-project-monitoring/internal/errors"
+	"context"
+	"errors"
+	"strings"
+	"time"
 )
 
 func (s *service) GetProjects(ctx context.Context, projectReq *api.GetProjectsReq) ([]model.Project, int, error) {
@@ -119,7 +118,7 @@ func (s *service) GetProjectCommits(ctx context.Context, id int) ([]model.Commit
 		ghUsername := commit.Author.GetLogin()
 		if info, ok := usersCommitsInfo[ghUsername]; ok {
 			curDate := commit.Commit.Author.GetDate()
-			//checking only first because otherwise we're updating both
+			//checks only first because otherwise we're updating both
 			if !info.FirstCommitDate.IsZero() {
 				if info.FirstCommitDate.After(curDate) {
 					info.FirstCommitDate = curDate
@@ -132,8 +131,6 @@ func (s *service) GetProjectCommits(ctx context.Context, id int) ([]model.Commit
 				info.LastCommitDate = curDate
 			}
 
-			info.FirstCommitDate = commit.Commit.Author.GetDate()
-			info.LastCommitDate = commit.Commit.Author.GetDate()
 			info.Total++
 			usersCommitsInfo[ghUsername] = info
 		}

@@ -225,7 +225,7 @@ func (s *Server) getProjectCommits(c *gin.Context) {
 		)
 	}
 
-	c.JSON(http.StatusOK, commitsInfo)
+	c.JSON(http.StatusOK, resp)
 }
 func (s *Server) sendProjectInfoResponse(c *gin.Context, projectID int) {
 	projectInfo, err := s.svc.GetProjectInfo(c.Request.Context(), projectID)
