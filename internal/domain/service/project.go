@@ -94,10 +94,7 @@ func (s *service) GetProjectCommits(ctx context.Context, id int) ([]model.Commit
 
 	usersCommitsInfo := make(map[string]model.CommitsInfo, len(users))
 	for _, user := range users {
-		usersCommitsInfo[user.GithubUsername] = model.CommitsInfo{
-			GithubUsername: user.GithubUsername,
-			Username:       user.Username,
-		}
+		usersCommitsInfo[user.GithubUsername] = model.CommitsInfo{ShortUser: user}
 	}
 
 	if !project.RepoURL.Valid {
@@ -131,7 +128,7 @@ func (s *service) GetProjectCommits(ctx context.Context, id int) ([]model.Commit
 				info.LastCommitDate = curDate
 			}
 
-			info.Total++
+			info.TotalCommits++
 			usersCommitsInfo[ghUsername] = info
 		}
 	}

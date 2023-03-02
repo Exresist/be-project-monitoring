@@ -1,12 +1,13 @@
 package api
 
 import (
-	"be-project-monitoring/internal/domain"
-	"be-project-monitoring/internal/domain/model"
 	"encoding/json"
 	"net/http"
 	"strconv"
 	"time"
+
+	"be-project-monitoring/internal/domain"
+	"be-project-monitoring/internal/domain/model"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -74,10 +75,11 @@ type (
 	}
 
 	commitsInfoResp struct {
-		GithubUsername string `json:"githubUsername"`
-		Username       string `json:"username"`
-		Total          int    `json:"total"`
-		TotalHours     int    `json:"totalHours"`
+		User    model.ShortUser `json:"user"`
+		Metrics struct {
+			Count int `json:"count"`
+			Time  int `json:"time"`
+		} `json:"metrics"`
 	}
 )
 
@@ -217,10 +219,13 @@ func (s *Server) getProjectCommits(c *gin.Context) {
 	for _, info := range commitsInfo {
 		resp = append(resp,
 			commitsInfoResp{
-				GithubUsername: info.GithubUsername,
-				Username:       info.Username,
-				Total:          info.Total,
-				TotalHours:     int(info.LastCommitDate.Sub(info.FirstCommitDate).Hours()),
+				User: info.ShortUser,
+				Metrics: struct {
+					Count int `json:"count"`
+					Time  int `json:"time"`
+				}{
+					Count: info.TotalCommits,
+					Time:  int(info.LastCommitDate.Sub(info.FirstCommitDate).Hours())},
 			},
 		)
 	}
