@@ -1,13 +1,15 @@
 package api
 
 import (
-	"be-project-monitoring/internal/domain"
-	"be-project-monitoring/internal/domain/model"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
 	"time"
+
+	"be-project-monitoring/internal/domain"
+	"be-project-monitoring/internal/domain/model"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -285,17 +287,18 @@ func (s *Server) getProjectReport(c *gin.Context) {
 		xlsx.SetCellValue("Sheet1", fmt.Sprintf("F%v", i+2), int(commitInfo.LastCommitDate.Sub(commitInfo.FirstCommitDate).Hours()))
 	}
 
-	c.Writer.Header().Set("Content-Type", "application/octet-stream")
-	c.Writer.Header().Set("Content-Disposition", "attachment; filename="+"Project_Report_"+strconv.Itoa(projectID)+".xlsx")
-	c.Writer.Header().Set("Content-Transfer-Encoding", "binary")
-	c.Writer.Header().Set("Expires", "0")
-
-	err = xlsx.Write(c.Writer)
+	buffer, err := xlsx.WriteToBuffer()
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{errField: err.Error()})
 		return
 	}
 
+	res := base64.StdEncoding.EncodeToString(buffer.Bytes())
+	c.JSON(http.StatusOK, struct {
+		Data string `json:"data"`
+	}{
+		Data: res,
+	})
 }
 
 func (s *Server) sendProjectInfoResponse(c *gin.Context, projectID int) {
