@@ -128,6 +128,7 @@ func New(opts ...OptionFunc) *Server {
 		s.verifyParticipantRoleMiddleware(model.RoleOwner, model.RoleTeamlead), s.updateProject)
 	projectRtr.GET("/:projectId", s.getProjectInfo)
 	projectRtr.GET("/:projectId/commits", s.getProjectCommits)
+	projectRtr.GET("/:projectId/report", s.getProjectReport)
 	projectRtr.DELETE("/remove", s.parseBodyToDeletedProject,
 		s.verifyParticipantRoleMiddleware(model.RoleOwner), s.deleteProject)
 	projectRtr.POST("/add-participant", s.parseBodyToAddedParticipant,

@@ -1,16 +1,17 @@
 package api
 
 import (
+	"be-project-monitoring/internal/domain"
+	"be-project-monitoring/internal/domain/model"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
 
-	"be-project-monitoring/internal/domain"
-	"be-project-monitoring/internal/domain/model"
-
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/xuri/excelize/v2"
 )
 
 type (
@@ -232,6 +233,71 @@ func (s *Server) getProjectCommits(c *gin.Context) {
 
 	c.JSON(http.StatusOK, resp)
 }
+
+func (s *Server) getProjectReport(c *gin.Context) {
+	projectID, err := strconv.Atoi(c.Param("projectId"))
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, err)
+		return
+	}
+
+	xlsx := excelize.NewFile()
+	if err = xlsx.SetCellValue("Sheet1", "A1", "Имя"); err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError,
+			gin.H{errField: err.Error()})
+		return
+	}
+	if err = xlsx.SetCellValue("Sheet1", "B1", "Фамилия"); err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError,
+			gin.H{errField: err.Error()})
+		return
+	}
+	if err = xlsx.SetCellValue("Sheet1", "C1", "Имя Github"); err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError,
+			gin.H{errField: err.Error()})
+		return
+	}
+	if err = xlsx.SetCellValue("Sheet1", "D1", "Группа"); err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError,
+			gin.H{errField: err.Error()})
+		return
+	}
+	if err = xlsx.SetCellValue("Sheet1", "E1", "Кол-во коммитов"); err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError,
+			gin.H{errField: err.Error()})
+		return
+	}
+	if err = xlsx.SetCellValue("Sheet1", "F1", "Время работы (ч.)"); err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError,
+			gin.H{errField: err.Error()})
+		return
+	}
+	commitsInfo, err := s.svc.GetProjectCommits(c.Request.Context(), projectID)
+	if err != nil {
+		return
+	}
+	for i, commitInfo := range commitsInfo {
+		xlsx.SetCellValue("Sheet1", fmt.Sprintf("A%v", i+2), commitInfo.FirstName)
+		xlsx.SetCellValue("Sheet1", fmt.Sprintf("B%v", i+2), commitInfo.LastName)
+		xlsx.SetCellValue("Sheet1", fmt.Sprintf("C%v", i+2), commitInfo.GithubUsername)
+		xlsx.SetCellValue("Sheet1", fmt.Sprintf("D%v", i+2), commitInfo.Group)
+		xlsx.SetCellValue("Sheet1", fmt.Sprintf("E%v", i+2), commitInfo.TotalCommits)
+		xlsx.SetCellValue("Sheet1", fmt.Sprintf("F%v", i+2), int(commitInfo.LastCommitDate.Sub(commitInfo.FirstCommitDate).Hours()))
+	}
+
+	c.Writer.Header().Set("Content-Type", "application/octet-stream")
+	c.Writer.Header().Set("Content-Disposition", "attachment; filename="+"Workbook.xlsx")
+	c.Writer.Header().Set("Content-Transfer-Encoding", "binary")
+	c.Writer.Header().Set("Expires", "0")
+
+	err = xlsx.Write(c.Writer)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{errField: err.Error()})
+		return
+	}
+
+}
+
 func (s *Server) sendProjectInfoResponse(c *gin.Context, projectID int) {
 	projectInfo, err := s.svc.GetProjectInfo(c.Request.Context(), projectID)
 	if err != nil {
