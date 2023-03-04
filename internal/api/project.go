@@ -286,7 +286,7 @@ func (s *Server) getProjectReport(c *gin.Context) {
 	}
 
 	c.Writer.Header().Set("Content-Type", "application/octet-stream")
-	c.Writer.Header().Set("Content-Disposition", "attachment; filename="+"Workbook.xlsx")
+	c.Writer.Header().Set("Content-Disposition", "attachment; filename="+"Project_Report_"+strconv.Itoa(projectID)+".xlsx")
 	c.Writer.Header().Set("Content-Transfer-Encoding", "binary")
 	c.Writer.Header().Set("Expires", "0")
 
