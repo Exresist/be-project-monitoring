@@ -9,8 +9,6 @@ import (
 	"errors"
 	"strings"
 	"time"
-
-	"github.com/google/go-github/v49/github"
 )
 
 func (s *service) GetProjects(ctx context.Context, projectReq *api.GetProjectsReq) ([]model.Project, int, error) {
@@ -120,29 +118,19 @@ func (s *service) GetProjectCommits(ctx context.Context, id int) ([]model.Commit
 	}
 	// owner := repoURL[3]
 	// repoName := repoURL[4]
-	commits, _, err := s.githubCl.Repositories.ListCommits(ctx, repoURL[3], repoURL[4], &github.CommitsListOptions{ListOptions: github.ListOptions{Page: 1, PerPage: 1000}})
+	stats, _, err := s.githubCl.Repositories.ListContributorsStats(ctx, repoURL[3], repoURL[4])
 	if err != nil {
 		return nil, err
 	}
 
-	for _, commit := range commits {
-		ghUsername := commit.Author.GetLogin()
+	for _, stat := range stats {
+		ghUsername := stat.Author.GetLogin()
 		if info, ok := usersCommitsInfo[ghUsername]; ok {
-			curDate := commit.Commit.Author.GetDate()
-			//checks only first because otherwise we're updating both
-			if !info.FirstCommitDate.IsZero() {
-				if info.FirstCommitDate.After(curDate) {
-					info.FirstCommitDate = curDate
-				}
-				if info.LastCommitDate.Before(curDate) {
-					info.LastCommitDate = curDate
-				}
-			} else {
-				info.FirstCommitDate = curDate
-				info.LastCommitDate = curDate
+			info.TotalCommits = stat.GetTotal()
+			for _, week := range stat.Weeks {
+				info.NumberOfAdditions += week.GetAdditions()
+				info.NumberOfDeletions += week.GetDeletions()
 			}
-
-			info.TotalCommits++
 			usersCommitsInfo[ghUsername] = info
 		}
 	}

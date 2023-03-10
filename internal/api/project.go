@@ -45,7 +45,7 @@ type (
 	projectWithParticipantsResp struct {
 		ProjectResp
 		Participants []ParticipantResp `json:"participants"`
-		Tasks        []TaskResp
+		Tasks        []TaskResp        `json:"tasks"`
 	}
 	projectWithShortParticipantsResp struct {
 		ShortProjectResp
@@ -83,7 +83,8 @@ type (
 		User    model.ShortUser `json:"user"`
 		Metrics struct {
 			Count              int `json:"count"`
-			Time               int `json:"time"`
+			NumberOfAdditions  int `json:"numberOfAdditions"`
+			NumberOfDeletions  int `json:"numberOfDeletions"`
 			TasksDoneCount     int `json:"tasksDoneCount"`
 			TasksEstimateCount int `json:"tasksEstimateCount"`
 		} `json:"metrics"`
@@ -236,12 +237,14 @@ func (s *Server) getProjectCommits(c *gin.Context) {
 				User: info.ShortUser,
 				Metrics: struct {
 					Count              int `json:"count"`
-					Time               int `json:"time"`
+					NumberOfAdditions  int `json:"numberOfAdditions"`
+					NumberOfDeletions  int `json:"numberOfDeletions"`
 					TasksDoneCount     int `json:"tasksDoneCount"`
 					TasksEstimateCount int `json:"tasksEstimateCount"`
 				}{
 					Count:              info.TotalCommits,
-					Time:               int(info.LastCommitDate.Sub(info.FirstCommitDate).Hours()),
+					NumberOfAdditions:  info.NumberOfAdditions,
+					NumberOfDeletions:  info.NumberOfDeletions,
 					TasksDoneCount:     info.TotalTasksDone,
 					TasksEstimateCount: info.TotalTasksEstimate,
 				},
@@ -285,17 +288,22 @@ func (s *Server) getProjectReport(c *gin.Context) {
 			gin.H{errField: err.Error()})
 		return
 	}
-	if err = xlsx.SetCellValue(List1, "F1", "Время работы (ч.)"); err != nil {
+	if err = xlsx.SetCellValue(List1, "F1", "Количество добавленных строк"); err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError,
 			gin.H{errField: err.Error()})
 		return
 	}
-	if err = xlsx.SetCellValue(List1, "G1", "Количество выполненных заданий"); err != nil {
+	if err = xlsx.SetCellValue(List1, "G1", "Количество удаленных строк"); err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError,
 			gin.H{errField: err.Error()})
 		return
 	}
-	if err = xlsx.SetCellValue(List1, "H1", "Время выполнения задач (ч.)"); err != nil {
+	if err = xlsx.SetCellValue(List1, "H1", "Количество выполненных заданий"); err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError,
+			gin.H{errField: err.Error()})
+		return
+	}
+	if err = xlsx.SetCellValue(List1, "I1", "Время выполнения задач (ч.)"); err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError,
 			gin.H{errField: err.Error()})
 		return
@@ -310,8 +318,9 @@ func (s *Server) getProjectReport(c *gin.Context) {
 		xlsx.SetCellValue(List1, fmt.Sprintf("C%v", i+2), commitInfo.GithubUsername)
 		xlsx.SetCellValue(List1, fmt.Sprintf("D%v", i+2), commitInfo.Group)
 		xlsx.SetCellValue(List1, fmt.Sprintf("E%v", i+2), commitInfo.TotalCommits)
-		xlsx.SetCellValue(List1, fmt.Sprintf("F%v", i+2), int(commitInfo.LastCommitDate.Sub(commitInfo.FirstCommitDate).Hours()))
-		xlsx.SetCellValue(List1, fmt.Sprintf("G%v", i+2), commitInfo.TotalTasksDone)
+		xlsx.SetCellValue(List1, fmt.Sprintf("F%v", i+2), commitInfo.NumberOfAdditions)
+		xlsx.SetCellValue(List1, fmt.Sprintf("G%v", i+2), commitInfo.NumberOfDeletions)
+		xlsx.SetCellValue(List1, fmt.Sprintf("H%v", i+2), commitInfo.TotalTasksDone)
 		xlsx.SetCellValue(List1, fmt.Sprintf("H%v", i+2), commitInfo.TotalTasksEstimate)
 	}
 
