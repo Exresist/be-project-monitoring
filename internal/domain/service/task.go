@@ -1,15 +1,16 @@
 package service
 
 import (
-	"be-project-monitoring/internal/api"
-	"be-project-monitoring/internal/domain/model"
-	"be-project-monitoring/internal/domain/repository"
-	ierr "be-project-monitoring/internal/errors"
 	"context"
 	"database/sql"
 	"fmt"
 	"strings"
 	"time"
+
+	"be-project-monitoring/internal/api"
+	"be-project-monitoring/internal/domain/model"
+	"be-project-monitoring/internal/domain/repository"
+	ierr "be-project-monitoring/internal/errors"
 
 	"github.com/google/uuid"
 )
@@ -17,7 +18,14 @@ import (
 func (s *service) GetTasks(ctx context.Context, taskReq *api.GetTasksReq) ([]model.Task, int, error) {
 	filter := repository.NewTaskFilter().
 		WithPaginator(uint64(taskReq.Limit), uint64(taskReq.Offset)).
-		ByProjectID(taskReq.ProjectID).ByParticipantID(*taskReq.ParticipantID).ByTaskName(*taskReq.Name)
+		ByProjectID(taskReq.ProjectID)
+	if taskReq.ParticipantID != nil {
+		filter.ByParticipantID(*taskReq.ParticipantID)
+	}
+	if taskReq.Name != nil {
+		filter.ByTaskName(*taskReq.Name)
+	}
+
 	count, err := s.repo.GetTaskCountByFilter(ctx, filter)
 	if err != nil {
 		return nil, 0, err
