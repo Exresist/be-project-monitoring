@@ -1,10 +1,11 @@
 package api
 
 import (
-	"be-project-monitoring/internal/domain"
-	"be-project-monitoring/internal/domain/model"
 	"encoding/json"
 	"net/http"
+
+	"be-project-monitoring/internal/domain"
+	"be-project-monitoring/internal/domain/model"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -119,7 +120,7 @@ func makeParticipantResponse(participant model.Participant) *ParticipantResp {
 		User: participant.ShortUser,
 	}
 }
-func makeParticipantResponses(participants []model.Participant) []ParticipantResp {
+func makeParticipantsResponse(participants []model.Participant) []ParticipantResp {
 	participantResponses := make([]ParticipantResp, 0, len(participants))
 	for _, participant := range participants {
 		participantResponses = append(participantResponses, *makeParticipantResponse(participant))

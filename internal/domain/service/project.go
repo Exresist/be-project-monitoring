@@ -108,6 +108,7 @@ func (s *service) GetProjectCommits(ctx context.Context, id int) ([]model.Commit
 		info := usersCommitsInfo[task.GithubUsername]
 		info.TotalTasksDone = task.TotalDone
 		info.TotalTasksEstimate = task.TotalEstimate
+		usersCommitsInfo[task.GithubUsername] = info
 	}
 
 	if !project.RepoURL.Valid {
