@@ -1,14 +1,13 @@
 package api
 
 import (
+	"be-project-monitoring/internal/domain"
+	"be-project-monitoring/internal/domain/model"
+	ierr "be-project-monitoring/internal/errors"
 	"encoding/json"
 	"net/http"
 	"strconv"
 	"time"
-
-	"be-project-monitoring/internal/domain"
-	"be-project-monitoring/internal/domain/model"
-	ierr "be-project-monitoring/internal/errors"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -18,7 +17,7 @@ type (
 	CreateTaskReq struct {
 		Name              string `json:"title"`
 		Description       string `json:"description"`
-		SuggestedEstimate string `json:"estimatedTime"`
+		SuggestedEstimate int    `json:"estimatedTime"`
 		// CreatorID         int    `json:"creatorId"`
 		ParticipantID *int   `json:"asignee"`
 		Status        string `json:"status"`
@@ -29,7 +28,7 @@ type (
 		Name          string    `json:"title"`
 		Status        string    `json:"status"`
 		Description   string    `json:"description"`
-		Estimate      string    `json:"estimatedTime"`
+		Estimate      int       `json:"estimatedTime"`
 		CreatedAt     time.Time `json:"createdAt"`
 		UpdatedAt     time.Time `json:"updatedAt"`
 		ParticipantID int       `json:"asignee,omitempty"`
@@ -182,7 +181,7 @@ func makeTaskResponse(task model.Task) TaskResp {
 			ID:            task.ID,
 			Name:          task.Name,
 			Description:   task.Description.String,
-			Estimate:      task.Estimate.String,
+			Estimate:      int(task.Estimate.Int64),
 			ParticipantID: int(task.ParticipantID.Int64),
 			CreatorID:     int(task.CreatorID.Int64),
 			Status:        string(task.Status),
@@ -197,7 +196,7 @@ func makeShortTaskResponse(task model.ShortTask) ShortTaskResp {
 		ID:            task.ID,
 		Name:          task.Name,
 		Description:   task.Description.String,
-		Estimate:      task.Estimate.String,
+		Estimate:      int(task.Estimate.Int64),
 		ParticipantID: int(task.ParticipantID.Int64),
 		CreatorID:     int(task.CreatorID.Int64),
 		Status:        string(task.Status),

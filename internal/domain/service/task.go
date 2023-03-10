@@ -81,7 +81,7 @@ func (s *service) CreateTask(ctx context.Context, creatorUserID uuid.UUID, taskR
 	if strings.TrimSpace(taskReq.Description) != "" {
 		task.Description.Scan(taskReq.Description)
 	}
-	if strings.TrimSpace(taskReq.SuggestedEstimate) != "" {
+	if taskReq.SuggestedEstimate != 0 {
 		task.Estimate.Scan(taskReq.SuggestedEstimate)
 	}
 

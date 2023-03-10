@@ -26,7 +26,7 @@ type (
 		ParticipantID sql.NullInt64  `json:"asignee"`
 		CreatorID     sql.NullInt64  `json:"creatorId"`
 		Status        TaskStatus     `json:"status"`
-		Estimate      sql.NullString `json:"estimatedTime"`
+		Estimate      sql.NullInt64  `json:"estimatedTime"`
 		CreatedAt     time.Time      `json:"createdAt"`
 		UpdatedAt     time.Time      `json:"updatedAt"`
 	}
