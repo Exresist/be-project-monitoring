@@ -9,6 +9,8 @@ import (
 	"errors"
 	"strings"
 	"time"
+
+	"github.com/google/go-github/v49/github"
 )
 
 func (s *service) GetProjects(ctx context.Context, projectReq *api.GetProjectsReq) ([]model.Project, int, error) {
@@ -97,6 +99,17 @@ func (s *service) GetProjectCommits(ctx context.Context, id int) ([]model.Commit
 		usersCommitsInfo[user.GithubUsername] = model.CommitsInfo{ShortUser: user}
 	}
 
+	tasks, err := s.GetCompletedTasksCountByGHUsername(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, task := range tasks {
+		info := usersCommitsInfo[task.GithubUsername]
+		info.TotalTasksDone = task.TotalDone
+		info.TotalTasksEstimate = task.TotalEstimate
+	}
+
 	if !project.RepoURL.Valid {
 		return nil, ierr.ErrRepositoryURLIsEmpty
 	}
@@ -106,7 +119,7 @@ func (s *service) GetProjectCommits(ctx context.Context, id int) ([]model.Commit
 	}
 	// owner := repoURL[3]
 	// repoName := repoURL[4]
-	commits, _, err := s.githubCl.Repositories.ListCommits(ctx, repoURL[3], repoURL[4], nil)
+	commits, _, err := s.githubCl.Repositories.ListCommits(ctx, repoURL[3], repoURL[4], &github.CommitsListOptions{ListOptions: github.ListOptions{Page: 1, PerPage: 1000}})
 	if err != nil {
 		return nil, err
 	}
@@ -141,6 +154,11 @@ func (s *service) GetProjectCommits(ctx context.Context, id int) ([]model.Commit
 
 	return res, nil
 }
+
+func (s *service) GetCompletedTasksCountByGHUsername(ctx context.Context, projectID int) ([]model.TaskCount, error) {
+	return s.repo.GetCompletedTasksCountByGHUsername(ctx, projectID)
+}
+
 func (s *service) GetProjectInfo(ctx context.Context, id int) (*model.ProjectInfo, error) {
 	project, err := s.repo.GetProject(ctx, repository.NewProjectFilter().ByID(id))
 	if err != nil {

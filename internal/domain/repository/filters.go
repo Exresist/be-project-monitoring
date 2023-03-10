@@ -2,6 +2,7 @@ package repository
 
 import (
 	"be-project-monitoring/internal/db"
+	"be-project-monitoring/internal/domain/model"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/google/uuid"
@@ -199,6 +200,7 @@ type TaskFilter struct {
 	ProjectID     int
 	ParticipantID *int
 	Name          *string
+	Status        model.TaskStatus
 	*db.Paginator
 }
 
@@ -220,6 +222,11 @@ func (f *TaskFilter) ByParticipantID(id int) *TaskFilter {
 }
 func (f *TaskFilter) ByTaskName(name string) *TaskFilter {
 	f.Name = &name
+	return f
+}
+
+func (f *TaskFilter) ByStatus(status model.TaskStatus) *TaskFilter {
+	f.Status = status
 	return f
 }
 

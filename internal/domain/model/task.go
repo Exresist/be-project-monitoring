@@ -35,6 +35,11 @@ type (
 		Creator     ShortUser
 		Participant ShortUser
 	}
+	TaskCount struct {
+		GithubUsername string
+		TotalDone      int
+		TotalEstimate  int
+	}
 )
 
 var TaskStatuses = map[string]struct{}{

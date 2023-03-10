@@ -1,13 +1,14 @@
 package api
 
 import (
-	"be-project-monitoring/internal/domain"
-	"be-project-monitoring/internal/domain/model"
-	ierr "be-project-monitoring/internal/errors"
 	"encoding/json"
 	"net/http"
 	"strconv"
 	"time"
+
+	"be-project-monitoring/internal/domain"
+	"be-project-monitoring/internal/domain/model"
+	ierr "be-project-monitoring/internal/errors"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -55,7 +56,7 @@ type (
 		ID                int     `json:"id"`
 		Name              *string `json:"title"`
 		Description       *string `json:"description"`
-		SuggestedEstimate *string `json:"estimatedTime"`
+		SuggestedEstimate *int    `json:"estimatedTime"`
 		Status            *string `json:"status"`
 		ParticipantID     *int    `json:"asignee"`
 		ProjectID         int     `json:"projectId"`

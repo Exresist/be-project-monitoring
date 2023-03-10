@@ -53,6 +53,7 @@ type (
 	taskRepo interface {
 		GetTask(ctx context.Context, filter *repository.TaskFilter) (*model.Task, error)
 		GetTasks(ctx context.Context, filter *repository.TaskFilter) ([]model.Task, error)
+		GetCompletedTasksCountByGHUsername(ctx context.Context, projectID int) ([]model.TaskCount, error)
 		GetTaskCountByFilter(ctx context.Context, filter *repository.TaskFilter) (int, error)
 		GetTaskInfo(ctx context.Context, id int) (*model.TaskInfo, error)
 

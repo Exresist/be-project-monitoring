@@ -212,3 +212,32 @@ func (r *Repository) DeleteParticipantsFromTask(ctx context.Context, participant
 		ExecContext(ctx)
 	return err
 }
+
+func (r *Repository) GetCompletedTasksCountByGHUsername(ctx context.Context, projectID int) ([]model.TaskCount, error) {
+	rows, err := r.sq.Select("u.github_username",
+		"COUNT(1)",
+		"SUM(t.suggested_estimate)",
+	).
+		From("tasks t").
+		Join("participants p ON p.id = t.participant_id").
+		Join("users u ON u.id = p.user_id").
+		Where(sq.Eq{"t.status": model.Done, "t.project_id": projectID}).
+		GroupBy("u.github_username").QueryContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	res := make([]model.TaskCount, 0)
+	for rows.Next() {
+		var taskCount model.TaskCount
+		if err = rows.Scan(
+			&taskCount.GithubUsername,
+			&taskCount.TotalDone,
+			&taskCount.TotalEstimate,
+		); err != nil {
+			return nil, err
+		}
+		res = append(res, taskCount)
+	}
+
+	return res, nil
+}

@@ -1,6 +1,8 @@
 package api
 
 import (
+	"be-project-monitoring/internal/domain"
+	"be-project-monitoring/internal/domain/model"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -8,13 +10,12 @@ import (
 	"strconv"
 	"time"
 
-	"be-project-monitoring/internal/domain"
-	"be-project-monitoring/internal/domain/model"
-
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/xuri/excelize/v2"
 )
+
+const List1 = "Sheet1"
 
 type (
 	CreateProjectReq struct {
@@ -80,8 +81,10 @@ type (
 	commitsInfoResp struct {
 		User    model.ShortUser `json:"user"`
 		Metrics struct {
-			Count int `json:"count"`
-			Time  int `json:"time"`
+			Count              int `json:"count"`
+			Time               int `json:"time"`
+			TasksDoneCount     int `json:"tasksDoneCount"`
+			TasksEstimateCount int `json:"tasksEstimateCount"`
 		} `json:"metrics"`
 	}
 )
@@ -224,11 +227,16 @@ func (s *Server) getProjectCommits(c *gin.Context) {
 			commitsInfoResp{
 				User: info.ShortUser,
 				Metrics: struct {
-					Count int `json:"count"`
-					Time  int `json:"time"`
+					Count              int `json:"count"`
+					Time               int `json:"time"`
+					TasksDoneCount     int `json:"tasksDoneCount"`
+					TasksEstimateCount int `json:"tasksEstimateCount"`
 				}{
-					Count: info.TotalCommits,
-					Time:  int(info.LastCommitDate.Sub(info.FirstCommitDate).Hours())},
+					Count:              info.TotalCommits,
+					Time:               int(info.LastCommitDate.Sub(info.FirstCommitDate).Hours()),
+					TasksDoneCount:     info.TotalTasksDone,
+					TasksEstimateCount: info.TotalTasksEstimate,
+				},
 			},
 		)
 	}
@@ -244,32 +252,42 @@ func (s *Server) getProjectReport(c *gin.Context) {
 	}
 
 	xlsx := excelize.NewFile()
-	if err = xlsx.SetCellValue("Sheet1", "A1", "Имя"); err != nil {
+	if err = xlsx.SetCellValue(List1, "A1", "Имя"); err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError,
 			gin.H{errField: err.Error()})
 		return
 	}
-	if err = xlsx.SetCellValue("Sheet1", "B1", "Фамилия"); err != nil {
+	if err = xlsx.SetCellValue(List1, "B1", "Фамилия"); err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError,
 			gin.H{errField: err.Error()})
 		return
 	}
-	if err = xlsx.SetCellValue("Sheet1", "C1", "Имя Github"); err != nil {
+	if err = xlsx.SetCellValue(List1, "C1", "Имя Github"); err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError,
 			gin.H{errField: err.Error()})
 		return
 	}
-	if err = xlsx.SetCellValue("Sheet1", "D1", "Группа"); err != nil {
+	if err = xlsx.SetCellValue(List1, "D1", "Группа"); err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError,
 			gin.H{errField: err.Error()})
 		return
 	}
-	if err = xlsx.SetCellValue("Sheet1", "E1", "Кол-во коммитов"); err != nil {
+	if err = xlsx.SetCellValue(List1, "E1", "Кол-во коммитов"); err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError,
 			gin.H{errField: err.Error()})
 		return
 	}
-	if err = xlsx.SetCellValue("Sheet1", "F1", "Время работы (ч.)"); err != nil {
+	if err = xlsx.SetCellValue(List1, "F1", "Время работы (ч.)"); err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError,
+			gin.H{errField: err.Error()})
+		return
+	}
+	if err = xlsx.SetCellValue(List1, "G1", "Количество выполненных заданий"); err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError,
+			gin.H{errField: err.Error()})
+		return
+	}
+	if err = xlsx.SetCellValue(List1, "H1", "Время выполнения задач (ч.)"); err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError,
 			gin.H{errField: err.Error()})
 		return
@@ -279,12 +297,14 @@ func (s *Server) getProjectReport(c *gin.Context) {
 		return
 	}
 	for i, commitInfo := range commitsInfo {
-		xlsx.SetCellValue("Sheet1", fmt.Sprintf("A%v", i+2), commitInfo.FirstName)
-		xlsx.SetCellValue("Sheet1", fmt.Sprintf("B%v", i+2), commitInfo.LastName)
-		xlsx.SetCellValue("Sheet1", fmt.Sprintf("C%v", i+2), commitInfo.GithubUsername)
-		xlsx.SetCellValue("Sheet1", fmt.Sprintf("D%v", i+2), commitInfo.Group)
-		xlsx.SetCellValue("Sheet1", fmt.Sprintf("E%v", i+2), commitInfo.TotalCommits)
-		xlsx.SetCellValue("Sheet1", fmt.Sprintf("F%v", i+2), int(commitInfo.LastCommitDate.Sub(commitInfo.FirstCommitDate).Hours()))
+		xlsx.SetCellValue(List1, fmt.Sprintf("A%v", i+2), commitInfo.FirstName)
+		xlsx.SetCellValue(List1, fmt.Sprintf("B%v", i+2), commitInfo.LastName)
+		xlsx.SetCellValue(List1, fmt.Sprintf("C%v", i+2), commitInfo.GithubUsername)
+		xlsx.SetCellValue(List1, fmt.Sprintf("D%v", i+2), commitInfo.Group)
+		xlsx.SetCellValue(List1, fmt.Sprintf("E%v", i+2), commitInfo.TotalCommits)
+		xlsx.SetCellValue(List1, fmt.Sprintf("F%v", i+2), int(commitInfo.LastCommitDate.Sub(commitInfo.FirstCommitDate).Hours()))
+		xlsx.SetCellValue(List1, fmt.Sprintf("G%v", i+2), commitInfo.TotalTasksDone)
+		xlsx.SetCellValue(List1, fmt.Sprintf("H%v", i+2), commitInfo.TotalTasksEstimate)
 	}
 
 	buffer, err := xlsx.WriteToBuffer()
