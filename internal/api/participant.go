@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"be-project-monitoring/internal/domain"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"golang.org/x/sync/singleflight"
 )
 
 type (
@@ -39,6 +41,8 @@ type (
 var (
 	addedParticipant  *AddedParticipant
 	parsedParticipant *ParticipantResp
+
+	sf = singleflight.Group{}
 )
 
 func (s *Server) parseBodyToAddedParticipant(c *gin.Context) {
@@ -52,7 +56,13 @@ func (s *Server) parseBodyToAddedParticipant(c *gin.Context) {
 	c.Set(string(domain.ProjectIDCtx), addedParticipant.ProjectID)
 }
 func (s *Server) addParticipant(c *gin.Context) {
-	_, err := s.svc.AddParticipant(c.Request.Context(), false, addedParticipant)
+	_, err, _ := sf.Do(fmt.Sprintf("%v-%v", addedParticipant.ProjectID, addedParticipant.UserID), func() (interface{}, error) {
+		return s.svc.AddParticipant(c.Request.Context(), false, addedParticipant)
+	})
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
+		return
+	}
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return

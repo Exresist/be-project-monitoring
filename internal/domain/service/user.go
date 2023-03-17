@@ -1,13 +1,12 @@
 package service
 
 import (
-	"context"
-	"errors"
-
 	"be-project-monitoring/internal/api"
 	"be-project-monitoring/internal/domain/model"
 	"be-project-monitoring/internal/domain/repository"
 	ierr "be-project-monitoring/internal/errors"
+	"context"
+	"errors"
 
 	"github.com/AvraamMavridis/randomcolor"
 	"github.com/google/uuid"
@@ -24,7 +23,7 @@ func (s *service) CreateUser(ctx context.Context, userReq *api.CreateUserReq) (*
 	user := &model.User{
 		ShortUser: model.ShortUser{
 			Role:           model.UserRole(userReq.Role),
-			ColorCode: 			randomcolor.GetRandomColorInHex(),
+			ColorCode:      randomcolor.GetRandomColorInHex(),
 			Email:          userReq.Email,
 			Username:       userReq.Username,
 			FirstName:      userReq.FirstName,
@@ -168,8 +167,8 @@ func (s *service) DeleteUser(ctx context.Context, guid uuid.UUID) error {
 }
 
 func (s *service) FindGithubUser(ctx context.Context, username string) bool {
-	_, _, err := s.githubCl.Users.Get(ctx, username)
-	return err == nil
+	user, _, err := s.githubCl.Users.Get(ctx, username)
+	return err == nil && user.GetLogin() == username
 }
 func (s *service) GetUserProfile(ctx context.Context, guid uuid.UUID) (*model.Profile, error) {
 	return s.repo.GetUserProfile(ctx, guid)

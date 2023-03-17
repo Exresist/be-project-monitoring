@@ -6,7 +6,7 @@ services:
       context: .
       dockerfile: Dockerfile
     environment:
-      APP_DSN: postgres://sascha.panin2011:xBA1rPcGYK2X@ep-lively-morning-098612.eu-central-1.aws.neon.tech/penis2
+
       APP_GHTOKEN: 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
     restart: always
     ports:
