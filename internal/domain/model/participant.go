@@ -22,5 +22,3 @@ var ParticipantRoles = map[ParticipantRole]struct{}{
 	RoleParticipant: {},
 	RoleOwner:       {},
 }
-
-//teamlead participant owner

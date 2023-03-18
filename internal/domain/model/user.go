@@ -12,10 +12,12 @@ const (
 
 type (
 	UserRole string
-	User     struct {
+
+	User struct {
 		ShortUser
 		HashedPassword string `json:"hashedPassword"`
 	}
+
 	ShortUser struct {
 		ID             uuid.UUID `json:"id"`
 		Role           UserRole  `json:"role"`
@@ -27,6 +29,7 @@ type (
 		Group          string    `json:"group"`
 		GithubUsername string    `json:"ghUsername"`
 	}
+
 	Profile struct {
 		ShortUser
 		UserProjects []ShortProject

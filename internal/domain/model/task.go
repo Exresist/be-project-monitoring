@@ -9,8 +9,7 @@ const (
 	TODO       TaskStatus = "BACKLOG"
 	InProgress TaskStatus = "IN_PROGRESS"
 	InReview   TaskStatus = "REVIEW"
-	//Testing    TaskStatus = "Testing"
-	Done TaskStatus = "DONE"
+	Done       TaskStatus = "DONE"
 )
 
 type (
@@ -47,6 +46,5 @@ var TaskStatuses = map[string]struct{}{
 	"BACKLOG":     {},
 	"IN_PROGRESS": {},
 	"REVIEW":      {},
-	//"Testing":     {},
-	"DONE": {},
+	"DONE":        {},
 }

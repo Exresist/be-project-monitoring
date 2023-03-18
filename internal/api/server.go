@@ -45,7 +45,6 @@ type (
 	tokenService interface {
 		GetUserIDFromToken(ctx context.Context, token string) (uuid.UUID, error)
 		VerifyToken(ctx context.Context, token string, toAllow ...model.UserRole) error
-		VerifySelf(ctx context.Context, userIDFromToken, userIDReq uuid.UUID) error
 	}
 
 	projectService interface {
@@ -114,7 +113,7 @@ func New(opts ...OptionFunc) *Server {
 	usersRtr.GET("/search", s.getPartialUsers)
 	usersRtr.GET("/", s.authMiddleware(model.Admin, model.ProjectManager, model.Student), s.getUserProfileFromToken)
 	usersRtr.GET("/:id", s.getUserProfile)
-	usersRtr.PATCH("/", s.parseBodyToUpdatedUser, s.selfUpdateMiddleware(), s.updateUser)
+	usersRtr.PATCH("/", s.parseBodyToUpdatedUser, s.updateMiddleware(), s.updateUser)
 	//usersRtr.DELETE("/:id", s.deleteUser)
 
 	// /api/pm

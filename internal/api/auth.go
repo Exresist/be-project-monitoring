@@ -31,7 +31,7 @@ type (
 	}
 )
 
-var errField = "error"
+const errField = "error"
 
 func (s *Server) register(c *gin.Context) {
 	userReq := &CreateUserReq{}

@@ -71,9 +71,11 @@ func (s *service) CreateTask(ctx context.Context, creatorUserID uuid.UUID, taskR
 	if strings.TrimSpace(taskReq.Name) == "" {
 		return nil, ierr.ErrTaskNameIsInvalid
 	}
+
 	if strings.TrimSpace(taskReq.Status) == "" {
 		taskReq.Status = string(model.TODO)
 	}
+
 	if _, ok := model.TaskStatuses[taskReq.Status]; !ok {
 		return nil, ierr.ErrInvalidStatus
 	}
@@ -89,9 +91,11 @@ func (s *service) CreateTask(ctx context.Context, creatorUserID uuid.UUID, taskR
 		},
 		ProjectID: taskReq.ProjectID,
 	}
+
 	if strings.TrimSpace(taskReq.Description) != "" {
 		task.Description.Scan(taskReq.Description)
 	}
+
 	if taskReq.SuggestedEstimate != 0 {
 		task.Estimate.Scan(taskReq.SuggestedEstimate)
 	}
@@ -99,9 +103,11 @@ func (s *service) CreateTask(ctx context.Context, creatorUserID uuid.UUID, taskR
 	return task, s.repo.InsertTask(ctx, task)
 }
 func (s *service) UpdateTask(ctx context.Context, taskReq *api.UpdateTaskReq) (*model.Task, error) {
+
 	if taskReq.ID == 0 {
 		return nil, ierr.ErrTaskIDIsInvalid
 	}
+
 	oldTask, err := s.repo.GetTask(ctx, repository.NewTaskFilter().
 		ByID(taskReq.ID))
 	if err != nil {
@@ -126,20 +132,15 @@ func (s *service) UpdateTask(ctx context.Context, taskReq *api.UpdateTaskReq) (*
 	if err != nil {
 		return nil, err
 	}
+
 	return newTask, s.repo.UpdateTask(ctx, newTask)
 }
 
 func (s *service) DeleteTask(ctx context.Context, id int) error {
-	// if _, err := s.repo.GetTask(ctx, repository.NewTaskFilter().ByID(id)); err != nil {
-	// 	return err
-	// }
 	return s.repo.DeleteTask(ctx, id)
 }
 
 func (s *service) GetTaskInfo(ctx context.Context, id int) (*model.TaskInfo, error) {
-	// if _, err := s.repo.GetTask(ctx, repository.NewTaskFilter().ByID(id)); err != nil {
-	// 	return nil, err
-	// }
 	return s.repo.GetTaskInfo(ctx, id)
 }
 

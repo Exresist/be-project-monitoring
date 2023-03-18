@@ -34,31 +34,22 @@ func (f *UserFilter) ByUsername(username string) *UserFilter {
 	f.username = username
 	return f
 }
+
 func (f *UserFilter) ByEmail(email string) *UserFilter {
 	f.email = email
 	return f
 }
+
 func (f *UserFilter) ByGithubUsername(githubUsername string) *UserFilter {
 	f.githubUsername = githubUsername
 	return f
 }
+
 func (f *UserFilter) ByLike(text string) *UserFilter {
 	f.likeText = text
 	f.isLike = true
 	return f
 }
-
-//	func (f *UserFilter) ByUsernameLike(username string) *UserFilter {
-//		f.username = username
-//		f.isLike = true
-//		return f
-//	}
-//
-//	func (f *UserFilter) ByEmailLike(email string) *UserFilter {
-//		f.email = email
-//		f.isLike = true
-//		return f
-//	}
 
 func (f *UserFilter) ByAtProject(projectID int) *UserFilter {
 	f.projectID = projectID
@@ -66,12 +57,14 @@ func (f *UserFilter) ByAtProject(projectID int) *UserFilter {
 	f.isProjectSearch = true
 	return f
 }
+
 func (f *UserFilter) ByNotAtProject(projectID int) *UserFilter {
 	f.projectID = projectID
 	f.isOnProject = false
 	f.isProjectSearch = true
 	return f
 }
+
 func (f *UserFilter) WithPaginator(limit, offset uint64) *UserFilter {
 	f.Paginator = db.NewPaginator(limit, offset)
 	return f
@@ -132,20 +125,8 @@ func conditionsFromUserFilter(filter *UserFilter) sq.Sqlizer {
 		return nil
 	}
 	return or
-
-	// like := make(sq.Like)
-	// if filter.username != "" {
-	// 	like["u.username"] = "%" + filter.username + "%"
-	// }
-	// if filter.email != "" {
-	// 	like["u.email"] = "%" + filter.email + "%"
-	// }
-	// if filter.isProjectSearch {
-	// 	return sq.And{like, sq.Eq{"p.project_id": filter.projectID}}
-	// }
-
-	// return like
 }
+
 func conditionsFromUserFilterForProject(filter *UserFilter) sq.Sqlizer {
 	return sq.Eq{"p.project_id": filter.projectID}
 }
@@ -213,14 +194,17 @@ func (f *TaskFilter) ByID(id int) *TaskFilter {
 	f.ID = id
 	return f
 }
+
 func (f *TaskFilter) ByProjectID(id int) *TaskFilter {
 	f.ProjectID = id
 	return f
 }
+
 func (f *TaskFilter) ByParticipantID(id int) *TaskFilter {
 	f.ParticipantID = &id
 	return f
 }
+
 func (f *TaskFilter) ByTaskName(name string) *TaskFilter {
 	f.Name = &name
 	return f
@@ -245,20 +229,6 @@ func conditionsFromTaskFilter(filter *TaskFilter) sq.Sqlizer {
 	if filter.ID > 0 {
 		return sq.Eq{"t.id": filter.ID}
 	}
-
-	// projectEq := sq.Eq{"t.project_id": filter.ProjectID}
-	// nameEq := make(sq.Eq)
-	// participantEq := make(sq.Eq)
-	// if filter.Name != nil {
-	// 	nameEq["t.name"] = *filter.Name
-	// }
-	// if filter.ParticipantID != nil {
-	// 	participantEq["t.participant_id"] = *filter.ParticipantID
-	// }
-
-	// return sq.And{projectEq, participantEq, nameEq}
-
-	//можно одну eq, т.к. под капотом используется AND, но проверить!
 	eq := make(sq.Eq)
 	eq["t.project_id"] = filter.ProjectID
 	if filter.Name != nil {
@@ -284,26 +254,32 @@ type ParticipantFilter struct {
 func NewParticipantFilter() *ParticipantFilter {
 	return &ParticipantFilter{Paginator: db.DefaultPaginator}
 }
+
 func (f *ParticipantFilter) ByID(id int) *ParticipantFilter {
 	f.ID = id
 	return f
 }
+
 func (f *ParticipantFilter) ByUserID(guid uuid.UUID) *ParticipantFilter {
 	f.UserID = guid
 	return f
 }
+
 func (f *ParticipantFilter) ByProjectID(id int) *ParticipantFilter {
 	f.ProjectID = id
 	return f
 }
+
 func (f *ParticipantFilter) ByRole(role string) *ParticipantFilter {
 	f.Role = role
 	return f
 }
+
 func (f *ParticipantFilter) WithPaginator(limit, offset uint64) *ParticipantFilter {
 	f.Paginator = db.NewPaginator(limit, offset)
 	return f
 }
+
 func conditionsFromParticipantFilter(filter *ParticipantFilter) sq.Sqlizer {
 	if filter.ID > 0 && filter.ProjectID > 0 {
 		return sq.Eq{"p.id": filter.ID,

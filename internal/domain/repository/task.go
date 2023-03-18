@@ -24,8 +24,10 @@ func (r *Repository) GetTask(ctx context.Context, filter *TaskFilter) (*model.Ta
 		return &tasks[0], nil
 	}
 }
+
 func (r *Repository) GetTasks(ctx context.Context, filter *TaskFilter) ([]model.Task, error) {
 	filter.Limit = db.NormalizeLimit(filter.Limit)
+
 	rows, err := r.sq.Select(
 		"t.id", "t.name",
 		"t.description", "t.suggested_estimate",
@@ -42,12 +44,12 @@ func (r *Repository) GetTasks(ctx context.Context, filter *TaskFilter) ([]model.
 		return nil, fmt.Errorf("error while performing sql request: %w", err)
 	}
 
-	defer func(res *sql.Rows) {
-		err = res.Close()
-		if err != nil {
+	defer func() {
+		if err = rows.Close(); err != nil {
 			r.logger.Error("error while closing sql rows", zap.Error(err))
 		}
-	}(rows)
+	}()
+
 	tasks := make([]model.Task, 0)
 	for rows.Next() {
 		task := model.Task{}
@@ -65,16 +67,20 @@ func (r *Repository) GetTasks(ctx context.Context, filter *TaskFilter) ([]model.
 	}
 	return tasks, nil
 }
+
 func (r *Repository) GetTaskCountByFilter(ctx context.Context, filter *TaskFilter) (int, error) {
 	var count int
+
 	if err := r.sq.Select("COUNT(1)").
 		From("tasks t").
 		Where(conditionsFromTaskFilter(filter)).
 		QueryRowContext(ctx).Scan(&count); err != nil {
 		return 0, fmt.Errorf("error while scanning sql row: %w", err)
 	}
+
 	return count, nil
 }
+
 func (r *Repository) InsertTask(ctx context.Context, task *model.Task) error {
 	row := r.sq.Insert("tasks").
 		Columns("name",
@@ -89,11 +95,13 @@ func (r *Repository) InsertTask(ctx context.Context, task *model.Task) error {
 			task.UpdatedAt, task.ProjectID).
 		Suffix("RETURNING \"id\"").
 		QueryRowContext(ctx)
+
 	if err := row.Scan(&task.ID); err != nil {
 		return fmt.Errorf("error while scanning sql row: %w", err)
 	}
 	return nil
 }
+
 func (r *Repository) UpdateTask(ctx context.Context, task *model.Task) error {
 	_, err := r.sq.Update("tasks").
 		SetMap(map[string]interface{}{
@@ -108,6 +116,7 @@ func (r *Repository) UpdateTask(ctx context.Context, task *model.Task) error {
 		ExecContext(ctx)
 	return err
 }
+
 func (r *Repository) DeleteTask(ctx context.Context, id int) error {
 	_, err := r.sq.Delete("tasks").
 		Where(sq.Eq{"id": id}).ExecContext(ctx)
@@ -115,6 +124,7 @@ func (r *Repository) DeleteTask(ctx context.Context, id int) error {
 }
 
 func (r *Repository) GetTaskInfo(ctx context.Context, id int) (*model.TaskInfo, error) {
+
 	rows, err := r.sq.Select("t.id", "t.name", "t.description",
 		"t.suggested_estimate",
 		"t.participant_id", "t.creator_id",
@@ -140,18 +150,18 @@ func (r *Repository) GetTaskInfo(ctx context.Context, id int) (*model.TaskInfo, 
 	if err != nil {
 		return nil, fmt.Errorf("error while performing sql request: %w", err)
 	}
-	defer func(rows *sql.Rows) {
-		err := rows.Close()
-		if err != nil {
+
+	defer func() {
+		if err = rows.Close(); err != nil {
 			r.logger.Error("error while closing sql rows", zap.Error(err))
 		}
-	}(rows)
+	}()
 
 	if rows.Next() {
 		taskInfo := model.TaskInfo{}
 		nullStrings := [18]sql.NullString{}
-		//make([]sql.NullString, 19)
-		if err := rows.Scan(&taskInfo.ID, &taskInfo.Name, &taskInfo.Description,
+
+		if err = rows.Scan(&taskInfo.ID, &taskInfo.Name, &taskInfo.Description,
 			&taskInfo.Estimate,
 			&taskInfo.ParticipantID, &taskInfo.CreatorID,
 			&taskInfo.Status, &taskInfo.CreatedAt,
@@ -165,7 +175,7 @@ func (r *Repository) GetTaskInfo(ctx context.Context, id int) (*model.TaskInfo, 
 		); err != nil {
 			return nil, fmt.Errorf("error while performing sql request: %w", err)
 		}
-		fmt.Println(nullStrings)
+
 		if nullStrings[0].Valid {
 			taskInfo.Creator = model.ShortUser{
 				ID:             uuid.MustParse(nullStrings[0].String),
@@ -195,6 +205,7 @@ func (r *Repository) GetTaskInfo(ctx context.Context, id int) (*model.TaskInfo, 
 
 		return &taskInfo, nil
 	}
+
 	return nil, ierr.ErrTaskNotFound
 }
 
@@ -206,6 +217,7 @@ func (r *Repository) DeleteParticipantsFromTask(ctx context.Context, participant
 		ExecContext(ctx); err != nil {
 		return err
 	}
+
 	_, err := r.sq.Update("tasks").
 		SetMap(map[string]interface{}{
 			"participant_id": nil,
@@ -215,6 +227,7 @@ func (r *Repository) DeleteParticipantsFromTask(ctx context.Context, participant
 }
 
 func (r *Repository) GetCompletedTasksCountByGHUsername(ctx context.Context, projectID int) ([]model.TaskCount, error) {
+
 	rows, err := r.sq.Select("u.github_username",
 		"COUNT(1)",
 		"SUM(t.suggested_estimate)",
@@ -230,6 +243,13 @@ func (r *Repository) GetCompletedTasksCountByGHUsername(ctx context.Context, pro
 	if err != nil {
 		return nil, err
 	}
+
+	defer func() {
+		if err = rows.Close(); err != nil {
+			r.logger.Errorf("error while closing rows: %v", err)
+		}
+	}()
+
 	res := make([]model.TaskCount, 0)
 	for rows.Next() {
 		var taskCount model.TaskCount

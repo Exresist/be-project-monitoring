@@ -12,19 +12,19 @@ import (
 )
 
 func (s *service) GetProjects(ctx context.Context, projectReq *api.GetProjectsReq) ([]model.Project, int, error) {
-
 	filter := repository.NewProjectFilter().
-		// WithPaginator(uint64(projectReq.Limit), uint64(projectReq.Offset)).
 		ByProjectNameLike(projectReq.SearchText)
 
 	count, err := s.repo.GetProjectCountByFilter(ctx, filter)
 	if err != nil {
 		return nil, 0, err
 	}
+
 	projects, err := s.repo.GetProjects(ctx, filter)
 	if err != nil {
 		return nil, 0, err
 	}
+
 	return projects, count, nil
 }
 
@@ -32,6 +32,7 @@ func (s *service) CreateProject(ctx context.Context, projectReq *api.CreateProje
 	if strings.TrimSpace(projectReq.Name) == "" {
 		return nil, ierr.ErrInvalidProjectName
 	}
+
 	if projectReq.ActiveTo.IsZero() || projectReq.ActiveTo.Before(time.Now()) {
 		return nil, ierr.ErrProjectActiveToIsInvalid
 	}
@@ -41,6 +42,7 @@ func (s *service) CreateProject(ctx context.Context, projectReq *api.CreateProje
 	if err != nil && !errors.Is(err, ierr.ErrProjectNotFound) {
 		return nil, err
 	}
+
 	if found != nil {
 		return nil, ierr.ErrProjectNameAlreadyExists
 	}
@@ -61,6 +63,7 @@ func (s *service) CreateProject(ctx context.Context, projectReq *api.CreateProje
 }
 
 func (s *service) UpdateProject(ctx context.Context, projectReq *api.UpdateProjectReq) (*model.Project, error) {
+
 	oldProject, err := s.repo.GetProject(ctx, repository.NewProjectFilter().
 		ByID(projectReq.ID))
 	if err != nil {
@@ -76,12 +79,10 @@ func (s *service) UpdateProject(ctx context.Context, projectReq *api.UpdateProje
 }
 
 func (s *service) DeleteProject(ctx context.Context, id int) error {
-	// if _, err := s.repo.GetProject(ctx, repository.NewProjectFilter().ByID(id)); err != nil {
-	// 	return err
-	// }
 	return s.repo.DeleteProject(ctx, id)
 }
 func (s *service) GetProjectCommits(ctx context.Context, id int) ([]model.CommitsInfo, error) {
+
 	project, err := s.repo.GetProject(ctx, repository.NewProjectFilter().ByID(id))
 	if err != nil {
 		return nil, err
@@ -112,12 +113,14 @@ func (s *service) GetProjectCommits(ctx context.Context, id int) ([]model.Commit
 	if !project.RepoURL.Valid {
 		return nil, ierr.ErrRepositoryURLIsEmpty
 	}
+
 	repoURL := strings.Split(project.RepoURL.String, "/") //https://github.com/Exresist/be-project-monitoring
 	if len(repoURL) != 5 {
 		return nil, ierr.ErrRepositoryURLWrongFormat
 	}
 	// owner := repoURL[3]
 	// repoName := repoURL[4]
+
 	stats, _, err := s.githubCl.Repositories.ListContributorsStats(ctx, repoURL[3], repoURL[4])
 	if err != nil {
 		return nil, err
@@ -136,7 +139,6 @@ func (s *service) GetProjectCommits(ctx context.Context, id int) ([]model.Commit
 	}
 
 	res := make([]model.CommitsInfo, 0, len(usersCommitsInfo))
-
 	for _, commitInfo := range usersCommitsInfo {
 		res = append(res, commitInfo)
 	}
@@ -149,25 +151,28 @@ func (s *service) GetCompletedTasksCountByGHUsername(ctx context.Context, projec
 }
 
 func (s *service) GetProjectInfo(ctx context.Context, id int) (*model.ProjectInfo, error) {
+
 	project, err := s.repo.GetProject(ctx, repository.NewProjectFilter().ByID(id))
 	if err != nil {
 		return nil, err
 	}
+
 	participants, err := s.repo.GetParticipants(ctx, repository.NewParticipantFilter().ByProjectID(id))
 	if err != nil {
 		return nil, err
 	}
+
 	tasks, err := s.repo.GetTasks(ctx, repository.NewTaskFilter().ByProjectID(id))
 	if err != nil {
 		return nil, err
 	}
+
 	projectInfo := &model.ProjectInfo{
 		Project:      *project,
 		Participants: participants,
 		Tasks:        tasks,
 	}
 	return projectInfo, nil
-	//return s.repo.GetProjectInfo(ctx, id)
 }
 
 func mergeProjectFields(oldProject *model.Project, projectReq *api.UpdateProjectReq) (*model.Project, error) {
@@ -182,6 +187,7 @@ func mergeProjectFields(oldProject *model.Project, projectReq *api.UpdateProject
 	} else if projectReq.ActiveTo.Before(time.Now()) {
 		return nil, ierr.ErrInvalidActiveTo
 	}
+
 	if projectReq.ActiveTo.IsZero() || projectReq.ActiveTo.Before(time.Now()) {
 		newProject.ActiveTo = oldProject.ActiveTo
 	}
@@ -199,25 +205,30 @@ func mergeProjectFields(oldProject *model.Project, projectReq *api.UpdateProject
 	} else {
 		newProject.Description.Scan(*projectReq.Description)
 	}
+
 	if projectReq.PhotoURL == nil {
 		newProject.PhotoURL = oldProject.PhotoURL
 	} else {
 		newProject.PhotoURL.Scan(*projectReq.PhotoURL)
 	}
+
 	if projectReq.ReportURL == nil {
 		newProject.ReportURL = oldProject.ReportURL
 	} else {
 		newProject.ReportURL.Scan(*projectReq.ReportURL)
 	}
+
 	if projectReq.ReportName == nil {
 		newProject.ReportName = oldProject.ReportName
 	} else {
 		newProject.ReportName.Scan(*projectReq.ReportName)
 	}
+
 	if projectReq.RepoURL == nil {
 		newProject.RepoURL = oldProject.RepoURL
 	} else {
 		newProject.RepoURL.Scan(*projectReq.RepoURL)
 	}
+
 	return newProject, nil
 }

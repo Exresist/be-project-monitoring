@@ -4,7 +4,6 @@ import (
 	"be-project-monitoring/internal/domain/model"
 	ierr "be-project-monitoring/internal/errors"
 	"context"
-	"database/sql"
 	"fmt"
 
 	sq "github.com/Masterminds/squirrel"
@@ -42,28 +41,9 @@ func (r *Repository) GetParticipant(ctx context.Context, filter *ParticipantFilt
 		return &participants[0], nil
 	}
 }
+
 func (r *Repository) GetParticipants(ctx context.Context, filter *ParticipantFilter) ([]model.Participant, error) {
-	// query := r.sq.Select(
-	// 	"p.id",
-	// 	"p.role",
-	// 	"p.user_id",
-	// 	"p.project_id",
-	// 	"u.role",
-	// 	"u.color_code",
-	// 	"u.email",
-	// 	"u.username",
-	// 	"u.first_name",
-	// 	"u.last_name",
-	// 	"u.group",
-	// 	"u.github_username",
-	// 	"u.hashed_password",
-	// ).
-	// 	From("participants p").
-	// 	Join("users u ON u.id = p.user_id").
-	// 	//Where("p.project_id = $1", projectID).QueryContext(ctx)
-	// 	Where(conditionsFromParticipantFilter(filter))
-	// fmt.Println(query.ToSql())
-	// rows, err := query.QueryContext(ctx)
+
 	rows, err := r.sq.Select(
 		"p.id",
 		"p.role",
@@ -80,22 +60,21 @@ func (r *Repository) GetParticipants(ctx context.Context, filter *ParticipantFil
 	).
 		From("participants p").
 		Join("users u ON u.id = p.user_id").
-		//Where("p.project_id = $1", projectID).QueryContext(ctx)
 		Where(conditionsFromParticipantFilter(filter)).QueryContext(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("error while querying participants: %w", err)
 	}
-	defer func(res *sql.Rows) {
-		err = res.Close()
-		if err != nil {
+
+	defer func() {
+		if err = rows.Close(); err != nil {
 			r.logger.Error("error while closing sql rows", zap.Error(err))
 		}
-	}(rows)
+	}()
 
 	participants := make([]model.Participant, 0)
 	for rows.Next() {
 		p := model.Participant{}
-		if err := rows.Scan(
+		if err = rows.Scan(
 			&p.ID, &p.Role,
 			&p.ShortUser.ID, &p.ProjectID,
 			&p.ShortUser.Role, &p.ColorCode,
@@ -105,10 +84,12 @@ func (r *Repository) GetParticipants(ctx context.Context, filter *ParticipantFil
 		); err != nil {
 			return nil, fmt.Errorf("error while scanning row: %w", err)
 		}
+
 		participants = append(participants, p)
 	}
 	return participants, nil
 }
+
 func (r *Repository) UpdateParticipantRole(ctx context.Context, participantID int, role string) error {
 	_, err := r.sq.Update("participants").
 		SetMap(map[string]interface{}{
@@ -117,6 +98,7 @@ func (r *Repository) UpdateParticipantRole(ctx context.Context, participantID in
 		ExecContext(ctx)
 	return err
 }
+
 func (r *Repository) DeleteParticipant(ctx context.Context, id int) error {
 	_, err := r.sq.Delete("participants").
 		Where(sq.Eq{"id": id}).ExecContext(ctx)

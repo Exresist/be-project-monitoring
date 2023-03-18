@@ -1,14 +1,13 @@
 package api
 
 import (
+	"be-project-monitoring/internal/domain"
+	"be-project-monitoring/internal/domain/model"
+	ierr "be-project-monitoring/internal/errors"
 	"encoding/json"
 	"net/http"
 	"strconv"
 	"time"
-
-	"be-project-monitoring/internal/domain"
-	"be-project-monitoring/internal/domain/model"
-	ierr "be-project-monitoring/internal/errors"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -196,7 +195,7 @@ func makeTaskResponse(task model.Task) TaskResp {
 		//ProjectID:     task.ProjectID,
 	}
 }
-func makeShortTaskResponse(task model.ShortTask) ShortTaskResp {
+func castShortTaskResponse(task model.ShortTask) ShortTaskResp {
 	return ShortTaskResp{
 		ID:            task.ID,
 		Name:          task.Name,
@@ -222,7 +221,7 @@ func makeTasksResponses(tasks []model.Task) []TaskResp {
 func makeShortTasksResponses(tasks []model.ShortTask) []ShortTaskResp {
 	taskResponses := make([]ShortTaskResp, 0, len(tasks))
 	for _, task := range tasks {
-		taskResponses = append(taskResponses, makeShortTaskResponse(task))
+		taskResponses = append(taskResponses, castShortTaskResponse(task))
 	}
 	return taskResponses
 }

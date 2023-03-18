@@ -48,5 +48,6 @@ CREATE TABLE tasks
     status             status    NOT NULL DEFAULT 'BACKLOG',
     created_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    approved           bool               DEFAULT FALSE,
     project_id         BIGINT REFERENCES projects (id) ON DELETE CASCADE
 );

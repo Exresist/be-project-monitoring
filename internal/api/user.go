@@ -1,11 +1,10 @@
 package api
 
 import (
+	"be-project-monitoring/internal/domain"
 	"encoding/json"
 	"net/http"
 	"strconv"
-
-	"be-project-monitoring/internal/domain"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -123,6 +122,7 @@ func (s *Server) getUserProfile(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return
 	}
+
 	c.JSON(http.StatusOK, GetUserResp{
 		ID:             userProfile.ShortUser.ID,
 		Email:          userProfile.Email,
@@ -133,7 +133,7 @@ func (s *Server) getUserProfile(c *gin.Context) {
 		GithubUsername: userProfile.ShortUser.GithubUsername,
 		ColorCode:      userProfile.ShortUser.ColorCode,
 		Role:           string(userProfile.ShortUser.Role),
-		Projects:       makeShortProjectResponses(userProfile.UserProjects),
+		Projects:       castShortProjects(userProfile.UserProjects),
 	})
 }
 func (s *Server) getUserProfileFromToken(c *gin.Context) {
@@ -154,28 +154,36 @@ func (s *Server) getUserProfileFromToken(c *gin.Context) {
 		GithubUsername: userProfile.ShortUser.GithubUsername,
 		ColorCode:      userProfile.ShortUser.ColorCode,
 		Role:           string(userProfile.ShortUser.Role),
-		Projects:       makeShortProjectResponses(userProfile.UserProjects),
+		Projects:       castShortProjects(userProfile.UserProjects),
 	})
 }
 
 func (s *Server) getUserProjects(c *gin.Context) {
 	userID := c.MustGet(string(domain.UserIDCtx)).(uuid.UUID)
+	ctx := c.Request.Context()
 
-	userProfile, err := s.svc.GetUserProfile(c.Request.Context(), userID)
+	userProfile, err := s.svc.GetUserProfile(ctx, userID)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return
 	}
+
 	projectResponses := make([]projectWithShortParticipantsResp, 0)
-	for _, v := range userProfile.UserProjects {
-		participants, err := s.svc.GetParticipants(c.Request.Context(), v.ID)
+	for _, project := range userProfile.UserProjects {
+		participants, err := s.svc.GetParticipants(ctx, project.ID)
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 			return
 		}
 		projectResponses = append(projectResponses, projectWithShortParticipantsResp{
-			Participants:     makeShortParticipantResponses(participants),
-			ShortProjectResp: makeShortProjectResponse(v),
+			Participants: makeShortParticipantResponses(participants),
+			ShortProjectResp: ShortProjectResp{
+				ID:          project.ID,
+				Name:        project.Name,
+				Description: project.Description.String,
+				PhotoURL:    project.PhotoURL.String,
+				ActiveTo:    project.ActiveTo,
+			},
 		})
 	}
 	c.JSON(http.StatusOK, projectResponses)

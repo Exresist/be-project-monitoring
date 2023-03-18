@@ -1,12 +1,11 @@
 package api
 
 import (
+	"be-project-monitoring/internal/domain"
+	"be-project-monitoring/internal/domain/model"
 	"encoding/json"
 	"fmt"
 	"net/http"
-
-	"be-project-monitoring/internal/domain"
-	"be-project-monitoring/internal/domain/model"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -19,12 +18,6 @@ type (
 		UserID    uuid.UUID `json:"userId"`
 		ProjectID int       `json:"projectId"`
 	}
-	// ParsedParticipant struct {
-	// 	ID        int    `json:"id"`
-	// 	Role      string `json:"role"`
-	// 	ProjectID int    `json:"projectId"`
-	// 	User      model.ShortUser `json:"user,omitempty"`
-	// }
 
 	ParticipantResp struct {
 		ID        int             `json:"id"`
@@ -46,8 +39,8 @@ var (
 )
 
 func (s *Server) parseBodyToAddedParticipant(c *gin.Context) {
-
 	addedParticipant = &AddedParticipant{}
+
 	if err := json.NewDecoder(c.Request.Body).Decode(addedParticipant); err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return
@@ -56,23 +49,23 @@ func (s *Server) parseBodyToAddedParticipant(c *gin.Context) {
 	c.Set(string(domain.ProjectIDCtx), addedParticipant.ProjectID)
 }
 func (s *Server) addParticipant(c *gin.Context) {
-	_, err, _ := sf.Do(fmt.Sprintf("%v-%v", addedParticipant.ProjectID, addedParticipant.UserID), func() (interface{}, error) {
-		return s.svc.AddParticipant(c.Request.Context(), false, addedParticipant)
-	})
+
+	_, err, _ := sf.Do(
+		fmt.Sprintf("%v-%v", addedParticipant.ProjectID, addedParticipant.UserID),
+		func() (interface{}, error) {
+			return s.svc.AddParticipant(c.Request.Context(), false, addedParticipant)
+		})
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return
 	}
-	if err != nil {
+
+	if _, err = s.svc.GetParticipants(c.Request.Context(), addedParticipant.ProjectID); err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
 		return
 	}
-	if _, err := s.svc.GetParticipants(c.Request.Context(), addedParticipant.ProjectID); err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{errField: err.Error()})
-		return
-	}
+
 	s.sendProjectInfoResponse(c, addedParticipant.ProjectID)
-	//c.JSON(http.StatusCreated, participants)
 }
 func (s *Server) parseBodyToParticipantResp(c *gin.Context) {
 	parsedParticipant = &ParticipantResp{}
@@ -130,7 +123,7 @@ func makeParticipantResponse(participant model.Participant) *ParticipantResp {
 		User: participant.ShortUser,
 	}
 }
-func makeParticipantsResponse(participants []model.Participant) []ParticipantResp {
+func castParticipants(participants []model.Participant) []ParticipantResp {
 	participantResponses := make([]ParticipantResp, 0, len(participants))
 	for _, participant := range participants {
 		participantResponses = append(participantResponses, *makeParticipantResponse(participant))

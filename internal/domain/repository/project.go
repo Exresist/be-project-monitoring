@@ -5,7 +5,6 @@ import (
 	"be-project-monitoring/internal/domain/model"
 	ierr "be-project-monitoring/internal/errors"
 	"context"
-	"database/sql"
 	"fmt"
 	"strconv"
 
@@ -26,6 +25,7 @@ func (r *Repository) GetProject(ctx context.Context, filter *ProjectFilter) (*mo
 		return &projects[0], nil
 	}
 }
+
 func (r *Repository) GetProjects(ctx context.Context, filter *ProjectFilter) ([]model.Project, error) {
 	filter.Limit = db.NormalizeLimit(filter.Limit)
 	rows, err := r.sq.Select(
@@ -42,12 +42,12 @@ func (r *Repository) GetProjects(ctx context.Context, filter *ProjectFilter) ([]
 		return nil, fmt.Errorf("error while performing sql request: %w", err)
 	}
 
-	defer func(rows *sql.Rows) {
-		err = rows.Close()
-		if err != nil {
+	defer func() {
+		if err = rows.Close(); err != nil {
 			r.logger.Error("error while closing sql rows", zap.Error(err))
 		}
-	}(rows)
+	}()
+
 	projects := make([]model.Project, 0)
 	for rows.Next() {
 		project := model.Project{}
@@ -63,6 +63,7 @@ func (r *Repository) GetProjects(ctx context.Context, filter *ProjectFilter) ([]
 	}
 	return projects, nil
 }
+
 func (r *Repository) GetProjectCountByFilter(ctx context.Context, filter *ProjectFilter) (int, error) {
 	var count int
 	if err := r.sq.Select("COUNT(1)").
@@ -71,8 +72,10 @@ func (r *Repository) GetProjectCountByFilter(ctx context.Context, filter *Projec
 		QueryRowContext(ctx).Scan(&count); err != nil {
 		return 0, fmt.Errorf("error while scanning sql row: %w", err)
 	}
+
 	return count, nil
 }
+
 func (r *Repository) InsertProject(ctx context.Context, project *model.Project) error {
 	row := r.sq.Insert("projects").
 		Columns("name",
@@ -103,13 +106,13 @@ func (r *Repository) UpdateProject(ctx context.Context, project *model.Project) 
 		ExecContext(ctx)
 	return err
 }
+
 func (r *Repository) DeleteProject(ctx context.Context, id int) error {
 	_, err := r.sq.Delete("projects").
 		Where(sq.Eq{"id": id}).ExecContext(ctx)
 	return err
 }
 
-// не работает((( партисипанты дублируются, из-за того, что висят на тасках, плюс еще не подтягиваю здесь дату криэйта и апдейта таски
 func (r *Repository) GetProjectInfo(ctx context.Context, id int) (*model.ProjectInfo, error) {
 	query := `SELECT p.id, p.name, p.description, p.photo_url, p.report_url,
 	 			p.report_name, p.repo_url, p.active_to,
@@ -131,17 +134,17 @@ func (r *Repository) GetProjectInfo(ctx context.Context, id int) (*model.Project
 				  GROUP BY p.id, p.name, p.description, p.photo_url, p.report_url,
 			 	  p.report_name, p.repo_url, p.active_to
 				  `
-	//fmt.Println(query)
+
 	rows, err := r.db.QueryContext(ctx, query, id)
 	if err != nil {
 		return nil, fmt.Errorf("error while performing sql request: %w", err)
 	}
-	defer func(rows *sql.Rows) {
-		err := rows.Close()
-		if err != nil {
+
+	defer func() {
+		if err = rows.Close(); err != nil {
 			r.logger.Error("error while closing sql rows", zap.Error(err))
 		}
-	}(rows)
+	}()
 
 	if rows.Next() {
 		projectInfo := model.ProjectInfo{}
@@ -172,19 +175,18 @@ func (r *Repository) GetProjectInfo(ctx context.Context, id int) (*model.Project
 			&tasksDescriptions, &participantsIDs,
 			&tasksStatuses}
 
-		if err := rows.Scan(params...); err != nil {
+		if err = rows.Scan(params...); err != nil {
 			return nil, fmt.Errorf("error while scanning sql row: %w", err)
 		}
-		// for _, v := range params {
-		// 	fmt.Printf("%v, %T \n\n", v, v)
-		// }
 
 		participants := make([]model.Participant, 0)
 		for i := range participantIDs {
+
 			userID, err := uuid.Parse(usersIDs[i])
 			if err != nil {
 				return nil, fmt.Errorf("error while parsing user id: %w", err)
 			}
+
 			participants = append(participants, model.Participant{
 				ShortUser: model.ShortUser{
 					ID:             userID,
@@ -205,10 +207,12 @@ func (r *Repository) GetProjectInfo(ctx context.Context, id int) (*model.Project
 		tasks := make([]model.Task, 0)
 		for i := range tasksIDs {
 			if tasksIDs[i] != nil {
+
 				taskID, err := strconv.Atoi(string(tasksIDs[i]))
 				if err != nil {
 					return nil, err
 				}
+
 				task := model.Task{
 					ShortTask: model.ShortTask{
 						ID:     taskID,

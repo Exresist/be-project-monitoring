@@ -48,10 +48,3 @@ func (s *service) GetUserIDFromToken(ctx context.Context, token string) (uuid.UU
 	cl := claims.Claims.(jwt.MapClaims)
 	return uuid.Parse(cl["id"].(string))
 }
-
-func (s *service) VerifySelf(ctx context.Context, tokenID, id uuid.UUID) error {
-	if tokenID != id {
-		return ierr.ErrAccessDeniedAnotherUser
-	}
-	return nil
-}

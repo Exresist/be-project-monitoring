@@ -5,7 +5,6 @@ import (
 	"be-project-monitoring/internal/domain/model"
 	ierr "be-project-monitoring/internal/errors"
 	"context"
-	"database/sql"
 	"fmt"
 	"strconv"
 	"strings"
@@ -28,29 +27,10 @@ func (r *Repository) GetUser(ctx context.Context, filter *UserFilter) (*model.Us
 		return &users[0], nil
 	}
 }
+
 func (r *Repository) GetFullUsers(ctx context.Context, filter *UserFilter) ([]model.User, error) {
 	filter.Limit = db.NormalizeLimit(filter.Limit)
-	// rows, err := r.sq.Select(
-	// 	"u.id", "u.role",
-	// 	"u.color_code", "u.email",
-	// 	"u.username", "u.first_name",
-	// 	"u.last_name", "u.\"group\"",
-	// 	"u.github_username", "u.hashed_password").
-	// 	From("users u").
-	// 	Where(conditionsFromUserFilter(filter)).
-	// 	Limit(filter.Limit).
-	// 	Offset(filter.Offset).
-	// 	QueryContext(ctx)
 
-	// query := r.sq.Select(
-	// 	"u.id", "u.role",
-	// 	"u.color_code", "u.email",
-	// 	"u.username", "u.first_name",
-	// 	"u.last_name", "u.\"group\"",
-	// 	"u.github_username", "u.hashed_password").
-	// 	From("users u").
-	// 	Where(conditionsFromUserFilter(filter))
-	// fmt.Println(query.ToSql())
 	rows, err := r.sq.Select(
 		"u.id", "u.role",
 		"u.color_code", "u.email",
@@ -64,12 +44,13 @@ func (r *Repository) GetFullUsers(ctx context.Context, filter *UserFilter) ([]mo
 		return nil, fmt.Errorf("error while performing sql request: %w", err)
 	}
 
-	defer func(rows *sql.Rows) {
+	defer func() {
 		err = rows.Close()
 		if err != nil {
 			r.logger.Error("error while closing sql rows", zap.Error(err))
 		}
-	}(rows)
+	}()
+
 	users := make([]model.User, 0)
 	for rows.Next() {
 		user := model.User{}
@@ -82,39 +63,48 @@ func (r *Repository) GetFullUsers(ctx context.Context, filter *UserFilter) ([]mo
 		); err != nil {
 			return nil, fmt.Errorf("error while scanning sql row: %w", err)
 		}
+
 		users = append(users, user)
 	}
 	return users, nil
 }
 func (r *Repository) GetFullCountByFilter(ctx context.Context, filter *UserFilter) (int, error) {
 	var count int
+
 	if err := r.sq.Select("COUNT(1)").
 		From("users u").
 		Where(conditionsFromUserFilter(filter)).
 		QueryRowContext(ctx).Scan(&count); err != nil {
 		return 0, fmt.Errorf("error while scanning sql row: %w", err)
 	}
+
 	return count, nil
 }
 
 func (r *Repository) GetPartialUsers(ctx context.Context, filter *UserFilter) ([]model.ShortUser, error) {
 	filter.Limit = db.NormalizeLimit(filter.Limit)
-	fields := []string{
-		"u.id", "u.role",
-		"u.color_code", "u.email",
-		"u.username", "u.first_name",
-		"u.last_name", "u.\"group\"",
-		"u.github_username",
-	}
-	query := ""
-	args := []interface{}{}
-	err := error(nil)
+	var (
+		fields = []string{
+			"u.id", "u.role",
+			"u.color_code", "u.email",
+			"u.username", "u.first_name",
+			"u.last_name", "u.\"group\"",
+			"u.github_username",
+		}
+		query string
+		args  []interface{}
+		err   error
+	)
+
 	if filter.isOnProject {
-		if query, args, err = getSQLStringForPartialUser(filter, fields...); err != nil {
+
+		if query, args, err = r.getSQLStringForPartialUser(filter, fields...); err != nil {
 			return nil, fmt.Errorf("error while generating sql query: %w", err)
 		}
+
 	} else {
-		if query, args, err = getSQLStringForPartialUser(filter, fields[0]); err != nil {
+
+		if query, args, err = r.getSQLStringForPartialUser(filter, fields[0]); err != nil {
 			return nil, fmt.Errorf("error while generating sql query: %w", err)
 		}
 
@@ -123,24 +113,27 @@ func (r *Repository) GetPartialUsers(ctx context.Context, filter *UserFilter) ([
 		FROM users u WHERE u.id NOT IN (` + query + `)`
 	}
 	if filter.likeText != "" {
+
 		searchCondition, searchArgs, err := conditionsFromUserFilter(filter).ToSql()
 		if err != nil {
 			return nil, fmt.Errorf("error while adding conditions to sql row: %w", err)
 		}
+
 		searchCondition = strings.ReplaceAll(searchCondition, "?", "'"+searchArgs[0].(string)+"'")
 		query = query + " AND " + searchCondition
 	}
-	//query = query + " LIMIT " + fmt.Sprint(filter.Limit) + " OFFSET " + fmt.Sprint(filter.Offset)
+
 	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("error while performing sql request: %w", err)
 	}
-	defer func(rows *sql.Rows) {
-		err = rows.Close()
-		if err != nil {
+
+	defer func() {
+		if err = rows.Close(); err != nil {
 			r.logger.Error("error while closing sql rows", zap.Error(err))
 		}
-	}(rows)
+	}()
+
 	users := make([]model.ShortUser, 0)
 	for rows.Next() {
 		user := model.ShortUser{}
@@ -153,30 +146,38 @@ func (r *Repository) GetPartialUsers(ctx context.Context, filter *UserFilter) ([
 		); err != nil {
 			return nil, fmt.Errorf("error while scanning sql row: %w", err)
 		}
+
 		users = append(users, user)
 	}
 	return users, nil
 }
 func (r *Repository) GetPartialCountByFilter(ctx context.Context, filter *UserFilter) (int, error) {
-	var count int
-	fields := []string{
-		"u.id", "u.role",
-		"u.color_code", "u.email",
-		"u.username", "u.first_name",
-		"u.last_name", "u.\"group\"",
-		"u.github_username",
-	}
-	query := ""
-	args := []interface{}{}
-	err := error(nil)
+	var (
+		count  int
+		fields = []string{
+			"u.id", "u.role",
+			"u.color_code", "u.email",
+			"u.username", "u.first_name",
+			"u.last_name", "u.\"group\"",
+			"u.github_username",
+		}
+		query string
+		args  []interface{}
+		err   error
+	)
+
 	if filter.isOnProject {
-		if query, args, err = getSQLStringForPartialUser(filter, "COUNT(1)"); err != nil {
+
+		if query, args, err = r.getSQLStringForPartialUser(filter, "COUNT(1)"); err != nil {
 			return 0, fmt.Errorf("error while generating sql query: %w", err)
 		}
+
 	} else {
-		if query, args, err = getSQLStringForPartialUser(filter, fields[0]); err != nil {
+
+		if query, args, err = r.getSQLStringForPartialUser(filter, fields[0]); err != nil {
 			return 0, fmt.Errorf("error while generating sql query: %w", err)
 		}
+
 		query = `SELECT COUNT(1) FROM users u WHERE u.id NOT IN (` + query + `)`
 	}
 
@@ -185,20 +186,16 @@ func (r *Repository) GetPartialCountByFilter(ctx context.Context, filter *UserFi
 		if err != nil {
 			return 0, fmt.Errorf("error while adding conditions to sql row: %w", err)
 		}
+
 		searchCondition = strings.ReplaceAll(searchCondition, "?", "'"+searchArgs[0].(string)+"'")
 		query = query + " AND " + searchCondition
 	}
-	if err := r.db.QueryRowContext(ctx, query, args...).Scan(&count); err != nil {
+
+	if err = r.db.QueryRowContext(ctx, query, args...).Scan(&count); err != nil {
 		return 0, fmt.Errorf("error while scanning sql row: %w", err)
 	}
+
 	return count, nil
-}
-func getSQLStringForPartialUser(filter *UserFilter, fields ...string) (string, []interface{}, error) {
-	return sq.Select(fields...).
-		From("users u").
-		Join("participants p on u.id = p.user_id").
-		Where(conditionsFromUserFilterForProject(filter)).
-		PlaceholderFormat(sq.Dollar).ToSql()
 }
 
 func (r *Repository) InsertUser(ctx context.Context, user *model.User) error {
@@ -216,6 +213,7 @@ func (r *Repository) InsertUser(ctx context.Context, user *model.User) error {
 		ExecContext(ctx)
 	return err
 }
+
 func (r *Repository) UpdateUser(ctx context.Context, user *model.User) error {
 	_, err := r.sq.Update("users").
 		SetMap(map[string]interface{}{
@@ -230,11 +228,13 @@ func (r *Repository) UpdateUser(ctx context.Context, user *model.User) error {
 		ExecContext(ctx)
 	return err
 }
+
 func (r *Repository) DeleteUser(ctx context.Context, id uuid.UUID) error {
 	_, err := r.sq.Delete("users").
 		Where(sq.Eq{"id": id}).ExecContext(ctx)
 	return err
 }
+
 func (r *Repository) GetUserProfile(ctx context.Context, id uuid.UUID) (*model.Profile, error) {
 	query := `SELECT u.id, u.role, u.color_code, u.email, u.username,
 	 			u.first_name, u.last_name, u."group", u.github_username,
@@ -248,16 +248,17 @@ func (r *Repository) GetUserProfile(ctx context.Context, id uuid.UUID) (*model.P
 			  WHERE u.id = $1
 			  GROUP BY u.id, u.role, u.color_code, u.email, u.username,
 					   u.first_name, u.last_name, u."group", u.github_username`
+
 	rows, err := r.db.QueryContext(ctx, query, id)
 	if err != nil {
 		return nil, fmt.Errorf("error while performing sql request: %w", err)
 	}
-	defer func(rows *sql.Rows) {
-		err := rows.Close()
-		if err != nil {
+
+	defer func() {
+		if err = rows.Close(); err != nil {
 			r.logger.Error("error while closing sql rows", zap.Error(err))
 		}
-	}(rows)
+	}()
 
 	if rows.Next() {
 		profile := model.Profile{}
@@ -274,19 +275,19 @@ func (r *Repository) GetUserProfile(ctx context.Context, id uuid.UUID) (*model.P
 			&projectsNames, &projectsDescriptions,
 			&projectsPhotoURLs, &projectsActiveTos}
 
-		if err := rows.Scan(params...); err != nil {
+		if err = rows.Scan(params...); err != nil {
 			return nil, fmt.Errorf("error while scanning sql row: %w", err)
 		}
-		// for _, v := range params {
-		// 	fmt.Printf("%v, %T \n\n", v, v)
-		// }
+
 		projects := make([]model.ShortProject, 0)
 		for i := range projectsIDs {
 			if projectsIDs[i] != nil {
+
 				activeTo, err := time.Parse("2006-01-02", string(projectsActiveTos[i]))
 				if err != nil {
 					return nil, fmt.Errorf("error while parsing time: %w", err)
 				}
+
 				projectID, err := strconv.Atoi(string(projectsIDs[i]))
 				if err != nil {
 					return nil, err
@@ -306,4 +307,12 @@ func (r *Repository) GetUserProfile(ctx context.Context, id uuid.UUID) (*model.P
 		return &profile, nil
 	}
 	return nil, ierr.ErrUserNotFound
+}
+
+func (r *Repository) getSQLStringForPartialUser(filter *UserFilter, fields ...string) (string, []interface{}, error) {
+	return r.sq.Select(fields...).
+		From("users u").
+		Join("participants p on u.id = p.user_id").
+		Where(conditionsFromUserFilterForProject(filter)).
+		ToSql()
 }
