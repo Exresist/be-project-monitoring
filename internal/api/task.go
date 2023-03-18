@@ -1,13 +1,14 @@
 package api
 
 import (
-	"be-project-monitoring/internal/domain"
-	"be-project-monitoring/internal/domain/model"
-	ierr "be-project-monitoring/internal/errors"
 	"encoding/json"
 	"net/http"
 	"strconv"
 	"time"
+
+	"be-project-monitoring/internal/domain"
+	"be-project-monitoring/internal/domain/model"
+	ierr "be-project-monitoring/internal/errors"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -31,6 +32,7 @@ type (
 		Estimate      int       `json:"estimatedTime"`
 		CreatedAt     time.Time `json:"createdAt"`
 		UpdatedAt     time.Time `json:"updatedAt"`
+		Approved      bool      `json:"approved"`
 		ParticipantID int       `json:"asignee,omitempty"`
 		CreatorID     int       `json:"creatorId,omitempty"`
 	}
@@ -48,6 +50,7 @@ type (
 		ProjectID     int
 		Name          *string
 		ParticipantID *int
+		Approved      *bool
 		Offset        int
 		Limit         int
 	}
@@ -59,6 +62,7 @@ type (
 		Status            *string `json:"status"`
 		ParticipantID     *int    `json:"asignee"`
 		ProjectID         int     `json:"projectId"`
+		Approved          *bool   `json:"approved"`
 		//ChangeParticipant *bool   `json:"change_participant"`
 	}
 )
@@ -185,6 +189,7 @@ func makeTaskResponse(task model.Task) TaskResp {
 			ParticipantID: int(task.ParticipantID.Int64),
 			CreatorID:     int(task.CreatorID.Int64),
 			Status:        string(task.Status),
+			Approved:      task.Approved.Bool,
 			CreatedAt:     task.CreatedAt,
 			UpdatedAt:     task.UpdatedAt,
 		},
@@ -200,6 +205,7 @@ func makeShortTaskResponse(task model.ShortTask) ShortTaskResp {
 		ParticipantID: int(task.ParticipantID.Int64),
 		CreatorID:     int(task.CreatorID.Int64),
 		Status:        string(task.Status),
+		Approved:      task.Approved.Bool,
 		CreatedAt:     task.CreatedAt,
 		UpdatedAt:     task.UpdatedAt,
 	}

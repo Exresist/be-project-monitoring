@@ -27,6 +27,7 @@ type (
 		CreatorID     sql.NullInt64  `json:"creatorId"`
 		Status        TaskStatus     `json:"status"`
 		Estimate      sql.NullInt64  `json:"estimatedTime"`
+		Approved      sql.NullBool   `json:"approved"`
 		CreatedAt     time.Time      `json:"createdAt"`
 		UpdatedAt     time.Time      `json:"updatedAt"`
 	}

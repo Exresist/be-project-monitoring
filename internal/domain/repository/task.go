@@ -32,7 +32,7 @@ func (r *Repository) GetTasks(ctx context.Context, filter *TaskFilter) ([]model.
 		"t.participant_id",
 		"t.creator_id", "t.status",
 		"t.created_at", "t.updated_at",
-		"t.project_id").
+		"t.project_id", "t.approved").
 		From("tasks t").
 		Where(conditionsFromTaskFilter(filter)).
 		Limit(filter.Limit).
@@ -57,7 +57,7 @@ func (r *Repository) GetTasks(ctx context.Context, filter *TaskFilter) ([]model.
 			&task.ParticipantID,
 			&task.CreatorID, &task.Status,
 			&task.CreatedAt, &task.UpdatedAt,
-			&task.ProjectID,
+			&task.ProjectID, &task.Approved,
 		); err != nil {
 			return nil, fmt.Errorf("error while scanning sql row: %w", err)
 		}
@@ -103,6 +103,7 @@ func (r *Repository) UpdateTask(ctx context.Context, task *model.Task) error {
 			"participant_id":     task.ParticipantID,
 			"status":             task.Status,
 			"updated_at":         task.UpdatedAt,
+			"approved":           task.Approved,
 		}).Where(sq.Eq{"id": task.ID}).
 		ExecContext(ctx)
 	return err
@@ -118,7 +119,7 @@ func (r *Repository) GetTaskInfo(ctx context.Context, id int) (*model.TaskInfo, 
 		"t.suggested_estimate",
 		"t.participant_id", "t.creator_id",
 		"t.status", "t.created_at",
-		"t.updated_at", "t.project_id",
+		"t.updated_at", "t.project_id", "t.approved",
 		"u1.id", "u1.role",
 		"u1.color_code", "u1.email",
 		"u1.username", "u1.first_name",
@@ -154,7 +155,7 @@ func (r *Repository) GetTaskInfo(ctx context.Context, id int) (*model.TaskInfo, 
 			&taskInfo.Estimate,
 			&taskInfo.ParticipantID, &taskInfo.CreatorID,
 			&taskInfo.Status, &taskInfo.CreatedAt,
-			&taskInfo.UpdatedAt, &taskInfo.ProjectID,
+			&taskInfo.UpdatedAt, &taskInfo.ProjectID, &taskInfo.Approved,
 			&nullStrings[0], &nullStrings[1], &nullStrings[2],
 			&nullStrings[3], &nullStrings[4], &nullStrings[5],
 			&nullStrings[6], &nullStrings[7], &nullStrings[8],
@@ -221,7 +222,10 @@ func (r *Repository) GetCompletedTasksCountByGHUsername(ctx context.Context, pro
 		From("tasks t").
 		Join("participants p ON p.id = t.participant_id").
 		Join("users u ON u.id = p.user_id").
-		Where(sq.Eq{"t.status": model.Done, "t.project_id": projectID}).
+		Where(sq.Eq{"t.status": model.Done,
+			"t.project_id": projectID,
+			"t.approved":   true,
+		}).
 		GroupBy("u.github_username").QueryContext(ctx)
 	if err != nil {
 		return nil, err

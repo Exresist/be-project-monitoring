@@ -25,6 +25,9 @@ func (s *service) GetTasks(ctx context.Context, taskReq *api.GetTasksReq) ([]mod
 	if taskReq.Name != nil {
 		filter.ByTaskName(*taskReq.Name)
 	}
+	if taskReq.Approved != nil {
+		filter.ByApproved(*taskReq.Approved)
+	}
 
 	count, err := s.repo.GetTaskCountByFilter(ctx, filter)
 	if err != nil {
@@ -177,6 +180,12 @@ func mergeTaskFields(oldTask *model.Task, taskReq *api.UpdateTaskReq, newPartici
 		newTask.Estimate = oldTask.Estimate
 	} else {
 		newTask.Estimate.Scan(*taskReq.SuggestedEstimate)
+	}
+
+	if taskReq.Approved == nil {
+		newTask.Approved = oldTask.Approved
+	} else {
+		newTask.Approved.Scan(*taskReq.Approved)
 	}
 
 	return newTask, nil

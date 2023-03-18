@@ -201,6 +201,7 @@ type TaskFilter struct {
 	ParticipantID *int
 	Name          *string
 	Status        model.TaskStatus
+	Approved      *bool
 	*db.Paginator
 }
 
@@ -227,6 +228,11 @@ func (f *TaskFilter) ByTaskName(name string) *TaskFilter {
 
 func (f *TaskFilter) ByStatus(status model.TaskStatus) *TaskFilter {
 	f.Status = status
+	return f
+}
+
+func (f *TaskFilter) ByApproved(approved bool) *TaskFilter {
+	f.Approved = &approved
 	return f
 }
 
@@ -260,6 +266,9 @@ func conditionsFromTaskFilter(filter *TaskFilter) sq.Sqlizer {
 	}
 	if filter.ParticipantID != nil {
 		eq["t.participant_id"] = *filter.ParticipantID
+	}
+	if filter.Approved != nil {
+		eq["t.approved"] = *filter.Approved
 	}
 	return eq
 }

@@ -94,9 +94,6 @@ func (s *service) GetFullUsers(ctx context.Context, searchParam string) ([]model
 	if err != nil {
 		return nil, 0, err
 	}
-	if count == 0 {
-		return nil, 0, ierr.ErrUsersNotFound
-	}
 	users, err := s.repo.GetFullUsers(ctx, filter)
 	if err != nil {
 		return nil, 0, err
@@ -120,9 +117,6 @@ func (s *service) GetPartialUsers(ctx context.Context, userReq *api.GetUserReq) 
 	count, err := s.repo.GetPartialCountByFilter(ctx, filter)
 	if err != nil {
 		return nil, 0, err
-	}
-	if count == 0 {
-		return nil, 0, ierr.ErrUsersNotFound
 	}
 	users, err := s.repo.GetPartialUsers(ctx, filter)
 	if err != nil {
