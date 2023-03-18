@@ -1,12 +1,13 @@
 package service
 
 import (
+	"context"
+	"errors"
+
 	"be-project-monitoring/internal/api"
 	"be-project-monitoring/internal/domain/model"
 	"be-project-monitoring/internal/domain/repository"
 	ierr "be-project-monitoring/internal/errors"
-	"context"
-	"errors"
 
 	"github.com/AvraamMavridis/randomcolor"
 	"github.com/google/uuid"

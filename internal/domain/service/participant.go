@@ -1,11 +1,12 @@
 package service
 
 import (
+	"context"
+
 	"be-project-monitoring/internal/api"
 	"be-project-monitoring/internal/domain/model"
 	"be-project-monitoring/internal/domain/repository"
 	ierr "be-project-monitoring/internal/errors"
-	"context"
 
 	"github.com/google/uuid"
 )

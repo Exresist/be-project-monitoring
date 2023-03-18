@@ -1,12 +1,13 @@
 package api
 
 import (
-	"be-project-monitoring/internal/domain"
-	"be-project-monitoring/internal/domain/model"
-	ierr "be-project-monitoring/internal/errors"
 	"net/http"
 	"strconv"
 	"strings"
+
+	"be-project-monitoring/internal/domain"
+	"be-project-monitoring/internal/domain/model"
+	ierr "be-project-monitoring/internal/errors"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"

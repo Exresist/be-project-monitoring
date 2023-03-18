@@ -1,10 +1,11 @@
 package repository
 
 import (
-	"be-project-monitoring/internal/domain/model"
-	ierr "be-project-monitoring/internal/errors"
 	"context"
 	"fmt"
+
+	"be-project-monitoring/internal/domain/model"
+	ierr "be-project-monitoring/internal/errors"
 
 	sq "github.com/Masterminds/squirrel"
 	"go.uber.org/zap"

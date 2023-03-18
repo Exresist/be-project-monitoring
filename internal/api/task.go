@@ -18,10 +18,9 @@ type (
 		Name              string `json:"title"`
 		Description       string `json:"description"`
 		SuggestedEstimate int    `json:"estimatedTime"`
-		// CreatorID         int    `json:"creatorId"`
-		ParticipantID *int   `json:"asignee"`
-		Status        string `json:"status"`
-		ProjectID     int    `json:"projectId"`
+		ParticipantID     *int   `json:"asignee"`
+		Status            string `json:"status"`
+		ProjectID         int    `json:"projectId"`
 	}
 	ShortTaskResp struct {
 		ID            int       `json:"id"`

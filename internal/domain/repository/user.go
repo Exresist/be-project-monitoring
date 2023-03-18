@@ -1,14 +1,15 @@
 package repository
 
 import (
-	"be-project-monitoring/internal/db"
-	"be-project-monitoring/internal/domain/model"
-	ierr "be-project-monitoring/internal/errors"
 	"context"
 	"fmt"
 	"strconv"
 	"strings"
 	"time"
+
+	"be-project-monitoring/internal/db"
+	"be-project-monitoring/internal/domain/model"
+	ierr "be-project-monitoring/internal/errors"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/google/uuid"

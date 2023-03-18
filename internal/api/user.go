@@ -14,19 +14,8 @@ type (
 	GetUserReq struct {
 		SearchText string
 		ProjectID  int `json:"projectId"`
-		//IsOnProject bool      `json:"isOnProject"` //описать значения для парс.бул
-		// Offset      int       `json:"offset"`
-		// Limit       int       `json:"limit"`
 	}
 
-	// getUserResp struct {
-	// 	Users []model.User
-	// 	Count int          `json:"count"`
-	// }
-	// getShortUserResp struct {
-	// 	Users []model.ShortUser
-	// 	Count int               `json:"count"`
-	// }
 	UpdateUserReq struct {
 		ID             uuid.UUID `json:"id"`
 		Role           *string   `json:"role"`

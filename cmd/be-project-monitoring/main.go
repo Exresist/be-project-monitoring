@@ -49,12 +49,6 @@ func main() {
 		panic(fmt.Errorf("невозможно открыть соединение с базой данных: %w", err))
 	}
 
-	/*logger.Info("creating HTTP server")
-	srv := &http.Server{
-		Addr:         ":8080",
-		ReadTimeout:  time.Duration(cfg.ReadTimeout),
-		WriteTimeout: time.Duration(cfg.WriteTimeout),
-	}*/
 	var g = &run.Group{}
 
 	repo := repository.NewRepository(conn, sugaredLogger)

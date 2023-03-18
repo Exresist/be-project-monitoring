@@ -1,9 +1,10 @@
 package service
 
 import (
+	"context"
+
 	"be-project-monitoring/internal/domain/model"
 	ierr "be-project-monitoring/internal/errors"
-	"context"
 
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/google/uuid"
