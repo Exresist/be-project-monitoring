@@ -1,8 +1,8 @@
 package db
 
 const (
-	MaxLimit     = 100
-	DefaultLimit = 20
+	MaxLimit     = 1000
+	DefaultLimit = 100
 )
 
 var DefaultPaginator = NewPaginator(DefaultLimit, 0)

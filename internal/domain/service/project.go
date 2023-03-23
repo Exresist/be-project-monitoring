@@ -8,8 +8,8 @@ import (
 
 	"be-project-monitoring/internal/api"
 	"be-project-monitoring/internal/domain/model"
-	"be-project-monitoring/internal/domain/repository"
 	ierr "be-project-monitoring/internal/errors"
+	"be-project-monitoring/internal/repository"
 )
 
 func (s *service) GetProjects(ctx context.Context, projectReq *api.GetProjectsReq) ([]model.Project, int, error) {

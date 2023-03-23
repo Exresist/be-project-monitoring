@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"be-project-monitoring/internal/domain/model"
-	"be-project-monitoring/internal/domain/repository"
+	"be-project-monitoring/internal/repository"
 
 	"github.com/google/uuid"
 )

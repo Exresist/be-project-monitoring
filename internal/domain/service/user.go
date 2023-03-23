@@ -6,8 +6,8 @@ import (
 
 	"be-project-monitoring/internal/api"
 	"be-project-monitoring/internal/domain/model"
-	"be-project-monitoring/internal/domain/repository"
 	ierr "be-project-monitoring/internal/errors"
+	"be-project-monitoring/internal/repository"
 
 	"github.com/AvraamMavridis/randomcolor"
 	"github.com/google/uuid"
