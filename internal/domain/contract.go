@@ -36,6 +36,10 @@ type (
 		GetProjectCountByFilter(ctx context.Context, filter *repository.ProjectFilter) (int, error)
 		// GetProjectInfo(ctx context.Context, id int, isTasks bool) (*model.ProjectInfo, error)
 		GetProjectInfo(ctx context.Context, id int) (*model.ProjectInfo, error)
+		GetProjectChecklist(ctx context.Context, id int) ([]model.Checklist, error)
+		AddProjectChecklist(ctx context.Context, id int, checklist []model.Checklist) ([]model.Checklist, error)
+		UpdateProjectChecklist(ctx context.Context, id int, checklist *model.Checklist) ([]model.Checklist, error)
+		DeleteProjectChecklist(ctx context.Context, id int, itemID int) ([]model.Checklist, error)
 
 		InsertProject(ctx context.Context, project *model.Project) error
 		UpdateProject(ctx context.Context, project *model.Project) error

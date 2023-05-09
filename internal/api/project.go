@@ -78,6 +78,7 @@ type (
 		ProjectResp
 		Participants []model.Participant `json:"participants"`
 		Tasks        []ShortTaskResp     `json:"tasks"`
+		Checklist    []model.Checklist   `json:"checklist"`
 	}
 
 	commitsInfoResp struct {
@@ -367,6 +368,7 @@ func (s *Server) sendProjectInfoResponse(c *gin.Context, projectID int) {
 		},
 		Participants: projectInfo.Participants,
 		Tasks:        shortTasksResponse,
+		Checklist:    projectInfo.Checklist,
 	})
 }
 

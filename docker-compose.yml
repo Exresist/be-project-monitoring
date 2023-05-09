@@ -6,7 +6,6 @@ services:
       context: .
       dockerfile: Dockerfile
     environment:
-
       APP_GHTOKEN: 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
     restart: always
     ports:

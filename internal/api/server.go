@@ -1,12 +1,13 @@
 package api
 
 import (
-	"be-project-monitoring/internal/domain/model"
 	"context"
 	"fmt"
 	"net/http"
 	"os"
 	"time"
+
+	"be-project-monitoring/internal/domain/model"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -54,6 +55,10 @@ type (
 		GetProjects(ctx context.Context, projectReq *GetProjectsReq) ([]model.Project, int, error)
 		GetProjectInfo(ctx context.Context, id int) (*model.ProjectInfo, error)
 		GetProjectCommits(ctx context.Context, id int) ([]model.CommitsInfo, error)
+		GetProjectChecklist(ctx context.Context, id int) ([]model.Checklist, error)
+		AddProjectChecklist(ctx context.Context, id int, checklist []model.Checklist) ([]model.Checklist, error)
+		UpdateProjectChecklist(ctx context.Context, id int, checklist *model.Checklist) ([]model.Checklist, error)
+		DeleteProjectChecklist(ctx context.Context, id int, checklistID int) ([]model.Checklist, error)
 	}
 
 	participantService interface {
@@ -128,6 +133,10 @@ func New(opts ...OptionFunc) *Server {
 	projectRtr.GET("/:projectId", s.getProjectInfo)
 	projectRtr.GET("/:projectId/commits", s.getProjectCommits)
 	projectRtr.GET("/:projectId/report", s.getProjectReport)
+	projectRtr.GET("/:projectId/checklist", s.getProjectChecklist)
+	projectRtr.POST("/:projectId/checklist", s.addProjectChecklist)
+	projectRtr.PUT("/:projectId/checklist", s.updateProjectChecklist)
+	projectRtr.DELETE("/:projectId/checklist", s.removeProjectChecklist)
 	projectRtr.DELETE("/remove", s.parseBodyToDeletedProject,
 		s.verifyParticipantRoleMiddleware(model.RoleOwner), s.deleteProject)
 	projectRtr.POST("/add-participant", s.parseBodyToAddedParticipant,

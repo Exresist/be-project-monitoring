@@ -1,0 +1,4 @@
+BEGIN;
+
+DROP TABLE checklist;
+COMMIT;

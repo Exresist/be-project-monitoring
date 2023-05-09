@@ -168,10 +168,16 @@ func (s *service) GetProjectInfo(ctx context.Context, id int) (*model.ProjectInf
 		return nil, err
 	}
 
+	checklist, err := s.repo.GetProjectChecklist(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
 	projectInfo := &model.ProjectInfo{
 		Project:      *project,
 		Participants: participants,
 		Tasks:        tasks,
+		Checklist:    checklist,
 	}
 	return projectInfo, nil
 }

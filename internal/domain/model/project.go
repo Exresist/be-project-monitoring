@@ -23,5 +23,6 @@ type (
 		Project
 		Participants []Participant
 		Tasks        []Task
+		Checklist    []Checklist
 	}
 )
